@@ -20,15 +20,14 @@ public sealed class GeneralViewModel : PageViewModel
     readonly IReadOnlyList<GeneralRowViewModel> _rows;
     bool _filling;
 
-    public GeneralViewModel(DesktopRuntime runtime, IGameGateway game, IKeyboardState keyboard)
+    public GeneralViewModel(DesktopRuntime runtime, IGameGateway game)
         : base(PageKey.General)
     {
         ArgumentNullException.ThrowIfNull(runtime);
         ArgumentNullException.ThrowIfNull(game);
-        ArgumentNullException.ThrowIfNull(keyboard);
         _rules = runtime.Rules;
         FirstColumn = [MeSection(Apply), MovementSection(Apply), RoomSection(Apply), PeopleSection(Apply)];
-        SecondColumn = [ChatSection(Apply), HandItemsSection(Apply), FurniSection(Apply, keyboard.IsSupported), BlockingSection(Apply)];
+        SecondColumn = [ChatSection(Apply), HandItemsSection(Apply), FurniSection(Apply, runtime.Keyboard.IsSupported), BlockingSection(Apply)];
         Sections = [.. FirstColumn, .. SecondColumn];
         _rows = [.. Sections.SelectMany(static section => section.Rows)];
         Refresh();

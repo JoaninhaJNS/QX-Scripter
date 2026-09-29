@@ -27,6 +27,8 @@ internal sealed class RoomItemApplication : IApplicationFeature
         [
             Call<RoomFloorItemUseRequest>(FloorUseDescriptor(), FloorUse),
             Call<RoomWallItemUseRequest>(WallUseDescriptor(), WallUse),
+            Call<RoomFloorItemClickRequest>(FloorClickDescriptor(), FloorClick),
+            Call<RoomWallItemClickRequest>(WallClickDescriptor(), WallClick),
             Call<RoomOneWayDoorEnterRequest>(OneWayDoorDescriptor(), OneWayDoorEnter),
             Call<RoomDiceRequest>(DiceThrowDescriptor(), DiceThrow),
             Call<RoomDiceRequest>(DiceClearDescriptor(), DiceClear),
@@ -58,6 +60,28 @@ internal sealed class RoomItemApplication : IApplicationFeature
             (session, generation, cancellation) => game.RoomActions.UseWallItem(
                 request.ItemId,
                 request.State,
+                session,
+                generation,
+                cancellation),
+            cancellation_token);
+
+    private RoomItemDispatchResult FloorClick(
+        RoomFloorItemClickRequest request,
+        CancellationToken cancellation_token) => Dispatch(
+            (session, generation, cancellation) => game.RoomActions.ClickItem(
+                request.ItemId,
+                ItemType.Floor,
+                session,
+                generation,
+                cancellation),
+            cancellation_token);
+
+    private RoomItemDispatchResult WallClick(
+        RoomWallItemClickRequest request,
+        CancellationToken cancellation_token) => Dispatch(
+            (session, generation, cancellation) => game.RoomActions.ClickItem(
+                request.ItemId,
+                ItemType.Wall,
                 session,
                 generation,
                 cancellation),
@@ -200,6 +224,20 @@ internal sealed class RoomItemApplication : IApplicationFeature
         "Uses an interaction state on a wall item in the current room.",
         [IdParameter(), IntegerParameter(nameof(RoomWallItemUseRequest.State).ToLowerInvariant())],
         MessageKeys.Room.WallItem.Use);
+
+    private static ApplicationDescriptor FloorClickDescriptor() => Descriptor<RoomFloorItemClickRequest>(
+        ApplicationMemberIds.RoomItemFloorClick,
+        "Click floor item",
+        "Clicks a floor item in the current room the way the client does, without using it.",
+        [IdParameter()],
+        MessageKeys.Room.Item.Click);
+
+    private static ApplicationDescriptor WallClickDescriptor() => Descriptor<RoomWallItemClickRequest>(
+        ApplicationMemberIds.RoomItemWallClick,
+        "Click wall item",
+        "Clicks a wall item in the current room the way the client does, without using it.",
+        [IdParameter()],
+        MessageKeys.Room.Item.Click);
 
     private static ApplicationDescriptor OneWayDoorDescriptor() => Descriptor<RoomOneWayDoorEnterRequest>(
         ApplicationMemberIds.RoomItemOneWayDoorEnter,

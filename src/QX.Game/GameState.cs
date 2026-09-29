@@ -280,7 +280,7 @@ public sealed class GameState : IDisposable
         try
         {
             Room.GameData = GameData;
-            Room.OwnUserId = () => Profile.UserData?.Id;
+            Room.OwnUserId = () => Profile.State.Identity?.Id;
             Profile.RoomUserByIndex = index => Room.AvatarByIndex(index) as User;
             RoomActions.Room = Room;
             RoomActions.OwnUserId = () => Profile.UserData?.Id;

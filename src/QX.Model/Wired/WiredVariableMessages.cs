@@ -2,7 +2,7 @@ using Qx.Messages;
 
 namespace Qx.Model.Wired;
 
-// Operation codes shared by the two variable set/create/delete composers (689 / 625).
+// Operation codes shared by WiredSetObjectVariableValue and WiredSetUserPermanentVariable.
 public static class WiredVariableOperation
 {
     public const int Write = 0;
@@ -21,8 +21,9 @@ public static class WiredVariableTarget
 }
 
 // One persisted storage slot for a variable on an entity. Context-polymorphic: the leading
-// variableId is present only when the caller asked for it (true in 1557, false in 749) — decided
-// by calling context, never by a wire tag. The two timestamps are 8-byte longs.
+// variableId is present only when the caller asked for it (true in WiredUserPermanentVariables,
+// false in WiredUserVariablesList) — decided by calling context, never by a wire tag. The two
+// timestamps are 8-byte longs.
 public sealed record WiredVariableStorageParameter(
     bool IncludesVariableId,
     string? VariableId,
@@ -464,6 +465,24 @@ public sealed record WiredGetAllVariableHolders(string VariableId)
     }
 }
 
+public sealed record WiredDeleteAllVariableHolders(string VariableId)
+    : IParserComposer<WiredDeleteAllVariableHolders>
+{
+    public static WiredDeleteAllVariableHolders Parse(in PacketReader p) =>
+        FlashWire.Parse(in p, ParseFlash);
+
+    private static WiredDeleteAllVariableHolders ParseFlash(in PacketReader p) => new(p.ReadString());
+
+    public void Compose(in PacketWriter p) =>
+        FlashWire.Compose(this, in p, ComposeFlash);
+
+    private static void ComposeFlash(WiredDeleteAllVariableHolders value, in PacketWriter p)
+    {
+        WiredWire.RequireString(value.VariableId, nameof(VariableId), in p);
+        p.WriteString(value.VariableId);
+    }
+}
+
 // Uploads the client's whole {variableId -> perVariableHash} cache. Null cache -> count 0, which
 // is exactly an empty list here.
 public sealed record VariableHashEntry(string VariableId, int Hash) : IParserComposer<VariableHashEntry>
@@ -543,7 +562,7 @@ public sealed record WiredGetUserPermanentVariables(int EntityType, int EntityId
 }
 
 public sealed record WiredGetVariableOwnersPage(
-    string VariableId, int Page, int PageSize, int UserTypeFilter, int SortTypeFilter)
+    string VariableId, int Page, int PageSize, int SortTypeFilter, int UserTypeFilter)
     : IParserComposer<WiredGetVariableOwnersPage>
 {
     public static WiredGetVariableOwnersPage Parse(in PacketReader p) =>
@@ -561,8 +580,8 @@ public sealed record WiredGetVariableOwnersPage(
         p.WriteString(value.VariableId);
         p.WriteInt(value.Page);
         p.WriteInt(value.PageSize);
-        p.WriteInt(value.UserTypeFilter);
         p.WriteInt(value.SortTypeFilter);
+        p.WriteInt(value.UserTypeFilter);
     }
 
 }

@@ -6,6 +6,10 @@ public sealed record RoomFloorItemUseRequest(Id ItemId, int State = 0);
 
 public sealed record RoomWallItemUseRequest(Id ItemId, int State = 0);
 
+public sealed record RoomFloorItemClickRequest(Id ItemId);
+
+public sealed record RoomWallItemClickRequest(Id ItemId);
+
 public sealed record RoomOneWayDoorEnterRequest(Id ItemId);
 
 public sealed record RoomDiceRequest(Id ItemId);

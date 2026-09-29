@@ -178,6 +178,32 @@ public sealed record EnterOneWayDoorRequest(Id ItemId)
         p.WriteInt(checked((int)value.ItemId));
 }
 
+public sealed record ClickRoomItemRequest(Id ItemId, ItemType Type)
+    : IParserComposer<ClickRoomItemRequest>
+{
+    public static ClickRoomItemRequest Parse(in PacketReader p) =>
+        FlashWire.Parse(in p, ParseFlash);
+
+    private static ClickRoomItemRequest ParseFlash(in PacketReader p)
+    {
+        long id = p.ReadInt();
+        p.ReadInt();
+        return id < 0 ? new(-id, ItemType.Wall) : new(id, ItemType.Floor);
+    }
+
+    public void Compose(in PacketWriter p) =>
+        FlashWire.Compose(this, in p, ComposeFlash);
+
+    private static void ComposeFlash(ClickRoomItemRequest value, in PacketWriter p)
+    {
+        int id = checked((int)value.ItemId);
+        if (id <= 0)
+            throw new ArgumentOutOfRangeException(nameof(ItemId), value.ItemId, "A clicked item id must be positive.");
+        p.WriteInt(value.Type is ItemType.Wall ? -id : id);
+        p.WriteInt(0);
+    }
+}
+
 public sealed record ThrowDiceRequest(Id ItemId)
     : IParserComposer<ThrowDiceRequest>
 {

@@ -174,6 +174,8 @@ public sealed record WiredVariableHoldersRequest(
     string VariableId,
     int TimeoutMilliseconds = 10000);
 
+public sealed record WiredVariableHoldersDeleteRequest(string VariableId);
+
 public sealed record WiredPermanentVariablesRequest(
     int EntityType,
     int EntityId,
@@ -183,8 +185,8 @@ public sealed record WiredVariableOwnersRequest(
     string VariableId,
     int Page = 1,
     int PageSize = 50,
-    int UserTypeFilter = 0,
-    int SortTypeFilter = -1,
+    int SortTypeFilter = 0,
+    int UserTypeFilter = -1,
     int TimeoutMilliseconds = 10000);
 
 public sealed record WiredObjectVariableSetRequest(

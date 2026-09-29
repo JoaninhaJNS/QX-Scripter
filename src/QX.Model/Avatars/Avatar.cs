@@ -22,6 +22,26 @@ public abstract class Avatar : IParserComposer<Avatar>
     public Point XY => Location.XY;
 
     public AvatarStatus? CurrentUpdate { get; set; }
+
+    /// <summary>
+    /// The tile the avatar is stepping onto, or <see langword="null"/> when it stands still. Taken
+    /// from the latest status update and cleared when a roller or wired moves the avatar, so it
+    /// never points at a walk the avatar was pulled out of.
+    /// </summary>
+    public Tile? MovingTo { get; internal set; }
+
+    /// <summary>Whether the avatar is walking.</summary>
+    public bool IsMoving => MovingTo is not null;
+
+    /// <summary>
+    /// Whether the avatar stands still on the tile: the latest status update put it there without
+    /// a next step, and nothing has moved it since.
+    /// </summary>
+    public bool IsSettledAt(Point tile) =>
+        XY == tile && MovingTo is null && CurrentUpdate is { MovingTo: null } status && status.Location.XY == tile;
+
+    /// <inheritdoc cref="IsSettledAt(Point)"/>
+    public bool IsSettledAt(int x, int y) => IsSettledAt(new Point(x, y));
     public int Dance { get; set; }
     public int Effect { get; set; }
     public int HandItem { get; set; }

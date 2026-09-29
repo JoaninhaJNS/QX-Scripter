@@ -21,6 +21,7 @@ internal sealed class WiredApplication : IApplicationFeature
     private readonly SemaphoreSlim configuration_lock = new(1, 1);
     private readonly SemaphoreSlim save_lock = new(1, 1);
     private readonly SemaphoreSlim deposit_lock = new(1, 1);
+    private readonly SemaphoreSlim variables_lock = new(1, 1);
     private readonly ApplicationEventSource<WiredChanged> changed;
     private readonly ApplicationEventSource<WiredEvent<WiredPermissions>> permissions_changed;
     private readonly ApplicationEventSource<WiredEvent<WiredEnvironment>> environment_changed;
@@ -126,6 +127,8 @@ internal sealed class WiredApplication : IApplicationFeature
                     WiredApplicationDescriptors.VariablesObjectGet, GetObjectVariables),
                 new ApplicationCallBinding<WiredVariableHoldersRequest, WiredVariableHoldersSnapshot>(
                     WiredApplicationDescriptors.VariablesHoldersGet, GetVariableHolders),
+                new ApplicationCallBinding<WiredVariableHoldersDeleteRequest, WiredDispatchResult>(
+                    WiredApplicationDescriptors.VariablesHoldersDelete, DeleteVariableHolders),
                 new ApplicationCallBinding<WiredPermanentVariablesRequest, WiredPermanentVariablesSnapshot>(
                     WiredApplicationDescriptors.VariablesPermanentGet, GetPermanentVariables),
                 new ApplicationCallBinding<WiredVariableOwnersRequest, WiredVariableOwnersSnapshot>(
@@ -565,77 +568,86 @@ internal sealed class WiredApplication : IApplicationFeature
         ArgumentOutOfRangeException.ThrowIfGreaterThan(request.MaximumChunks, 256);
         ValidateTimeout(request.TimeoutMilliseconds);
         WiredOperationScope scope = CaptureOperation(cancellation_token);
+        using CancellationTokenSource operation = LinkCancellation(cancellation_token);
+        CancellationToken operation_token = operation.Token;
         long started = time_provider.GetTimestamp();
-        var entries = new Dictionary<string, WiredVariableWithHashSnapshot>(StringComparer.Ordinal);
-        var order = new List<string>();
-        int all_variables_hash = 0;
-        for (int chunk = 1; chunk <= request.MaximumChunks; chunk++)
+        await EnterExclusive(
+            variables_lock,
+            started,
+            request.TimeoutMilliseconds,
+            MessageKeys.Wired.Variables.DifferencesRequest.Value,
+            MessageKeys.Wired.Variables.Differences.Value,
+            operation_token).ConfigureAwait(false);
+        try
         {
-            VariableHashEntry[] cache =
-            [
-                .. order
-                    .Where(entries.ContainsKey)
-                    .Select(id => new VariableHashEntry(id, entries[id].PerVariableHash))
-            ];
-            int remaining = RemainingMilliseconds(started, request.TimeoutMilliseconds);
-            WiredVariableDifferencesSnapshot difference = await GetVariableDifferences(
-                new WiredVariableDifferencesRequest(cache, remaining),
-                cache,
+            CaptureCurrentState(scope, operation_token);
+            using var updates = new WiredUpdateQueue(wired, scope.WiredGeneration);
+            DispatchInRoom(
+                MessageContracts.Wired.Variables.DifferencesRequest,
+                new WiredGetAllVariablesDiffs([]),
                 scope,
-                cancellation_token).ConfigureAwait(false);
-            if (difference.Generation != scope.WiredGeneration)
-                throw new RequestDisconnectedException("wired variables", "wired variable differences");
-            all_variables_hash = difference.AllVariablesHash;
-            int changed = 0;
-            foreach (string id in difference.RemovedVariables)
+                operation_token);
+            var entries = new Dictionary<string, WiredVariableWithHashSnapshot>(StringComparer.Ordinal);
+            var order = new List<string>();
+            long revision = updates.Revision;
+            for (int chunk = 1; chunk <= request.MaximumChunks; chunk++)
             {
-                if (entries.Remove(id))
+                WiredStateUpdate update = await updates.WaitAsync(
+                    candidate =>
+                        candidate.Kind is WiredStateChangeKind.VariablesDifferences &&
+                        candidate.Value is WiredAllVariablesDiffs,
+                    interceptor,
+                    scope.Session,
+                    time_provider,
+                    started,
+                    request.TimeoutMilliseconds,
+                    revision,
+                    MessageKeys.Wired.Variables.DifferencesRequest.Value,
+                    MessageKeys.Wired.Variables.Differences.Value,
+                    operation_token).ConfigureAwait(false);
+                revision = update.State.Revision;
+                WiredVariableDifferencesSnapshot difference =
+                    SnapshotOf((WiredAllVariablesDiffs)update.Value!, scope.WiredGeneration);
+                foreach (string id in difference.RemovedVariables)
                 {
-                    order.Remove(id);
-                    changed++;
+                    if (entries.Remove(id))
+                        order.Remove(id);
+                }
+                foreach (WiredVariableWithHashSnapshot entry in difference.AddedOrUpdated)
+                {
+                    string id = entry.Variable.VariableId;
+                    if (!entries.ContainsKey(id))
+                        order.Add(id);
+                    entries[id] = entry;
+                }
+                if (difference.IsLastChunk)
+                {
+                    CaptureCurrentState(scope, operation_token);
+                    WiredVariableWithHashSnapshot[] values =
+                    [
+                        .. order.Where(entries.ContainsKey).Select(id => entries[id])
+                    ];
+                    VariableHashEntry[] final_cache =
+                    [
+                        .. values.Select(value => new VariableHashEntry(
+                            value.Variable.VariableId,
+                            value.PerVariableHash))
+                    ];
+                    return new WiredVariableCollectionSnapshot(
+                        scope.WiredGeneration,
+                        difference.AllVariablesHash,
+                        chunk,
+                        Array.AsReadOnly(values),
+                        Array.AsReadOnly(final_cache));
                 }
             }
-            foreach (WiredVariableWithHashSnapshot entry in difference.AddedOrUpdated)
-            {
-                string id = entry.Variable.VariableId;
-                if (!entries.TryGetValue(id, out WiredVariableWithHashSnapshot? previous))
-                {
-                    order.Add(id);
-                    changed++;
-                }
-                else if (previous.PerVariableHash != entry.PerVariableHash)
-                {
-                    changed++;
-                }
-                entries[id] = entry;
-            }
-            if (difference.IsLastChunk)
-            {
-                WiredVariableWithHashSnapshot[] values =
-                [
-                    .. order.Where(entries.ContainsKey).Select(id => entries[id])
-                ];
-                VariableHashEntry[] final_cache =
-                [
-                    .. values.Select(value => new VariableHashEntry(
-                        value.Variable.VariableId,
-                        value.PerVariableHash))
-                ];
-                return new WiredVariableCollectionSnapshot(
-                    scope.WiredGeneration,
-                    all_variables_hash,
-                    chunk,
-                    Array.AsReadOnly(values),
-                    Array.AsReadOnly(final_cache));
-            }
-            if (changed == 0)
-            {
-                throw new InvalidDataException(
-                    "The Wired variable difference stream did not make progress.");
-            }
+            throw new InvalidDataException(
+                $"The Wired variable difference stream exceeded {request.MaximumChunks} chunks.");
         }
-        throw new InvalidDataException(
-            $"The Wired variable difference stream exceeded {request.MaximumChunks} chunks.");
+        finally
+        {
+            variables_lock.Release();
+        }
     }
 
     private ValueTask<WiredVariablesObjectSnapshot> GetObjectVariables(
@@ -679,6 +691,19 @@ internal sealed class WiredApplication : IApplicationFeature
             cancellation_token);
     }
 
+    private ValueTask<WiredDispatchResult> DeleteVariableHolders(
+        WiredVariableHoldersDeleteRequest request,
+        CancellationToken cancellation_token)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(request);
+        ValidateText(request.VariableId, nameof(request.VariableId), false);
+        return Dispatch(
+            MessageContracts.Wired.Variables.HoldersDelete,
+            new WiredDeleteAllVariableHolders(request.VariableId),
+            cancellation_token);
+    }
+
     private ValueTask<WiredPermanentVariablesSnapshot> GetPermanentVariables(
         WiredPermanentVariablesRequest request,
         CancellationToken cancellation_token)
@@ -714,8 +739,8 @@ internal sealed class WiredApplication : IApplicationFeature
                 request.VariableId,
                 request.Page,
                 request.PageSize,
-                request.UserTypeFilter,
-                request.SortTypeFilter),
+                request.SortTypeFilter,
+                request.UserTypeFilter),
             MessageContracts.Wired.Variables.Owners,
             value =>
                 value.Page.VariableId == request.VariableId &&
@@ -2355,11 +2380,13 @@ internal sealed class WiredApplication : IApplicationFeature
             for (int index = 0; index < count; index++)
             {
                 WiredStateUpdate update = deferred.Dequeue();
-                if (update.State.Generation != Generation ||
-                    update.State.Revision <= minimum_revision)
+                if (update.Kind is WiredStateChangeKind.Reset ||
+                    update.State.Generation != Generation)
                 {
-                    continue;
+                    throw new RequestDisconnectedException("wired operation", "wired response");
                 }
+                if (update.State.Revision <= minimum_revision)
+                    continue;
                 if (predicate(update))
                 {
                     result = update;

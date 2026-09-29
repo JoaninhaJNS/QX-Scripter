@@ -257,6 +257,8 @@ public static class ApplicationMemberIds
     public const string RoomChatShout = "room.chat.shout";
     public const string RoomChatWhisper = "room.chat.whisper";
     public const string RoomChatReceived = "room.chat.received";
+    public const string RoomVariableFxState = "room.variable_fx.state";
+    public const string RoomVariableFxChanged = "room.variable_fx.changed";
     public const string RoomAvatarWalk = "room.avatar.walk";
     public const string RoomAvatarLook = "room.avatar.look";
     public const string RoomAvatarDance = "room.avatar.dance";
@@ -267,6 +269,8 @@ public static class ApplicationMemberIds
     public const string RoomAvatarTyping = "room.avatar.typing.set";
     public const string RoomItemFloorUse = "room.item.floor.use";
     public const string RoomItemWallUse = "room.item.wall.use";
+    public const string RoomItemFloorClick = "room.item.floor.click";
+    public const string RoomItemWallClick = "room.item.wall.click";
     public const string RoomItemOneWayDoorEnter = "room.item.one_way_door.enter";
     public const string RoomItemDiceThrow = "room.item.dice.throw";
     public const string RoomItemDiceClear = "room.item.dice.clear";
@@ -576,6 +580,7 @@ public static class ApplicationMemberIds
     public const string WiredVariablesList = "wired.variables.list";
     public const string WiredVariablesObjectGet = "wired.variables.object.get";
     public const string WiredVariablesHoldersGet = "wired.variables.holders.get";
+    public const string WiredVariablesHoldersDelete = "wired.variables.holders.delete";
     public const string WiredVariablesPermanentGet = "wired.variables.permanent.get";
     public const string WiredVariablesOwnersGet = "wired.variables.owners.get";
     public const string WiredVariablesObjectSet = "wired.variables.object.set";

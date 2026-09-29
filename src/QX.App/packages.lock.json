@@ -112,6 +112,9 @@
           "QX.Wire": "[0.0.1, )"
         }
       },
+      "qx.platform": {
+        "type": "Project"
+      },
       "qx.protocol": {
         "type": "Project",
         "dependencies": {
@@ -124,7 +127,8 @@
           "Microsoft.CodeAnalysis.CSharp.Scripting": "[5.3.0, )",
           "QX.Game": "[0.0.1, )",
           "QX.Interception": "[0.0.1, )",
-          "QX.Model": "[0.0.1, )"
+          "QX.Model": "[0.0.1, )",
+          "QX.Platform": "[0.0.1, )"
         }
       },
       "qx.wire": {

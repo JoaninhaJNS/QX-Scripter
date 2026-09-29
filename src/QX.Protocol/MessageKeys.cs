@@ -152,6 +152,7 @@ public static class MessageKeys
             public static readonly MessageKey Object = new("wired.variables.object");
             public static readonly MessageKey HoldersRequest = new("wired.variables.holders.request");
             public static readonly MessageKey Holders = new("wired.variables.holders");
+            public static readonly MessageKey HoldersDelete = new("wired.variables.holders.delete");
             public static readonly MessageKey PermanentRequest = new("wired.variables.permanent.request");
             public static readonly MessageKey Permanent = new("wired.variables.permanent");
             public static readonly MessageKey OwnersRequest = new("wired.variables.owners.request");
@@ -159,6 +160,14 @@ public static class MessageKeys
             public static readonly MessageKey ObjectValueSet = new("wired.variables.object_value.set");
             public static readonly MessageKey PermanentValueSet = new("wired.variables.permanent_value.set");
             public static readonly MessageKey PermanentValueSetResult = new("wired.variables.permanent_value.set.result");
+        }
+
+        public static class VariableFx
+        {
+            public static readonly MessageKey Configs = new("wired.variable_fx.configs");
+            public static readonly MessageKey ConfigsRemoved = new("wired.variable_fx.configs.removed");
+            public static readonly MessageKey Statuses = new("wired.variable_fx.statuses");
+            public static readonly MessageKey StatusesRemoved = new("wired.variable_fx.statuses.removed");
         }
 
         public static class Chests
@@ -829,6 +838,7 @@ public static class MessageKeys
         public static class Item
         {
             public static readonly MessageKey Place = new("room.item.place");
+            public static readonly MessageKey Click = new("room.item.click");
             public static readonly MessageKey Pickup = new("room.item.pickup");
             public static readonly MessageKey PickupConfirmation = new("room.item.pickup.confirmation");
         }

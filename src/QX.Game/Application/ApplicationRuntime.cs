@@ -67,6 +67,10 @@ public sealed class ApplicationRuntime : IApplicationRuntime, IDisposable
                     game,
                     clock));
             created_features.Add(
+                new RoomVariableFxApplication(
+                    game,
+                    ReportObserverError));
+            created_features.Add(
                 new RoomLifecycleApplication(
                     interceptor,
                     game,

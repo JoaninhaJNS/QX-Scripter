@@ -4,6 +4,7 @@ using Qx.Model.Messages.Incoming;
 using Qx.Model;
 using Qx.Protocol;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.ExceptionServices;
 
@@ -74,6 +75,8 @@ public sealed class RoomManager : GameStateManager
     private readonly ConcurrentDictionary<long, FloorItem> _floorItems = [];
     private readonly ConcurrentDictionary<long, WallItem> _wallItems = [];
     private readonly ConcurrentDictionary<int, Avatar> _avatars = [];
+    private readonly Dictionary<(bool IsUserFx, int ConfigId), VariableFxConfigEntry> _variable_fx_configs = [];
+    private readonly Dictionary<VariableFxSlot, VariableFxValue> _variable_fx_values = [];
     private readonly ConcurrentDictionary<long, GuestRoomResult> _pending_room_results = [];
     private readonly Dictionary<string, string> _properties = new(StringComparer.Ordinal);
     private readonly Queue<Action> _publication_queue = [];
@@ -87,12 +90,39 @@ public sealed class RoomManager : GameStateManager
     private bool _placement_session_bound;
     private ClientType _placement_client;
     private RoomKick? _pending_kick;
+    private CancellationTokenSource _session_end = new();
+    private TaskCompletionSource _next_change = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public bool IsInRoom { get; private set; }
     public bool IsReady => State is RoomSessionState.Ready;
     public RoomSessionState State { get; private set; }
     public long Generation { get; private set; }
     public long Revision => Interlocked.Read(ref _revision);
+
+    /// <summary>
+    /// Cancelled when the current room session ends: on leaving the room, and on entering another
+    /// or the same room again. Capture it together with <see cref="Generation"/> through
+    /// <see cref="Capture{TResult}"/> to bind work to one session.
+    /// </summary>
+    public CancellationToken SessionToken
+    {
+        get
+        {
+            lock (_state_sync)
+                return _session_end.Token;
+        }
+    }
+
+    /// <summary>
+    /// Completes after the next change to the room state has been applied and its events have
+    /// run. Awaiting it again waits for the change after that.
+    /// </summary>
+    public Task NextChange => Volatile.Read(ref _next_change).Task;
+
+    /// <summary>The local user's own avatar, or <see langword="null"/> while it is not in the room.</summary>
+    public Avatar? Self => OwnUserId?.Invoke() is { } id
+        ? _avatars.Values.FirstOrDefault(avatar => avatar is User && avatar.Id == id)
+        : null;
     public long RoomId { get; private set; }
     public RoomAccessState AccessState { get; private set; }
     public Id? AccessRoomId { get; private set; }
@@ -178,6 +208,26 @@ public sealed class RoomManager : GameStateManager
     public IReadOnlyCollection<WallItem> WallItems => _wallItems.Values.ToArray();
     public IReadOnlyCollection<Avatar> Avatars => _avatars.Values.ToArray();
 
+    /// <summary>The Fx bar configurations of the room, for avatars and for furni.</summary>
+    public IReadOnlyList<VariableFxConfigEntry> VariableFxConfigs
+    {
+        get
+        {
+            lock (_state_sync)
+                return [.. _variable_fx_configs.Values];
+        }
+    }
+
+    /// <summary>Every Fx bar value in the room, bound to its current configuration.</summary>
+    public IReadOnlyList<VariableFxValue> VariableFxValues
+    {
+        get
+        {
+            lock (_state_sync)
+                return [.. _variable_fx_values.Values.Select(BindVariableFx)];
+        }
+    }
+
     public event Action<Id>? Entering;
     public event Action? Entered;
     public event Action? Ready;
@@ -205,6 +255,10 @@ public sealed class RoomManager : GameStateManager
     public event Action<WallItem>? WallItemUpdated;
     public event Action<Avatar, int>? AvatarActioned;
     public event Action<Avatar, Tile, Tile>? AvatarMoved;
+    public event Action<Avatar, AvatarMovement>? AvatarMovementReceived;
+    public event Action<FloorItem, FloorItemMovement>? FloorItemMovementReceived;
+    public event Action<VariableFxValue, VariableFxValue?>? VariableFxChanged;
+    public event Action<VariableFxValue>? VariableFxRemoved;
     public event Action<Avatar, int, int>? AvatarDanceChanged;
     public event Action<Avatar, int, int>? AvatarEffectChanged;
     public event Action<Avatar, int, int>? AvatarHandItemChanged;
@@ -272,6 +326,7 @@ public sealed class RoomManager : GameStateManager
         if (!_floorItems.Remove(id, out FloorItem? item))
             return null;
         item.IsRemoved = true;
+        DropVariableFx(false, id);
         Publish(FloorItemRemoved, id);
         Publish(FloorItemRemovedDetailed, item);
         return item;
@@ -406,6 +461,7 @@ public sealed class RoomManager : GameStateManager
     private void Mutate(Action mutation)
     {
         bool drain_publications = false;
+        bool completed = false;
         ExceptionDispatchInfo? mutation_failure = null;
         lock (_state_sync)
         {
@@ -430,6 +486,7 @@ public sealed class RoomManager : GameStateManager
                     Interlocked.Increment(ref _revision);
                     drain_publications = QueuePublications(_staged_publications!);
                     _staged_publications = null;
+                    completed = true;
                 }
             }
         }
@@ -445,6 +502,13 @@ public sealed class RoomManager : GameStateManager
             {
                 publication_failure = ExceptionDispatchInfo.Capture(error);
             }
+        }
+
+        if (completed)
+        {
+            Interlocked.Exchange(
+                ref _next_change,
+                new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).TrySetResult();
         }
 
         if (mutation_failure is not null && publication_failure is not null)
@@ -808,12 +872,137 @@ public sealed class RoomManager : GameStateManager
             GuestRoomResult? pending_result = TakePendingRoomResult(room_id);
             LeaveRoom(source: RoomExitSource.RoomTransition);
             LastKick = null;
-            Generation++;
+            AdvanceGeneration();
             RoomId = room_id;
             State = RoomSessionState.Entering;
             if (pending_result is not null)
                 SetRoomResult(pending_result, false);
             Publish(Entering, room_id);
+        }
+    }
+
+    private void AdvanceGeneration()
+    {
+        Generation++;
+        CancellationTokenSource ended = _session_end;
+        _session_end = new CancellationTokenSource();
+        Publish(ended.Cancel);
+    }
+
+    private bool IsSelf(Avatar avatar) =>
+        avatar is User && OwnUserId?.Invoke() is { } id && avatar.Id == id;
+
+    private void PublishMovement(
+        Avatar avatar,
+        Tile from,
+        Tile to,
+        Tile? moving_to,
+        MovementSource source,
+        int duration)
+    {
+        if (AvatarMovementReceived is null)
+            return;
+        Publish(AvatarMovementReceived, avatar, new AvatarMovement(
+            avatar.Index,
+            IsSelf(avatar),
+            from,
+            to,
+            moving_to,
+            source,
+            duration,
+            checked(_revision + 1),
+            Stopwatch.GetTimestamp()));
+    }
+
+    private void PublishMovement(
+        FloorItem item,
+        Tile from,
+        MovementSource source,
+        int duration)
+    {
+        if (FloorItemMovementReceived is null)
+            return;
+        Publish(FloorItemMovementReceived, item, new FloorItemMovement(
+            item.Id,
+            from,
+            item.Location,
+            item.Direction,
+            source,
+            duration,
+            checked(_revision + 1),
+            Stopwatch.GetTimestamp()));
+    }
+
+    private VariableFxValue BindVariableFx(VariableFxValue value) =>
+        value with { Config = _variable_fx_configs.GetValueOrDefault((value.IsUser, value.ConfigId)) };
+
+    private void ChangeVariableFxConfig(bool is_user_fx, int config_id, VariableFxConfigEntry? config)
+    {
+        bool changed = !SameVariableFxConfig(_variable_fx_configs.GetValueOrDefault((is_user_fx, config_id)), config);
+        VariableFxValue[] previous = changed
+            ?
+            [
+                .. _variable_fx_values.Values
+                    .Where(value => value.IsUser == is_user_fx && value.ConfigId == config_id)
+                    .Select(BindVariableFx)
+            ]
+            : [];
+        if (config is null)
+            _variable_fx_configs.Remove((is_user_fx, config_id));
+        else
+            _variable_fx_configs[(is_user_fx, config_id)] = config;
+        foreach (VariableFxValue value in previous)
+            Publish(VariableFxChanged, BindVariableFx(value), value);
+    }
+
+    private static bool SameVariableFxConfig(VariableFxConfigEntry? left, VariableFxConfigEntry? right) =>
+        left is null || right is null
+            ? left is null && right is null
+            : left with { Extra = right.Extra } == right &&
+              left.Extra.Count == right.Extra.Count &&
+              left.Extra.All(pair => right.Extra.TryGetValue(pair.Key, out string? value) && value == pair.Value);
+
+    private void ApplyVariableFx(VariableFxStatusUpdate message)
+    {
+        long timestamp = Stopwatch.GetTimestamp();
+        foreach (VariableFxStatusEntry entry in message.Statuses)
+        {
+            VariableFxSlot slot = entry.Slot;
+            if (slot.IsUserEntity ? !_avatars.ContainsKey(slot.EntityId) : !_floorItems.ContainsKey(slot.EntityId))
+                continue;
+            _variable_fx_values.TryGetValue(slot, out VariableFxValue? previous);
+            var current = new VariableFxValue(
+                slot,
+                entry.Value,
+                entry.MinValue,
+                entry.MaxValue,
+                entry.Extra,
+                entry.IsInitialize || message.IsInitialize,
+                null,
+                checked(_revision + 1),
+                timestamp);
+            _variable_fx_values[slot] = current;
+            Publish(VariableFxChanged, BindVariableFx(current), previous is null ? null : BindVariableFx(previous));
+        }
+    }
+
+    private void RemoveVariableFx(VariableFxStatusRemoval message)
+    {
+        foreach (VariableFxSlot slot in message.Slots)
+        {
+            if (_variable_fx_values.Remove(slot, out VariableFxValue? removed))
+                Publish(VariableFxRemoved, BindVariableFx(removed));
+        }
+    }
+
+    private void DropVariableFx(bool is_user, long entity_id)
+    {
+        foreach (VariableFxValue removed in _variable_fx_values.Values
+            .Where(value => value.IsUser == is_user && value.EntityId == entity_id)
+            .ToArray())
+        {
+            _variable_fx_values.Remove(removed.Slot);
+            Publish(VariableFxRemoved, BindVariableFx(removed));
         }
     }
 
@@ -858,7 +1047,7 @@ public sealed class RoomManager : GameStateManager
         ClearRoom();
         State = RoomSessionState.Outside;
         if (had_state)
-            Generation++;
+            AdvanceGeneration();
         if (!preserve_access)
             SetAccessState(RoomAccessState.Idle, null);
         if (left)
@@ -907,6 +1096,8 @@ public sealed class RoomManager : GameStateManager
         _floorItems.Clear();
         _wallItems.Clear();
         _avatars.Clear();
+        _variable_fx_configs.Clear();
+        _variable_fx_values.Clear();
     }
 
     private GuestRoomResult? TakePendingRoomResult(Id room_id)
@@ -938,6 +1129,17 @@ public sealed class RoomManager : GameStateManager
             foreach (WallItem item in _wallItems.Values)
                 Enrich(item);
         });
+    }
+
+    /// <summary>The Fx bar values of one avatar, by room index, or of one furni, by item id.</summary>
+    public IReadOnlyList<VariableFxValue> VariableFxOf(bool is_user, long entity_id)
+    {
+        lock (_state_sync)
+        {
+            return [.. _variable_fx_values.Values
+                .Where(value => value.IsUser == is_user && value.EntityId == entity_id)
+                .Select(BindVariableFx)];
+        }
     }
 
     public FloorItem? FloorItem(Id id) => _floorItems.GetValueOrDefault(id);
@@ -1194,6 +1396,7 @@ public sealed class RoomManager : GameStateManager
                             continue;
                         _avatars.TryRemove(index, out _);
                         cached.IsRemoved = true;
+                        DropVariableFx(true, index);
                         Publish(AvatarRemoved, cached);
                     }
                 }
@@ -1291,6 +1494,7 @@ public sealed class RoomManager : GameStateManager
             if (_avatars.Remove(message.Index, out Avatar? avatar))
             {
                 avatar.IsRemoved = true;
+                DropVariableFx(true, message.Index);
                 Publish(AvatarRemoved, avatar);
             }
         });
@@ -1306,8 +1510,10 @@ public sealed class RoomManager : GameStateManager
                 avatar.Direction = status.Direction;
                 avatar.HeadDirection = status.HeadDirection;
                 avatar.CurrentUpdate = status;
+                avatar.MovingTo = status.MovingTo;
                 if (previous != avatar.Location)
                     Publish(AvatarMoved, avatar, previous, avatar.Location);
+                PublishMovement(avatar, previous, avatar.Location, avatar.MovingTo, MovementSource.Walk, 0);
                 Publish(AvatarUpdated, avatar);
             }
         });
@@ -1433,6 +1639,8 @@ public sealed class RoomManager : GameStateManager
                 previous_item.IsRemoved = true;
                 if (previous_item.Location != message.Item.Location)
                     Publish(FloorItemMoved, message.Item, previous_item.Location, message.Item.Location);
+                if (previous_item.Location != message.Item.Location || previous_item.Direction != message.Item.Direction)
+                    PublishMovement(message.Item, previous_item.Location, MovementSource.Update, 0);
                 if (!ReferenceEquals(previous_item.Data, message.Item.Data))
                     Publish(FloorItemDataChanged, message.Item, previous_item.Data, message.Item.Data);
             }
@@ -1525,6 +1733,7 @@ public sealed class RoomManager : GameStateManager
                     item.Location = new Tile(message.To.X, message.To.Y, slide.ToZ);
                     if (previous != item.Location)
                         Publish(FloorItemMoved, item, previous, item.Location);
+                    PublishMovement(item, previous, MovementSource.Roller, 0);
                     Publish(FloorItemUpdated, item);
                 }
 
@@ -1534,8 +1743,16 @@ public sealed class RoomManager : GameStateManager
                     return;
                 Tile previous = mover.Location;
                 mover.Location = new Tile(message.To.X, message.To.Y, avatar.ToZ);
+                mover.MovingTo = null;
                 if (previous != mover.Location)
                     Publish(AvatarMoved, mover, previous, mover.Location);
+                PublishMovement(
+                    mover,
+                    new Tile(message.From.X, message.From.Y, avatar.FromZ),
+                    mover.Location,
+                    null,
+                    MovementSource.Roller,
+                    0);
                 Publish(AvatarUpdated, mover);
             }
         });
@@ -1550,8 +1767,10 @@ public sealed class RoomManager : GameStateManager
                         a.Location = av.Destination;
                         a.Direction = av.BodyDirection;
                         a.HeadDirection = av.HeadDirection;
+                        a.MovingTo = null;
                         if (previous_avatar_location != a.Location)
                             Publish(AvatarMoved, a, previous_avatar_location, a.Location);
+                        PublishMovement(a, av.Source, a.Location, null, MovementSource.Wired, av.AnimationTime);
                         Publish(AvatarUpdated, a);
                         break;
                     case AvatarDirectionWiredMovement ad when _avatars.TryGetValue(ad.AvatarIndex, out Avatar? a):
@@ -1565,6 +1784,7 @@ public sealed class RoomManager : GameStateManager
                         item.Direction = fm.Rotation;
                         if (previous_floor_location != item.Location)
                             Publish(FloorItemMoved, item, previous_floor_location, item.Location);
+                        PublishMovement(item, previous_floor_location, MovementSource.Wired, fm.AnimationTime);
                         Publish(FloorItemUpdated, item);
                         break;
                     case WallItemWiredMovement wm when _wallItems.TryGetValue(wm.ItemId, out WallItem? item):
@@ -1576,6 +1796,25 @@ public sealed class RoomManager : GameStateManager
                         break;
                 }
         });
+
+        OnRoomState(MessageContracts.Wired.VariableFx.Configs, message =>
+        {
+            foreach (VariableFxConfigEntry config in message.Configs)
+                ChangeVariableFxConfig(config.IsUserFx, config.ConfigId, config);
+        });
+
+        OnRoomState(MessageContracts.Wired.VariableFx.ConfigsRemoved, message =>
+        {
+            foreach (int config_id in message.ConfigIds)
+            {
+                ChangeVariableFxConfig(true, config_id, null);
+                ChangeVariableFxConfig(false, config_id, null);
+            }
+        });
+
+        OnRoomState(MessageContracts.Wired.VariableFx.Statuses, ApplyVariableFx);
+
+        OnRoomState(MessageContracts.Wired.VariableFx.StatusesRemoved, RemoveVariableFx);
 
         OnRoomState(MessageContracts.Room.Chat.Talk, message =>
             Publish(Chat, message with { Type = ChatType.Talk }));

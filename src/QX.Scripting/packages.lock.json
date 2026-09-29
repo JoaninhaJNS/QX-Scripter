@@ -71,6 +71,9 @@
           "QX.Wire": "[0.0.1, )"
         }
       },
+      "qx.platform": {
+        "type": "Project"
+      },
       "qx.protocol": {
         "type": "Project",
         "dependencies": {

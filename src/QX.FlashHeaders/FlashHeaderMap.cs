@@ -18,7 +18,8 @@ public enum NameSource
     StructureHash,
     ReferenceClass,
     ReferenceId,
-    ConstructorName
+    ConstructorName,
+    Usage
 }
 
 public sealed class FlashHeaderDefinition

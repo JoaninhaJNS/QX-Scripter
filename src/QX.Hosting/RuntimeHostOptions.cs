@@ -1,6 +1,7 @@
 using Qx.ClientCatalog.InstalledClients;
 using Qx.Interception.GEarth;
 using Qx.Mcp;
+using Qx.Platform;
 
 namespace Qx.Hosting;
 
@@ -37,6 +38,12 @@ public sealed record RuntimeHostOptions
     public int McpPort { get; init; } = 9390;
 
     public McpConfig? McpConfiguration { get; init; }
+
+    /// <summary>
+    /// The keyboard scripts and the session rules read. Left unset, the host opens the system
+    /// keyboard itself and closes it on disposal; a keyboard passed in is owned by the caller.
+    /// </summary>
+    public Keyboard? Keyboard { get; init; }
 
     internal void Validate()
     {

@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Qx.Game;
 using Qx.Game.Application;
 using Qx.Interception;
+using Qx.Platform;
 using Qx.Scripting;
 
 namespace Qx.Hosting;
@@ -43,6 +44,7 @@ public sealed class ScriptExecutionService(
     IInterceptor extension,
     GameState game,
     IApplicationRuntime application,
+    Keyboard keyboard,
     CancellationToken lifetime = default)
 {
     readonly ConcurrentDictionary<string, RunMarker> _active = new(StoragePaths.FileComparer);
@@ -302,7 +304,7 @@ public sealed class ScriptExecutionService(
                         return;
                     }
                     RequestCancellation(TerminationCause.BackgroundFinished);
-                });
+                }, keyboard);
 
                 if (request.ConfigureAsync is not null)
                 {

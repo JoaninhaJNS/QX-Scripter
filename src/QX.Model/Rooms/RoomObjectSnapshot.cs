@@ -54,6 +54,7 @@ internal static class RoomObjectSnapshot
         snapshot.Direction = avatar.Direction;
         snapshot.HeadDirection = avatar.HeadDirection;
         snapshot.CurrentUpdate = avatar.CurrentUpdate?.Snapshot();
+        snapshot.MovingTo = avatar.MovingTo;
         snapshot.Dance = avatar.Dance;
         snapshot.Effect = avatar.Effect;
         snapshot.HandItem = avatar.HandItem;

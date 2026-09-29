@@ -611,6 +611,32 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>
+    /// Clicks one piece of furni the way the client does when it is clicked in the room. Unlike
+    /// <see cref="Use"/> this does not trigger the furni; the server answers with what a click
+    /// means for it, such as walking up to a teleporter.
+    /// </summary>
+    public void Click(Furni item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        SendMessage(
+            MessageContracts.Room.ItemClick,
+            new ClickRoomItemRequest(item.Id, item is FloorItem ? ItemType.Floor : ItemType.Wall));
+    }
+
+    internal void ClickItem(
+        Id item_id,
+        ItemType type,
+        Session expected_session,
+        long expected_room_generation,
+        CancellationToken cancellation_token) =>
+        SendGenerationGuardedMessage(
+            MessageContracts.Room.ItemClick,
+            new ClickRoomItemRequest(item_id, type),
+            expected_session,
+            expected_room_generation,
+            cancellation_token);
+
     public void EnterOneWayDoor(Id item_id) =>
         SendMessage(
             MessageContracts.Room.FloorItem.OneWayDoorEnter,

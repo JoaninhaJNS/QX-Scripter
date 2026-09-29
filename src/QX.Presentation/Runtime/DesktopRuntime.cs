@@ -5,6 +5,7 @@ using Qx.Game.Rules;
 using Qx.Hosting;
 using Qx.Interception.GEarth;
 using Qx.Mcp;
+using Qx.Platform;
 using Qx.Presentation.Platform;
 using Qx.Presentation.Services.Editor;
 using Qx.Protocol;
@@ -18,12 +19,11 @@ public sealed class DesktopRuntime : IAsyncDisposable
     readonly RuntimeHost _host;
     int _disposed;
 
-    public DesktopRuntime(LaunchOptions launch, IAppPaths paths, RuntimeProfile profile, int? mcp_port, DeferredEditorBridge editor, IKeyboardState keyboard)
+    public DesktopRuntime(LaunchOptions launch, IAppPaths paths, RuntimeProfile profile, int? mcp_port, DeferredEditorBridge editor)
     {
         ArgumentNullException.ThrowIfNull(launch);
         ArgumentNullException.ThrowIfNull(paths);
         ArgumentNullException.ThrowIfNull(editor);
-        ArgumentNullException.ThrowIfNull(keyboard);
         Launch = launch;
         bool live = profile == RuntimeProfile.Live;
         var options = new RuntimeHostOptions
@@ -37,11 +37,12 @@ public sealed class DesktopRuntime : IAsyncDisposable
             EnableMcp = live,
             EnableFallbackCatalogs = live,
             EnableClientMonitoring = live,
-            McpConfiguration = live ? McpConfig.Load(paths.McpConfigFile) : McpConfig.CreateDefault()
+            McpConfiguration = live ? McpConfig.Load(paths.McpConfigFile) : McpConfig.CreateDefault(),
+            Keyboard = live ? null : Keyboard.Unsupported("The keyboard is only read in a live session.")
         };
         if (mcp_port is { } port)
             options = options with { McpPort = port };
-        _host = new RuntimeHost(options, editor, keyboard.IsSupported ? keyboard.IsShiftDown : null);
+        _host = new RuntimeHost(options, editor);
         _host.Rules.AntiIdleSeconds = SessionRules.DefaultAntiIdleSeconds;
     }
 
@@ -54,6 +55,8 @@ public sealed class DesktopRuntime : IAsyncDisposable
     public IApplicationRuntime Application => _host.Application;
 
     public SessionRules Rules => _host.Rules;
+
+    public Keyboard Keyboard => _host.Keyboard;
 
     public ScriptExecutionService Scripts => _host.ScriptExecution;
 

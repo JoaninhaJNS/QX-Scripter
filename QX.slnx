@@ -11,6 +11,7 @@
     <Project Path="src/QX.Interception/QX.Interception.csproj" />
     <Project Path="src/QX.Mcp/QX.Mcp.csproj" />
     <Project Path="src/QX.Model/QX.Model.csproj" />
+    <Project Path="src/QX.Platform/QX.Platform.csproj" />
     <Project Path="src/QX.Presentation/QX.Presentation.csproj" />
     <Project Path="src/QX.Protocol/QX.Protocol.csproj" />
     <Project Path="src/QX.Scripting/QX.Scripting.csproj" />

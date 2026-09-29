@@ -68,11 +68,9 @@ public sealed class DesktopComposition : IDisposable
         var lifetime = new AppLifetime();
         services.AddSingleton(_ => lifetime);
         AddDesktopPlatform(services, options);
-        IKeyboardState keyboard = KeyboardStateFor(options);
-        services.AddSingleton(keyboard);
         var editor = new DeferredEditorBridge();
         services.AddSingleton(editor);
-        var runtime = new DesktopRuntime(launch, paths, options.Runtime, options.McpPort, editor, keyboard);
+        var runtime = new DesktopRuntime(launch, paths, options.Runtime, options.McpPort, editor);
         services.AddSingleton(runtime);
         diagnostics.AttachRuntime(runtime);
         runtime.StartAsync(lifetime.Token).Observe("host");
@@ -198,9 +196,6 @@ public sealed class DesktopComposition : IDisposable
         services.AddSingleton<IFileRevealer, FolderRevealer>();
         services.AddSingleton<IGlobalHotkeys, NoGlobalHotkeys>();
     }
-
-    static IKeyboardState KeyboardStateFor(DesktopCompositionOptions options) =>
-        OperatingSystem.IsWindows() && options.Runtime == RuntimeProfile.Live ? new Win32KeyboardState() : new NoKeyboardState();
 
     void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs args)
     {

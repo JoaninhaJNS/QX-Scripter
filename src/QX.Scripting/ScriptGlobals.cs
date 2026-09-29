@@ -66,6 +66,7 @@ public partial class ScriptGlobals : IDisposable
     private readonly CancellationToken _cancellationToken;
     private readonly Action<Exception>? _backgroundError;
     private readonly Action? _backgroundFinishedCallback;
+    private readonly Qx.Platform.Keyboard _hostKeyboard;
 
     public ScriptGlobals(
         IInterceptor extension,
@@ -81,6 +82,7 @@ public partial class ScriptGlobals : IDisposable
             log,
             cancellationToken,
             backgroundError,
+            null,
             null)
     {
     }
@@ -92,9 +94,11 @@ public partial class ScriptGlobals : IDisposable
         Action<string> log,
         CancellationToken cancellationToken,
         Action<Exception>? backgroundError,
-        Action? backgroundFinished)
+        Action? backgroundFinished,
+        Qx.Platform.Keyboard? keyboard)
     {
         Ext = extension;
+        _hostKeyboard = keyboard ?? NoKeyboard;
         Game = game;
         Application = application;
         _log = log;
@@ -569,7 +573,7 @@ public partial class ScriptGlobals : IDisposable
     /// object: its position, dance, effect and idle state are updated in place as packets
     /// arrive.
     /// </summary>
-    public User? SelfAvatar => SelfProfile is { } data ? Room.AvatarById(data.Id) as User : null;
+    public User? SelfAvatar => Room.Self as User;
 
     /// <summary>Alias of <see cref="SelfProfile"/>.</summary>
     public UserData? Self => SelfProfile;
@@ -831,6 +835,22 @@ public partial class ScriptGlobals : IDisposable
             ClientType.None,
             intercept => handler(ParseCopy<T>(name, intercept.Packet))));
 
+    /// <summary>
+    /// Intercepts an incoming message, parses it into <typeparamref name="T"/> and hands over the
+    /// intercept as well, so the handler can read the typed message and still block the packet
+    /// with <see cref="Intercept.Block"/>.
+    /// </summary>
+    /// <typeparam name="T">The message model to parse the packet as.</typeparam>
+    /// <returns>A handle that unsubscribes when disposed; also disposed when the script stops.</returns>
+    public IDisposable OnIn<T>(string name, Action<T, Intercept> handler) where T : IParserComposer<T>
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return Track(InterceptIncomingEvent(
+            name,
+            ClientType.None,
+            intercept => handler(ParseCopy<T>(name, intercept.Packet), intercept)));
+    }
+
     private IDisposable OnIn<T>(MessageContract<T> contract, Action<T> handler)
         where T : IParserComposer<T> =>
         Track(Ext.Intercept(
@@ -853,6 +873,23 @@ public partial class ScriptGlobals : IDisposable
             name,
             ClientType.None,
             intercept => handler(ParseCopy<T>(name, intercept.Packet))));
+
+    /// <summary>
+    /// Intercepts an outgoing message, parses it into <typeparamref name="T"/> and hands over the
+    /// intercept as well, so the handler can read the typed message and still block the packet
+    /// with <see cref="Intercept.Block"/>. This is how a click in the room can be turned into a
+    /// tile pick instead of a walk.
+    /// </summary>
+    /// <typeparam name="T">The message model to parse the packet as.</typeparam>
+    /// <returns>A handle that unsubscribes when disposed; also disposed when the script stops.</returns>
+    public IDisposable OnOut<T>(string name, Action<T, Intercept> handler) where T : IParserComposer<T>
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return Track(InterceptOutgoingEvent(
+            name,
+            ClientType.None,
+            intercept => handler(ParseCopy<T>(name, intercept.Packet), intercept)));
+    }
 
     /// <summary>
     /// Waits for the next packet with the given message name, in either direction, and parses

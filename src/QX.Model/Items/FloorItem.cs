@@ -21,6 +21,9 @@ public sealed class FloorItem : Furni, IParserComposer<FloorItem>
 
     public Area Area => AreaFor(SizeX, SizeZ);
 
+    /// <summary>The tile directly in front of the item, the way its rotation faces.</summary>
+    public Point Front => Location.XY.Step(Direction);
+
     public override int State => Data.State;
 
     public FloorItem() { }

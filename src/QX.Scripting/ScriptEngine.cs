@@ -23,7 +23,8 @@ public static class ScriptEngine
         typeof(RoomManager).Assembly,
         typeof(IPacket).Assembly,
         typeof(Qx.Protocol.MessageKey).Assembly,
-        typeof(RoomEntryInfo).Assembly
+        typeof(RoomEntryInfo).Assembly,
+        typeof(Qx.Platform.Keyboard).Assembly
     ];
 
     public static IReadOnlyList<string> Imports { get; } =
@@ -54,6 +55,7 @@ public static class ScriptEngine
         "Qx.Model.Subscriptions",
         "Qx.Model.Wired",
         "Qx.Game.Snapshots",
+        "Qx.Platform",
         "Qx.Scripting"
     ];
 

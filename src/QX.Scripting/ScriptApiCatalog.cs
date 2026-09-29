@@ -261,6 +261,10 @@ public static class ScriptApiCatalog
 
     private static readonly (string Prefix, string Group)[] Prefixes =
     [
+        ("Movement", "Movement"),
+        ("VariableFx", "Variable Fx"),
+        ("Keyboard", "Platform"),
+        ("Os", "Platform"),
         ("Achievement", "Achievements"),
         ("Earning", "Earnings"),
         ("Chest", "Wired chests"),

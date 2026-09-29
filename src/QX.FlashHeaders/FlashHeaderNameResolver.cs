@@ -7,10 +7,12 @@ public sealed partial class FlashHeaderNameResolver
 {
     readonly Avm2CallTargetResolver _types;
     readonly SignatureDatabase? _database;
+    readonly SwfInfo? _swf;
 
     public FlashHeaderNameResolver(SwfInfo swf, SignatureDatabase? database = null)
     {
         _database = database;
+        _swf = swf;
         _types = new Avm2CallTargetResolver(
             swf.DeclaringScopes,
             swf.AuthenticatedHarmanTransform);
@@ -24,6 +26,7 @@ public sealed partial class FlashHeaderNameResolver
             Resolve(definition, incoming: true, overwrite);
         foreach (FlashHeaderDefinition definition in map.Outgoing)
             Resolve(definition, incoming: false, overwrite);
+        ResolveByUsage(map);
     }
 
     void Resolve(FlashHeaderDefinition definition, bool incoming, bool overwrite)

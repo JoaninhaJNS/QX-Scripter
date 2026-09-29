@@ -289,7 +289,7 @@ public partial class ScriptGlobals
     /// <param name="value">The integer value to store.</param>
     /// <param name="timeoutMs">How long to wait for the definitions used to resolve the name.</param>
     /// <exception cref="InvalidOperationException">
-    /// The room has no furni-target wired variable with that name or id.
+    /// The room has no writable furni-target wired variable with that name or id.
     /// </exception>
     /// <exception cref="Qx.Game.RequestTimeoutException">The definitions did not arrive in time.</exception>
     public async Task SetFurniValue(Id furniId, string name, int value, int timeoutMs = 10000)
@@ -308,7 +308,7 @@ public partial class ScriptGlobals
     /// <param name="value">The integer value to store.</param>
     /// <param name="timeoutMs">How long to wait for the definitions used to resolve the name.</param>
     /// <exception cref="InvalidOperationException">
-    /// The room has no global-target wired variable with that name or id.
+    /// The room has no writable global-target wired variable with that name or id.
     /// </exception>
     /// <exception cref="Qx.Game.RequestTimeoutException">The definitions did not arrive in time.</exception>
     public async Task SetGlobalValue(string name, int value, int timeoutMs = 10000)
@@ -324,11 +324,14 @@ public partial class ScriptGlobals
         WiredTarget target)
     {
         foreach (WiredVariableSnapshot v in vars.All)
-            if (v.VariableTarget == (int)target && v.VariableName == name) return v;
+            if (writable(v, target) && v.VariableName == name) return v;
         foreach (WiredVariableSnapshot v in vars.All)
-            if (v.VariableTarget == (int)target && v.VariableId == name) return v;
-        throw new InvalidOperationException($"No {target} wired variable named '{name}' in this room.");
+            if (writable(v, target) && v.VariableId == name) return v;
+        throw new InvalidOperationException($"No writable {target} wired variable named '{name}' in this room.");
     }
+
+    private static bool writable(WiredVariableSnapshot variable, WiredTarget target) =>
+        variable.VariableTarget == (int)target && variable.HasValue && variable.CanWriteValue;
 
     public IDisposable WatchVariables(
         Action<WiredVariableCollectionSnapshot> onChange,
@@ -353,20 +356,42 @@ public partial class ScriptGlobals
         int interval_ms,
         CancellationToken cancellation_token)
     {
+        (long RoomGeneration, int Hash)? last_poll = null;
         (long Generation, int Hash)? last_state = null;
         while (!cancellation_token.IsCancellationRequested)
         {
-            WiredVariableCollectionSnapshot current =
-                await Application.InvokeAsync<
-                    WiredVariableListRequest,
-                    WiredVariableCollectionSnapshot>(
-                    ApplicationMemberIds.WiredVariablesList,
-                    new WiredVariableListRequest(),
-                    cancellation_token);
-            var current_state = (current.Generation, current.AllVariablesHash);
-            if (last_state != current_state)
+            WiredVariableCollectionSnapshot? current = null;
+            if (Room.IsReady)
             {
-                last_state = current_state;
+                try
+                {
+                    long room_generation = Room.Generation;
+                    WiredAllVariablesHash hash =
+                        await Application.InvokeAsync<WiredTimeoutRequest, WiredAllVariablesHash>(
+                            ApplicationMemberIds.WiredVariablesHashGet,
+                            new WiredTimeoutRequest(),
+                            cancellation_token);
+                    var poll = (room_generation, hash.AllVariablesHash);
+                    if (last_poll != poll)
+                    {
+                        current = await Application.InvokeAsync<
+                            WiredVariableListRequest,
+                            WiredVariableCollectionSnapshot>(
+                            ApplicationMemberIds.WiredVariablesList,
+                            new WiredVariableListRequest(),
+                            cancellation_token);
+                        last_poll = poll;
+                    }
+                }
+                catch (Exception error) when (
+                    error is RequestTimeoutException or RequestDisconnectedException ||
+                    error is InvalidOperationException && !Room.IsReady)
+                {
+                }
+            }
+            if (current is not null && last_state != (current.Generation, current.AllVariablesHash))
+            {
+                last_state = (current.Generation, current.AllVariablesHash);
                 on_change(current);
             }
             await Task.Delay(interval_ms, cancellation_token);

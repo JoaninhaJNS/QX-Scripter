@@ -238,8 +238,8 @@ public partial class ScriptGlobals
     /// timestamps per slot.
     /// </summary>
     /// <param name="entityType">
-    /// The entity kind. 1 means the user's own/default entity, and is the value for which the
-    /// reply omits the owner block; any other value carries owner id, name and figure.
+    /// The entity kind. 1 is a user, which has no owner; the reply for any other kind also
+    /// carries the owner's id, name and figure.
     /// </param>
     /// <param name="entityId">The entity's id.</param>
     /// <param name="timeoutMs">How long to wait for the reply, in milliseconds.</param>
@@ -260,11 +260,12 @@ public partial class ScriptGlobals
     /// <param name="variableId">The variable's id string.</param>
     /// <param name="page">The one-based page number; the game client starts at 1.</param>
     /// <param name="pageSize">How many rows per page; the game client uses 50.</param>
-    /// <param name="userTypeFilter">
-    /// The entity-type filter the table applies; the game client sends 0 for "no filter".
-    /// </param>
     /// <param name="sortFilter">
-    /// The sort order the table applies; the game client sends -1 for "default order".
+    /// The sort order the table applies; the game client opens the table with 0.
+    /// </param>
+    /// <param name="userTypeFilter">
+    /// The entity-type filter the table applies; the game client opens the table with -1, which
+    /// shows every entity type.
     /// </param>
     /// <param name="timeoutMs">How long to wait for the reply, in milliseconds.</param>
     /// <returns>
@@ -272,23 +273,23 @@ public partial class ScriptGlobals
     /// </returns>
     /// <exception cref="Qx.Game.RequestTimeoutException">No reply arrived in time.</exception>
     public Task<WiredVariableOwnersSnapshot> GetVariableOwnersPage(
-        string variableId, int page = 1, int pageSize = 50, int userTypeFilter = 0, int sortFilter = -1, int timeoutMs = 10000) =>
+        string variableId, int page = 1, int pageSize = 50, int sortFilter = 0, int userTypeFilter = -1, int timeoutMs = 10000) =>
         wired_call<WiredVariableOwnersRequest, WiredVariableOwnersSnapshot>(
             ApplicationMemberIds.WiredVariablesOwnersGet,
             new WiredVariableOwnersRequest(
                 variableId,
                 page,
                 pageSize,
-                userTypeFilter,
                 sortFilter,
+                userTypeFilter,
                 timeoutMs));
 
     /// <summary>
     /// Writes, creates or deletes a wired variable value on one object, taking the object id as a
-    /// 32-bit value. Returns immediately: the server sends no acknowledgement, so the effect is
-    /// only visible through the hash/diff poll.
+    /// 32-bit value. Returns immediately: the server sends no acknowledgement, so read the object's
+    /// values again to see the effect.
     /// </summary>
-    /// <param name="target">The holder kind: 0 furni, 1 user, 2 merged, -10 global, -20 context.</param>
+    /// <param name="target">The holder kind: 0 furni, 1 user, -10 global.</param>
     /// <param name="objectId">The furni id, the user's room index, or 0 for global.</param>
     /// <param name="variableId">The variable's id string, not its display name.</param>
     /// <param name="value">The integer value to store; ignored for a delete.</param>
@@ -311,7 +312,7 @@ public partial class ScriptGlobals
     /// Writes, creates or deletes a wired variable value on one object, taking the object id as a
     /// native id. Returns immediately; the server sends no acknowledgement.
     /// </summary>
-    /// <param name="target">The holder kind: 0 furni, 1 user, 2 merged, -10 global, -20 context.</param>
+    /// <param name="target">The holder kind: 0 furni, 1 user, -10 global.</param>
     /// <param name="objectId">The furni id, the user's room index, or 0 for global.</param>
     /// <param name="variableId">The variable's id string, not its display name.</param>
     /// <param name="value">The integer value to store; ignored for a delete.</param>
@@ -384,10 +385,24 @@ public partial class ScriptGlobals
         SetObjectVariable(target, objectId, variableId, 0, WiredVariableOperation.Delete);
 
     /// <summary>
+    /// Deletes a wired variable from every furni and user holding it, as the delete button of the
+    /// wired menu's variable overview does. Returns immediately; no acknowledgement is sent.
+    /// </summary>
+    /// <param name="variableId">The variable's id string.</param>
+    /// <remarks>
+    /// The game client only offers this with wired modify rights, for a persisted furni or user
+    /// variable that can be created and deleted.
+    /// </remarks>
+    public void DeleteAllVariableHolders(string variableId) =>
+        wired_send(
+            ApplicationMemberIds.WiredVariablesHoldersDelete,
+            new WiredVariableHoldersDeleteRequest(variableId));
+
+    /// <summary>
     /// Writes, creates or deletes a permanent variable on one entity and waits for the server's
     /// answer. Unlike the object-variable writes, this one is acknowledged.
     /// </summary>
-    /// <param name="entityType">The entity kind; 1 is the user's own/default entity.</param>
+    /// <param name="entityType">The entity kind; 1 is a user.</param>
     /// <param name="entityId">The entity's id.</param>
     /// <param name="variableId">The variable's id string.</param>
     /// <param name="value">The integer value to store; ignored for a delete.</param>

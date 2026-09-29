@@ -158,6 +158,10 @@ public static class MessageContracts
         Wired.State.ClickSettings,
         Wired.State.MenuError,
         Wired.State.RewardResult,
+        Wired.VariableFx.Configs,
+        Wired.VariableFx.ConfigsRemoved,
+        Wired.VariableFx.Statuses,
+        Wired.VariableFx.StatusesRemoved,
         Wired.Configuration.Opened,
         Wired.Configuration.OpenRequest,
         Wired.Configuration.ApplySnapshot,
@@ -197,6 +201,7 @@ public static class MessageContracts
         Wired.Variables.Object,
         Wired.Variables.HoldersRequest,
         Wired.Variables.Holders,
+        Wired.Variables.HoldersDelete,
         Wired.Variables.PermanentRequest,
         Wired.Variables.Permanent,
         Wired.Variables.OwnersRequest,
@@ -349,6 +354,7 @@ public static class MessageContracts
         Room.Typing.Start,
         Room.Typing.Cancel,
         Room.ItemPickup,
+        Room.ItemClick,
         Room.ItemPickupConfirmation,
         Room.WallItem.Added,
         Room.WallItem.Removed,
@@ -1302,6 +1308,21 @@ public static class MessageContracts
                 Flash<WiredRewardResult>(MessageKeys.Wired.State.RewardResult);
         }
 
+        public static class VariableFx
+        {
+            public static readonly MessageContract<VariableFxConfigUpdate> Configs =
+                Flash<VariableFxConfigUpdate>(MessageKeys.Wired.VariableFx.Configs);
+
+            public static readonly MessageContract<VariableFxConfigRemoval> ConfigsRemoved =
+                Flash<VariableFxConfigRemoval>(MessageKeys.Wired.VariableFx.ConfigsRemoved);
+
+            public static readonly MessageContract<VariableFxStatusUpdate> Statuses =
+                Flash<VariableFxStatusUpdate>(MessageKeys.Wired.VariableFx.Statuses);
+
+            public static readonly MessageContract<VariableFxStatusRemoval> StatusesRemoved =
+                Flash<VariableFxStatusRemoval>(MessageKeys.Wired.VariableFx.StatusesRemoved);
+        }
+
         public static class Configuration
         {
             public static readonly MessageContract<WiredOpen> Opened =
@@ -1432,6 +1453,9 @@ public static class MessageContracts
 
             public static readonly MessageContract<WiredAllVariableHolders> Holders =
                 Flash<WiredAllVariableHolders>(MessageKeys.Wired.Variables.Holders);
+
+            public static readonly MessageContract<WiredDeleteAllVariableHolders> HoldersDelete =
+                Flash<WiredDeleteAllVariableHolders>(MessageKeys.Wired.Variables.HoldersDelete);
 
             public static readonly MessageContract<WiredGetUserPermanentVariables> PermanentRequest =
                 Flash<WiredGetUserPermanentVariables>(MessageKeys.Wired.Variables.PermanentRequest);
@@ -1898,6 +1922,9 @@ public static class MessageContracts
 
         public static readonly MessageContract<PickupRoomItemRequest> ItemPickup =
             Flash<PickupRoomItemRequest>(MessageKeys.Room.Item.Pickup);
+
+        public static readonly MessageContract<ClickRoomItemRequest> ItemClick =
+            Flash<ClickRoomItemRequest>(MessageKeys.Room.Item.Click);
 
         public static readonly MessageContract<PickupConfirmation> ItemPickupConfirmation =
             Flash<PickupConfirmation>(MessageKeys.Room.Item.PickupConfirmation);

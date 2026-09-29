@@ -1103,6 +1103,14 @@ public static class Msg
         public const string UserUpdate = "UserUpdate";
         /// <summary>f:Users</summary>
         public const string Users = "Users";
+        /// <summary>f:VariableFxConfigs</summary>
+        public const string VariableFxConfigs = "VariableFxConfigs";
+        /// <summary>f:VariableFxConfigsRemoved</summary>
+        public const string VariableFxConfigsRemoved = "VariableFxConfigsRemoved";
+        /// <summary>f:VariableFxStatus</summary>
+        public const string VariableFxStatus = "VariableFxStatus";
+        /// <summary>f:VariableFxStatusRemoved</summary>
+        public const string VariableFxStatusRemoved = "VariableFxStatusRemoved";
         /// <summary>f:VoucherRedeemError</summary>
         public const string VoucherRedeemError = "VoucherRedeemError";
         /// <summary>f:VoucherRedeemOk</summary>
@@ -2330,6 +2338,8 @@ public static class Msg
         public const string WiredClearErrorLogs = "WiredClearErrorLogs";
         /// <summary>f:WiredClickUser</summary>
         public const string WiredClickUser = "WiredClickUser";
+        /// <summary>f:WiredDeleteAllVariableHolders</summary>
+        public const string WiredDeleteAllVariableHolders = "WiredDeleteAllVariableHolders";
         /// <summary>f:WiredGetAllVariableHolders</summary>
         public const string WiredGetAllVariableHolders = "WiredGetAllVariableHolders";
         /// <summary>f:WiredGetAllVariablesDiffs</summary>

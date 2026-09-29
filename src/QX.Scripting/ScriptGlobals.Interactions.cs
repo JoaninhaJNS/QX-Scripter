@@ -91,6 +91,36 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
+    /// Clicks a piece of furni the way the game client does when it is clicked in the room. The
+    /// furni is not used; the server answers with whatever a click means for it, such as walking up
+    /// to a teleporter. Fire-and-forget.
+    /// </summary>
+    /// <param name="item">The furni to click, floor or wall.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
+    public void ClickFurni(Furni item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (item is WallItem)
+            ClickWallItem(item.Id);
+        else
+            ClickFloorItem(item.Id);
+    }
+
+    /// <summary>Clicks a floor item by id, as <see cref="ClickFurni(Furni)"/> does.</summary>
+    public void ClickFloorItem(Id item_id) =>
+        Application.Invoke<RoomFloorItemClickRequest, RoomItemDispatchResult>(
+            ApplicationMemberIds.RoomItemFloorClick,
+            new RoomFloorItemClickRequest(item_id),
+            Ct);
+
+    /// <summary>Clicks a wall item by id, as <see cref="ClickFurni(Furni)"/> does.</summary>
+    public void ClickWallItem(Id item_id) =>
+        Application.Invoke<RoomWallItemClickRequest, RoomItemDispatchResult>(
+            ApplicationMemberIds.RoomItemWallClick,
+            new RoomWallItemClickRequest(item_id),
+            Ct);
+
+    /// <summary>
     /// Steps through a one-way gate. Walking onto the tile is not enough — the client sends this
     /// separate message, and the server then moves the avatar through.
     /// </summary>

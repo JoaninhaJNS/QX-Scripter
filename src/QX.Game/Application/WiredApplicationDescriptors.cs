@@ -178,6 +178,15 @@ internal static class WiredApplicationDescriptors
         [VariableIdParameter(), TimeoutParameter()],
         ReadHints());
 
+    public static ApplicationDescriptor VariablesHoldersDelete { get; } = SendCall<
+        WiredVariableHoldersDeleteRequest>(
+        ApplicationMemberIds.WiredVariablesHoldersDelete,
+        "Delete Wired variable from all holders",
+        "Removes one variable from every furni and user holding it, as the variable overview's delete does. The game client only offers this with wired modify rights, for a persisted furni or user variable that can be created and deleted.",
+        MessageKeys.Wired.Variables.HoldersDelete,
+        [VariableIdParameter()],
+        WriteHints(true, true));
+
     public static ApplicationDescriptor VariablesPermanentGet { get; } = RequestResponse<
         WiredPermanentVariablesRequest,
         WiredPermanentVariablesSnapshot>(
@@ -201,8 +210,8 @@ internal static class WiredApplicationDescriptors
             VariableIdParameter(),
             new("page", typeof(int), false, 1, "One-based result page.", new(Minimum: 1)),
             new("page_size", typeof(int), false, 50, "Rows requested from the hotel.", new(Minimum: 1, Maximum: 250)),
-            new("user_type_filter", typeof(int), false, 0, "Hotel entity-type filter."),
-            new("sort_type_filter", typeof(int), false, -1, "Hotel sort-order filter."),
+            new("sort_type_filter", typeof(int), false, 0, "Sort order of the management table; the game client starts with 0."),
+            new("user_type_filter", typeof(int), false, -1, "Entity-type filter of the management table; the game client starts with -1 for all."),
             TimeoutParameter()
         ],
         ReadHints());

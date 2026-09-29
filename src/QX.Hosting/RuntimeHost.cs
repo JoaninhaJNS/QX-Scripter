@@ -8,6 +8,7 @@ using Qx.Game.Rules;
 using Qx.Game.Snapshots;
 using Qx.Interception.GEarth;
 using Qx.Mcp;
+using Qx.Platform;
 using Qx.Protocol;
 using Qx.Scripting;
 
@@ -20,6 +21,7 @@ public sealed class RuntimeHost : IDisposable, IAsyncDisposable
     readonly object _gate = new();
     readonly Dictionary<(ClientType Client, string Path), Exception> _header_catalog_errors = [];
     readonly ApplicationRuntime application_runtime;
+    readonly bool _owns_keyboard;
     Task _transport_task = Task.CompletedTask;
     Task _fallback_task = Task.CompletedTask;
     Task _header_task = Task.CompletedTask;
@@ -38,11 +40,12 @@ public sealed class RuntimeHost : IDisposable, IAsyncDisposable
 
     public RuntimeHost(
         RuntimeHostOptions options,
-        IEditorBridge? editor = null,
-        Func<bool>? shift_pressed = null)
+        IEditorBridge? editor = null)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _options.Validate();
+        _owns_keyboard = _options.Keyboard is null;
+        Keyboard = _options.Keyboard ?? Keyboard.Create();
 
         string scripts_directory = Path.GetFullPath(_options.ScriptsDirectory);
         Directory.CreateDirectory(scripts_directory);
@@ -75,9 +78,9 @@ public sealed class RuntimeHost : IDisposable, IAsyncDisposable
             Game,
             Application,
             _options.SessionRulesPath,
-            shift_pressed);
+            Keyboard.IsSupported ? () => Keyboard.IsDown(Key.Shift) : null);
         Rules.Bind();
-        ScriptExecution = new ScriptExecutionService(Extension, Game, Application, _lifetime.Token);
+        ScriptExecution = new ScriptExecutionService(Extension, Game, Application, Keyboard, _lifetime.Token);
         McpHost = new McpHost(
             Extension,
             Game,
@@ -107,6 +110,8 @@ public sealed class RuntimeHost : IDisposable, IAsyncDisposable
     }
 
     public MessageManager Messages { get; }
+
+    public Keyboard Keyboard { get; }
 
     public MessageContractCatalog Contracts { get; }
 
@@ -488,6 +493,8 @@ public sealed class RuntimeHost : IDisposable, IAsyncDisposable
         Game.Dispose();
         Extension.Dispose();
         Http.Dispose();
+        if (_owns_keyboard)
+            Keyboard.Dispose();
         _lifetime.Dispose();
     }
 

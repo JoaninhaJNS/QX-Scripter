@@ -3,13 +3,6 @@ using Qx.Presentation.Platform;
 
 namespace Qx.Desktop.Platform.Portable;
 
-sealed class NoKeyboardState : IKeyboardState
-{
-    public bool IsSupported => false;
-
-    public bool IsShiftDown() => false;
-}
-
 sealed class NoGlobalHotkeys : IGlobalHotkeys
 {
     public bool IsSupported => false;
