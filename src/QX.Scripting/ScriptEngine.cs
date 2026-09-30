@@ -75,21 +75,32 @@ public static class ScriptEngine
     private static bool HasPhysicalMetadata(Assembly assembly) =>
         File.Exists(assembly.ManifestModule.FullyQualifiedName);
 
-    public static ScriptProgram Prepare(string code, string fileName = "script.csx")
+    /// <summary>
+    /// Compiles a script, making every loop in it and in the files it loads stop with the run.
+    /// </summary>
+    /// <param name="code">The script.</param>
+    /// <param name="fileName">Its path, or a name for a script that has no file.</param>
+    /// <param name="directory">
+    /// The folder <c>#load</c> and <c>#r</c> paths resolve against when the script's own path
+    /// does not settle them, normally the script library.
+    /// </param>
+    public static ScriptProgram Prepare(string code, string fileName = "script.csx", string? directory = null)
     {
         ArgumentNullException.ThrowIfNull(code);
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
 
-        Script<object> script = CSharpScript.Create(
-            code,
-            Options.WithFilePath(fileName).WithFileEncoding(Encoding.UTF8),
-            typeof(ScriptGlobals));
-        string rewritten = ScriptCancellationRewriter.Rewrite(script);
-        if (!string.Equals(code, rewritten, StringComparison.Ordinal))
+        ScriptOptions options = Options
+            .WithFilePath(fileName)
+            .WithFileEncoding(Encoding.UTF8)
+            .WithSourceResolver(new ScriptSourceResolver(directory))
+            .WithMetadataResolver(ScriptMetadataResolver.Default.WithBaseDirectory(directory));
+        Script<object> script = CSharpScript.Create(code, options, typeof(ScriptGlobals));
+        ScriptRewrite rewrite = ScriptCancellationRewriter.Rewrite(script);
+        if (rewrite.Loaded.Count > 0 || !string.Equals(code, rewrite.Main, StringComparison.Ordinal))
         {
             script = CSharpScript.Create(
-                rewritten,
-                Options.WithFilePath(fileName).WithFileEncoding(Encoding.UTF8),
+                rewrite.Main,
+                options.WithSourceResolver(new ScriptSourceResolver(directory, rewrite.Loaded)),
                 typeof(ScriptGlobals));
         }
         return new ScriptProgram(script);
@@ -108,8 +119,26 @@ public static class ScriptEngine
         CancellationToken cancellationToken = default) =>
         Prepare(code, fileName).RunAsync(globals, cancellationToken);
 
-    public static ImmutableArray<Diagnostic> Compile(string code, string fileName = "script.csx") =>
-        Prepare(code, fileName).Diagnostics;
+    public static ImmutableArray<Diagnostic> Compile(string code, string fileName = "script.csx", string? directory = null) =>
+        Prepare(code, fileName, directory).Diagnostics;
+
+    /// <summary>
+    /// Compiles, without running, a small script that uses the everyday constructs, so the first
+    /// real run does not pay for loading and JIT-compiling the compiler. Call it off the UI thread.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The sample no longer compiles against the API.</exception>
+    public static void WarmUp()
+    {
+        ScriptProgram program = Prepare(
+            """
+            var items = FloorItems.Where(item => item.Id > 0).ToList();
+            await Delay(0);
+            Log(items.Count);
+            """,
+            "warm-up.csx");
+        if (program.Diagnostics.FirstOrDefault(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error) is { } error)
+            throw new InvalidOperationException($"The compiler warm-up script no longer compiles: {error}");
+    }
 }
 
 public sealed class ScriptProgram

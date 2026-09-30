@@ -247,10 +247,42 @@ public sealed record UiGroupNode(string Title) : UiNode
     public bool Collapsed => Attr.Flag("collapsed") ?? false;
 }
 
+/// <summary>How the script's own output is shown under its panel.</summary>
+/// <param name="Collapsed">Whether it starts folded.</param>
+/// <param name="Height">Its starting height in pixels, or <see langword="null"/> for the default.</param>
+public sealed record UiConsole(bool Collapsed, double? Height);
+
+/// <summary>How the panel's content sits on its page.</summary>
+/// <param name="Centered">Whether the content is centred instead of left-aligned.</param>
+/// <param name="Width">
+/// The widest the content grows in pixels, <see langword="null"/> for the default and
+/// <see cref="double.PositiveInfinity"/> to fill the page.
+/// </param>
+public sealed record UiLayout(bool Centered, double? Width);
+
 public sealed partial class UiSpec
 {
     public string Title { get; set; } = "";
     public string Description { get; set; } = "";
+
+    /// <summary>
+    /// Whether the script only works with its panel, as <c>//@ui:required</c> declares. Such a
+    /// script always runs in panel mode: starting it from the editor opens the panel, and a run
+    /// without a panel is refused instead of finishing at once with default values.
+    /// </summary>
+    public bool Required { get; set; }
+
+    /// <summary>
+    /// The script's own output shown under the panel, as <c>//@ui:console</c> declares, or
+    /// <see langword="null"/> when the panel hides it.
+    /// </summary>
+    public UiConsole? Console { get; set; }
+
+    /// <summary>
+    /// Where the panel's content sits, as <c>//@ui:layout</c> declares, or <see langword="null"/>
+    /// for the default: left-aligned at the theme's width.
+    /// </summary>
+    public UiLayout? Layout { get; set; }
 
     /// <summary>
     /// The panel as written, including its rows and groups.
@@ -276,7 +308,7 @@ public sealed partial class UiSpec
     public List<UiTableNode> Tables { get; } = [];
 
     public bool HasUi =>
-        Nodes.Count > 0 || Title.Length > 0 || Description.Length > 0;
+        Nodes.Count > 0 || Title.Length > 0 || Description.Length > 0 || Required || Console is not null || Layout is not null;
 
     [GeneratedRegex(@"^\s*//\s*@ui:(?<key>\w+)\b\s*(?<rest>.*?)\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex DirectiveRegex();
@@ -331,6 +363,27 @@ public sealed partial class UiSpec
                 case "desc" or "description":
                     spec.Description = Unquote(rest);
                     break;
+
+                case "required":
+                    spec.Required = true;
+                    break;
+
+                case "console":
+                {
+                    UiAttributes options = ParseAttributes(rest, named: false);
+                    spec.Console = new UiConsole(options.Flag("collapsed") is true, options.Number("height"));
+                    break;
+                }
+
+                case "layout":
+                {
+                    UiAttributes options = ParseAttributes(rest, named: false);
+                    double? width = options.Flag("full") is true
+                        ? double.PositiveInfinity
+                        : options.Number("width") is double value && value > 0 ? value : null;
+                    spec.Layout = new UiLayout(options.Flag("center") is true, width);
+                    break;
+                }
 
                 case "section":
                     // The older grammar attached a section to the next field. It now stands on its
@@ -514,7 +567,7 @@ public sealed partial class UiSpec
         return m.Groups["q"].Success ? m.Groups["q"].Value : m.Groups["b"].Value;
     }
 
-    private static UiAttributes ParseAttributes(string rest)
+    private static UiAttributes ParseAttributes(string rest, bool named = true)
     {
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (Match m in AttributeRegex().Matches(rest))
@@ -530,7 +583,8 @@ public sealed partial class UiSpec
         string residue = QuotedRegex().Replace(rest, " ");
         residue = BracketRegex().Replace(residue, " ");
         residue = AttributeRegex().Replace(residue, " ");
-        residue = NameRegex().Replace(residue.TrimStart(), " ");
+        if (named)
+            residue = NameRegex().Replace(residue.TrimStart(), " ");
 
         foreach (Match m in BareFlagRegex().Matches(residue))
         {

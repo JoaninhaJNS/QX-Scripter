@@ -65,6 +65,7 @@ public static class PresentationRegistration
         services.AddSingleton<OutputPreferences>();
         services.AddSingleton<EditorBridge>();
         services.AddSingleton<IEditorBridge>(static provider => provider.GetRequiredService<EditorBridge>());
+        services.AddSingleton<IEditorWarmup, ScriptCompilerWarmup>();
         services.AddSingleton<SessionStatusService>();
         services.AddSingleton<ISessionStatusService>(static provider => provider.GetRequiredService<SessionStatusService>());
         services.AddSingleton<IAlwaysOn>(static provider => provider.GetRequiredService<SessionStatusService>());

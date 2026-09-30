@@ -7,6 +7,9 @@ namespace Qx.Game.Application;
 
 internal static class ForumApplicationDescriptors
 {
+    private static readonly ApplicationExposure dispatch_exposure =
+        ApplicationExposure.Ui | ApplicationExposure.Cli | ApplicationExposure.Scripting;
+
     public static readonly ApplicationDescriptor State = new(
         ApplicationMemberIds.ForumsState,
         "Forum state",
@@ -288,7 +291,7 @@ internal static class ForumApplicationDescriptors
             title,
             "Dispatches exactly one forum read request and returns immediately.",
             ApplicationMemberKind.Operation,
-            ApplicationExposure.All,
+            dispatch_exposure,
         request_type,
         typeof(ForumDispatchResult),
         parameters,

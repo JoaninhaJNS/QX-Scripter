@@ -341,7 +341,7 @@ internal sealed class ApplicationSession
         if (request.Method == "compile_check")
         {
             var diagnostics = await Task.Run(
-                () => ScriptEngine.Compile(script.Code, script.FileName), cancellation_token).ConfigureAwait(false);
+                () => runtime.ScriptExecution.Compile(script.Code, script.FileName), cancellation_token).ConfigureAwait(false);
             return new
             {
                 success = !diagnostics.Any(value => value.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error),

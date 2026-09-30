@@ -1,8 +1,8 @@
-using System.Text.RegularExpressions;
+using Qx.Scripting;
 
 namespace Qx.Presentation.Services.Files;
 
-public static partial class ScriptFileName
+public static class ScriptFileName
 {
     public const string Untitled = "untitled";
     public const string Extension = ".csx";
@@ -60,11 +60,9 @@ public static partial class ScriptFileName
 
     public static string? FromDirective(string code)
     {
-        ArgumentNullException.ThrowIfNull(code);
-        Match match = NameDirective().Match(code);
-        return match.Success ? match.Groups["name"].Value.Trim() : null;
+        if (ScriptHeader.Parse(code).Name is not { } declared)
+            return null;
+        string name = Normalize(declared);
+        return name == Untitled ? null : name;
     }
-
-    [GeneratedRegex(@"^///\s*@name[^\S\n]+(?<name>\S.*?)[^\S\n]*$", RegexOptions.Multiline)]
-    private static partial Regex NameDirective();
 }

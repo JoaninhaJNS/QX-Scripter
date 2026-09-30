@@ -19,6 +19,12 @@ public sealed class McpTool
     public McpRuntimeCapability RuntimeCapability { get; init; } = McpRuntimeCapability.None;
 
     /// <summary>
+    /// Whether tools/list offers the tool when the configuration names no filter of its own. An
+    /// unlisted tool stays reachable through list_mcp_tools, read_mcp_tool and call_mcp_tool.
+    /// </summary>
+    public bool Listed { get; init; } = true;
+
+    /// <summary>
     /// Resolves the per-request deadline in milliseconds from the call arguments.
     /// A tool without a selector, or one returning zero, runs without a deadline.
     /// </summary>

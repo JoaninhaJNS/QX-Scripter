@@ -22,16 +22,27 @@ public sealed class RoslynHostProvider : IEditorWarmup
 
     public void WarmUp() => _host.GetAsync().Observe("editor");
 
-    static Task<QxRoslynHost?> BuildAsync()
+    async Task<QxRoslynHost?> BuildAsync()
     {
+        QxRoslynHost host;
         try
         {
-            return Task.FromResult<QxRoslynHost?>(new QxRoslynHost());
+            host = new QxRoslynHost();
         }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
             Diag.Warn($"Editor code-intelligence unavailable ({error.Message}); scripts still run.", "editor");
-            return Task.FromResult<QxRoslynHost?>(null);
+            return null;
         }
+        try
+        {
+            Directory.CreateDirectory(WorkingDirectory);
+            await host.WarmUpAsync(WorkingDirectory);
+        }
+        catch (Exception error) when (error is not OutOfMemoryException)
+        {
+            Diag.Warn($"Editor warm-up failed ({error.Message}); the first tab may open slower.", "editor");
+        }
+        return host;
     }
 }

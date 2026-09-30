@@ -41,22 +41,25 @@ public sealed partial class ScriptDocument : ObservableObject, IRunSource, IDisp
     IScriptTextBuffer? _buffer;
     string _text;
     bool _disposed;
+    bool _console_seeded;
+    string? _disk_text;
 
     public ScriptDocument(string name, string text, string? file_path, IUiDispatcher dispatcher, TimeProvider time, Func<ScriptDocument, DocumentParts> parts)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(parts);
         _text = text ?? throw new ArgumentNullException(nameof(text));
-        Name = name;
+        Name = ScriptFileName.FromDirective(text) ?? name;
         FilePath = file_path is null ? null : PathComparison.Full(file_path);
         ExecutionIdentity = "ui:" + Guid.NewGuid().ToString("N");
-        HasUi = UiSpec.Parse(text).HasUi;
+        Describe(UiSpec.Parse(text));
         _panel_probe = new Debouncer(dispatcher, time, PanelProbeDelay, ProbePanel);
         DocumentParts built = parts(this);
         Run = built.Run;
         Console = built.Console;
         Panel = built.Panel;
         Run.PropertyChanged += OnRunChanged;
+        SeedConsole();
     }
 
     public ScriptRunController Run { get; }
@@ -105,6 +108,12 @@ public sealed partial class ScriptDocument : ObservableObject, IRunSource, IDisp
 
     [ObservableProperty]
     public partial bool HasUi { get; private set; }
+
+    [ObservableProperty]
+    public partial bool PanelRequired { get; private set; }
+
+    [ObservableProperty]
+    public partial UiConsole? PanelConsole { get; private set; }
 
     public bool IsSaved => FilePath is not null;
 
@@ -175,13 +184,35 @@ public sealed partial class ScriptDocument : ObservableObject, IRunSource, IDisp
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         FilePath = PathComparison.Full(path);
-        Name = ScriptFileName.NameOf(path);
+        RefreshName();
     }
 
     public void MarkClean(string saved_text)
     {
         if (string.Equals(saved_text, Text, StringComparison.Ordinal))
             IsModified = false;
+    }
+
+    /// <summary>
+    /// Records what the file on disk holds now and says whether that is news: different from the
+    /// tab and from what was last noted, so each outside change is acted on once.
+    /// </summary>
+    public bool NoteDiskText(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        if (string.Equals(text, Text, StringComparison.Ordinal) || string.Equals(text, _disk_text, StringComparison.Ordinal))
+        {
+            _disk_text = text;
+            return false;
+        }
+        _disk_text = text;
+        return true;
+    }
+
+    public void Reload(string text)
+    {
+        ReplaceText(text);
+        MarkClean(text);
     }
 
     public void MarkUnsaved()
@@ -226,15 +257,34 @@ public sealed partial class ScriptDocument : ObservableObject, IRunSource, IDisp
 
     void RefreshName()
     {
-        if (ScriptFileName.FromDirective(Text) is { Length: > 0 } directive)
+        if (ScriptFileName.FromDirective(Text) is { } directive)
             Name = directive;
         else if (FilePath is { } path)
             Name = ScriptFileName.NameOf(path);
     }
 
+    void Describe(UiSpec spec)
+    {
+        HasUi = spec.HasUi;
+        PanelRequired = spec.Required;
+        PanelConsole = spec.Console;
+    }
+
+    void SeedConsole()
+    {
+        if (_console_seeded || PanelConsole is not { } options)
+            return;
+        _console_seeded = true;
+        if (options.Height is { } height && height > 0 && Console.ExpandedHeight is null)
+            Console.ExpandedHeight = height;
+        if (!options.Collapsed)
+            Console.Expand();
+    }
+
     void ProbePanel()
     {
-        HasUi = UiSpec.Parse(Text).HasUi;
+        Describe(UiSpec.Parse(Text));
+        SeedConsole();
         if (!HasUi && PanelMode)
             PanelMode = false;
         if (PanelMode)

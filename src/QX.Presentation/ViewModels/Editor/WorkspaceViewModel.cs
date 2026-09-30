@@ -121,7 +121,7 @@ public sealed partial class WorkspaceViewModel : PageViewModel, IApiInsertTarget
 
     public bool IsPanelView => ActiveView == DocumentView.Panel;
 
-    public bool ConsoleVisible => ActiveView == DocumentView.Code;
+    public bool ConsoleVisible => ActiveView == DocumentView.Code || (IsPanelView && Active?.PanelConsole is not null);
 
     public bool HasDocuments => _workspace.Documents.Count > 0;
 
@@ -266,9 +266,13 @@ public sealed partial class WorkspaceViewModel : PageViewModel, IApiInsertTarget
         if (Active is not { } document)
             return;
         if (document.Run.IsAlive)
+        {
             document.Run.RequestStop();
-        else
-            document.Run.Start(null, panel_mode: document.PanelMode);
+            return;
+        }
+        if (document.PanelRequired && !document.PanelMode)
+            SelectPanelMode();
+        document.Run.Start(null, panel_mode: document.PanelMode);
     }
 
     [RelayCommand]
@@ -384,6 +388,7 @@ public sealed partial class WorkspaceViewModel : PageViewModel, IApiInsertTarget
             PanelSurface = _panels.Create(document);
         Watch(document);
         OnPropertyChanged(nameof(Active));
+        OnPropertyChanged(nameof(ConsoleVisible));
         OnPropertyChanged(nameof(CanUsePanelView));
         OnPropertyChanged(nameof(PanelTip));
         OnPropertyChanged(nameof(RunPhase));
@@ -443,6 +448,9 @@ public sealed partial class WorkspaceViewModel : PageViewModel, IApiInsertTarget
             case nameof(ScriptDocument.HasUi):
                 OnPropertyChanged(nameof(CanUsePanelView));
                 OnPropertyChanged(nameof(PanelTip));
+                break;
+            case nameof(ScriptDocument.PanelConsole):
+                OnPropertyChanged(nameof(ConsoleVisible));
                 break;
             case nameof(ScriptDocument.PanelMode):
                 ActiveView = Active is { PanelMode: true } ? DocumentView.Panel : DocumentView.Code;

@@ -1,8 +1,14 @@
 using System.Reflection;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Classification;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Text;
 using Qx.Scripting;
 using RoslynPad.Roslyn;
+using RoslynPad.Roslyn.BraceMatching;
+using RoslynPad.Roslyn.Formatting;
+using RoslynPad.Roslyn.QuickInfo;
+using RoslynPad.Roslyn.Structure;
 
 namespace Qx.Desktop.Editor;
 
@@ -21,6 +27,36 @@ public sealed class QxRoslynHost : RoslynHost
                 imports: ScriptEngine.Imports,
                 typeNamespaceImports: [typeof(ScriptGlobals)]))
     {
+    }
+
+    /// <summary>
+    /// Opens a throwaway script and asks it for what an editor asks when a tab first opens, so the
+    /// composition parts, the reference metadata and the compiler paths are built here, off the UI
+    /// thread, rather than while the first real tab stalls it.
+    /// </summary>
+    public async Task WarmUpAsync(string working_directory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(working_directory);
+        DocumentId id = AddDocument(new DocumentCreationArgs(
+            SourceText.From("var items = FloorItems.Where(item => item.Id > 0).ToList();\nLog(items.Count);\n").Container,
+            working_directory,
+            SourceCodeKind.Script));
+        try
+        {
+            _ = GetService<IQuickInfoProvider>();
+            _ = GetService<IBraceMatchingService>();
+            if (GetDocument(id) is not { } document)
+                return;
+            _ = document.GetLanguageService<ICodeFormattingService>();
+            if (document.GetLanguageService<IBlockStructureService>() is { } structure)
+                _ = await structure.GetBlockStructureAsync(document).ConfigureAwait(false);
+            SourceText text = await document.GetTextAsync().ConfigureAwait(false);
+            _ = await Classifier.GetClassifiedSpansAsync(document, new TextSpan(0, text.Length)).ConfigureAwait(false);
+        }
+        finally
+        {
+            CloseDocument(id);
+        }
     }
 
     protected override Project CreateProject(Solution solution, DocumentCreationArgs args, CompilationOptions compilationOptions, Project? previousProject = null)

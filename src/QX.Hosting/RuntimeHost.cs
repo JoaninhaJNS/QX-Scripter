@@ -80,7 +80,7 @@ public sealed class RuntimeHost : IDisposable, IAsyncDisposable
             _options.SessionRulesPath,
             Keyboard.IsSupported ? () => Keyboard.IsDown(Key.Shift) : null);
         Rules.Bind();
-        ScriptExecution = new ScriptExecutionService(Extension, Game, Application, Keyboard, _lifetime.Token);
+        ScriptExecution = new ScriptExecutionService(Extension, Game, Application, Keyboard, scripts_directory, _lifetime.Token);
         McpHost = new McpHost(
             Extension,
             Game,

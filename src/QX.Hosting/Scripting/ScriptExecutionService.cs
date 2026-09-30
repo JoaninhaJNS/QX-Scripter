@@ -45,9 +45,17 @@ public sealed class ScriptExecutionService(
     GameState game,
     IApplicationRuntime application,
     Keyboard keyboard,
+    string scripts_directory,
     CancellationToken lifetime = default)
 {
     readonly ConcurrentDictionary<string, RunMarker> _active = new(StoragePaths.FileComparer);
+
+    /// <summary>
+    /// Compiles a script without running it, resolving its <c>#load</c> and <c>#r</c> paths
+    /// against the script library the way a run does.
+    /// </summary>
+    public ImmutableArray<Diagnostic> Compile(string code, string file_name) =>
+        ScriptEngine.Compile(code, file_name, scripts_directory);
 
     public event Action? ActiveRunsChanged;
 
@@ -87,9 +95,16 @@ public sealed class ScriptExecutionService(
         CancellationToken cancellation_token = default)
     {
         Validate(request);
+        if (request.ConfigureAsync is null && UiSpec.Parse(request.Code).Required)
+        {
+            return Refused(
+                request,
+                "The script declares //@ui:required and only runs with its panel. Open it in QX and start it from the panel.",
+                already_running: false);
+        }
         var marker = new RunMarker(new ActiveScriptRun(request.SourceIdentity, request.FileName, DateTimeOffset.UtcNow));
         if (!_active.TryAdd(request.SourceIdentity, marker))
-            return AlreadyActive(request);
+            return Refused(request, $"A script execution for '{request.SourceIdentity}' is already running.", already_running: true);
         RaiseActiveRunsChanged();
         try
         {
@@ -269,7 +284,7 @@ public sealed class ScriptExecutionService(
             await extension.WaitForCatalogBuildAsync(run_source.Token).ConfigureAwait(false);
             stage = "compile";
             ScriptProgram program = await Task.Run(
-                () => ScriptEngine.Prepare(request.Code, request.FileName),
+                () => ScriptEngine.Prepare(request.Code, request.FileName, scripts_directory),
                 run_source.Token).ConfigureAwait(false);
 
             foreach (Diagnostic diagnostic in program.Diagnostics.Where(
@@ -554,12 +569,12 @@ public sealed class ScriptExecutionService(
         }
     }
 
-    static ScriptExecutionResult AlreadyActive(ScriptExecutionRequest request)
+    static ScriptExecutionResult Refused(ScriptExecutionRequest request, string message, bool already_running)
     {
         var error = new ScriptExecutionError(
             "scheduling",
             typeof(InvalidOperationException).FullName!,
-            $"A script execution for '{request.SourceIdentity}' is already running.",
+            message,
             Path.GetFileName(request.FileName),
             null,
             null,
@@ -587,7 +602,7 @@ public sealed class ScriptExecutionService(
             ScriptRunState.Faulted,
             true,
             false,
-            true,
+            already_running,
             0,
             "",
             [.. errors]);

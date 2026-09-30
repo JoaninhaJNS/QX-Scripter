@@ -33,6 +33,7 @@ public sealed class PanelRunLink : IDisposable
         _ui.EnabledChanged += OnEnabled;
         _ui.VisibilityChanged += OnVisibility;
         _ui.RowAdded += OnRowAdded;
+        _ui.RowsSet += OnRowsSet;
         _ui.Toasted += OnToasted;
         _ui.BusyChanged += OnBusy;
         _ui.Downloaded += OnDownloaded;
@@ -56,6 +57,7 @@ public sealed class PanelRunLink : IDisposable
         _ui.EnabledChanged -= OnEnabled;
         _ui.VisibilityChanged -= OnVisibility;
         _ui.RowAdded -= OnRowAdded;
+        _ui.RowsSet -= OnRowsSet;
         _ui.Toasted -= OnToasted;
         _ui.BusyChanged -= OnBusy;
         _ui.Downloaded -= OnDownloaded;
@@ -119,6 +121,8 @@ public sealed class PanelRunLink : IDisposable
     void OnVisibility(string name, bool visible) => Enqueue(() => _panel.SetVisible(name, visible));
 
     void OnRowAdded(string table, IReadOnlyList<string> cells) => Enqueue(() => _panel.AddRow(table, cells));
+
+    void OnRowsSet(string table, IReadOnlyList<IReadOnlyList<string>> rows) => Enqueue(() => _panel.SetRows(table, rows));
 
     void OnToasted(string text, bool problem) => Enqueue(() => _panel.Toast(text, problem));
 

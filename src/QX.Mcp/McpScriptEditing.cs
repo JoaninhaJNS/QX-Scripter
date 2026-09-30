@@ -213,7 +213,8 @@ public static partial class McpScriptEditing
     /// <remarks>
     /// A replacement that is not found, or found more than once without being told to replace every
     /// occurrence, is an error rather than a guess: the point of editing by text is that the agent
-    /// named something it had actually read.
+    /// named something it had actually read. Line endings do not count: the text is matched the way
+    /// the reading tools show it, and the script keeps the line endings it had.
     /// </remarks>
     /// <param name="code">The whole script.</param>
     /// <param name="edits">What to replace with what.</param>
@@ -230,11 +231,14 @@ public static partial class McpScriptEditing
         if (edits.Count == 0)
             throw new ArgumentException("Name at least one edit.", nameof(edits));
 
-        string updated = code;
+        string newline = NewlineOf(code);
+        string updated = Unify(code);
         var lines = new List<string>();
         for (int index = 0; index < edits.Count; index++)
         {
             (string old, string replacement, bool all) = edits[index];
+            old = Unify(old);
+            replacement = Unify(replacement);
             if (old.Length == 0)
                 throw new ArgumentException($"Edit {index + 1} has nothing to replace.", nameof(edits));
 
@@ -242,7 +246,7 @@ public static partial class McpScriptEditing
             if (occurrences == 0)
             {
                 throw new ArgumentException(
-                    $"Edit {index + 1} did not match anything. Read the lines again; the text has to be exactly as it stands, indentation included.",
+                    $"Edit {index + 1} did not match anything.{Nearest(updated, old)} The text has to be exactly as it stands, indentation included.",
                     nameof(edits));
             }
             if (occurrences > 1 && !all)
@@ -262,7 +266,22 @@ public static partial class McpScriptEditing
         }
 
         report = lines;
-        return updated;
+        return newline == "\n" ? updated : updated.Replace("\n", newline, StringComparison.Ordinal);
+    }
+
+    private static string Nearest(string code, string old)
+    {
+        string? first = old.Split('\n').Select(line => line.Trim()).FirstOrDefault(line => line.Length > 0);
+        if (first is null)
+            return "";
+        string[] lines = code.Split('\n');
+        int[] starts = [.. Enumerable.Range(0, lines.Length)
+            .Where(index => string.Equals(lines[index].Trim(), first, StringComparison.Ordinal))
+            .Select(index => index + 1)
+            .Take(3)];
+        return starts.Length == 0
+            ? " Its first line is not in the script; read the part again."
+            : $" Its first line stands at line {string.Join(", ", starts)}, so a later line or the indentation differs; read from there.";
     }
 
     /// <summary>
@@ -294,15 +313,18 @@ public static partial class McpScriptEditing
         if (replacement.Length > 0)
             updated.AddRange(Split(replacement));
         updated.AddRange(lines[last..]);
-        return string.Join("\n", updated);
+        return string.Join(NewlineOf(code), updated);
     }
 
     /// <summary>How many lines a script has.</summary>
     /// <param name="code">The whole script.</param>
     public static int LineCount(string code) => Split(code).Length;
 
-    private static string[] Split(string code) =>
-        code.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+    private static string[] Split(string code) => Unify(code).Split('\n');
+
+    private static string Unify(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal);
+
+    private static string NewlineOf(string code) => code.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
 
     private static int Count(string text, string value)
     {

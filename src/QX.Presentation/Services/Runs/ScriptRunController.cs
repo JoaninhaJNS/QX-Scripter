@@ -40,6 +40,8 @@ public interface IRunSource
     string ExecutionIdentity { get; }
 
     string Text { get; }
+
+    bool PanelRequired { get; }
 }
 
 public interface IRunHooks
@@ -59,7 +61,7 @@ public interface IPanelRunTarget
 
     void SetRunBusy(bool busy);
 
-    IDisposable Attach(ScriptUi ui, long run_epoch, string file_name, string? pressed_button, CancellationToken run_token);
+    IDisposable Attach(ScriptUi ui, string code, long run_epoch, string file_name, string? pressed_button, CancellationToken run_token);
 
     void SetButtonBusy(string button, bool busy);
 
@@ -156,7 +158,7 @@ public sealed partial class ScriptRunController : ObservableObject
     {
         if (IsAlive)
             return RunStartOutcome.AlreadyAlive;
-        var frame = new RunFrame(++_epoch, CancellationTokenSource.CreateLinkedTokenSource(_lifetime), panel_mode);
+        var frame = new RunFrame(++_epoch, CancellationTokenSource.CreateLinkedTokenSource(_lifetime), panel_mode || _source.PanelRequired);
         _frame = frame;
         _armed = null;
         _errors.Clear();
@@ -229,7 +231,7 @@ public sealed partial class ScriptRunController : ObservableObject
                 },
                 StateChanged = state => _dispatcher.Post(() => ApplyState(frame, state)),
                 ConfigureAsync = frame.PanelMode
-                    ? (globals, token) => _dispatcher.InvokeAsync(() => link = _panel.Attach(globals.Ui, frame.Epoch, file_name, pressed_button, frame.Source.Token), token)
+                    ? (globals, token) => _dispatcher.InvokeAsync(() => link = _panel.Attach(globals.Ui, code, frame.Epoch, file_name, pressed_button, frame.Source.Token), token)
                     : null,
                 ContinueAsync = frame.PanelMode ? (globals, token) => ParkAsync(frame, globals, pressed_button, token) : null,
                 DrainAsync = frame.PanelMode ? () => DrainHandlersAsync(frame) : null

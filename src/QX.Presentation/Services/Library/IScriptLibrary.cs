@@ -29,7 +29,7 @@ public sealed record ScriptMeta
 
 public sealed record LastRun(DateTimeOffset At, ScriptRunState? Outcome);
 
-public sealed record ScriptFileEntry(string Path, string Name, DateTimeOffset EditedAt, long Length);
+public sealed record ScriptFileEntry(string Path, string Name, DateTimeOffset EditedAt, long Length, ScriptHeader Header);
 
 public interface IScriptLibrary
 {

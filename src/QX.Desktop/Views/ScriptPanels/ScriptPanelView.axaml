@@ -309,7 +309,7 @@
 
     <Panel Grid.Row="1">
       <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="32,24,32,32">
-        <StackPanel HorizontalAlignment="Left" MaxWidth="{DynamicResource QxPanelMaxWidth}">
+        <StackPanel x:Name="Page">
           <SelectableTextBlock Classes="body secondary" Text="{Binding Panel.Description}" TextWrapping="Wrap" Margin="0,0,0,24"
                                IsVisible="{Binding Panel.Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           <ItemsControl ItemsSource="{Binding Panel.Nodes}">

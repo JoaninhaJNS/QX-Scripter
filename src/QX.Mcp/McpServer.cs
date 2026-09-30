@@ -29,14 +29,29 @@ public sealed class McpServer
         G-Earth interceptor, mirrors the whole game state, and hosts a C# scripting runtime that runs
         inside the QX process.
 
+        EDITING SCRIPTS
+        Saved scripts belong to QX. Create, read, change and run them through these tools first; edit
+        .csx files on disk only when no tool can do the job, and never copy or concatenate scripts
+        into the library. The tools edit an open tab live and keep the editor, the library and
+        running panels in step. Test and debug code runs with run_code, which leaves no file and no
+        tab behind (background=true, get_run and stop_run for longer runs); save a script only when
+        it is meant to stay. Find code with outline_script,
+        find_in_script or read_script, then change it with patch_script (exact text; line endings do
+        not matter) or replace_script_lines (by line number). save_script writes a script whole, for
+        new scripts. A tab without unsaved changes is saved at once, so never save, close and reopen.
+        Run with run_tab, which the user can watch and stop_tab can end, or with run_script.
+
+        FINDING TOOLS
+        tools/list holds the everyday set. Several hundred more game operations (catalog,
+        marketplace, trade, wired, navigator, forums, quests, badges and more) are named
+        application_*: search them with list_mcp_tools, read one schema with describe_mcp_tool, and
+        call them with call_mcp_tool, or read_mcp_tool for read-only ones. Both keep the target's
+        permissions and timeout and return its output in result.
+
         ORIENT
-        get_server_info reports the running version, the negotiated protocol and which capabilities this
-        server is currently allowed to use. list_mcp_tools searches the complete tool catalog in pages,
-        including tools hidden by the discovery filter. describe_mcp_tool returns one tool's full schema.
-        Use read_mcp_tool for a hidden read-only tool, or call_mcp_tool for an operation, passing its
-        name and arguments. Both preserve the target's permissions and timeout and return its output
-        in result. get_connection reports whether the interceptor and the
-        hotel session are live; nearly every game tool returns empty data until they are.
+        get_server_info reports the running version, the negotiated protocol and which capabilities
+        this server is currently allowed to use. get_connection reports whether the interceptor and
+        the hotel session are live; nearly every game tool returns empty data until they are.
 
         SCRIPTS
         Scripts are C# (Roslyn scripting, top-level statements). Every public member of ScriptGlobals is
@@ -59,17 +74,19 @@ public sealed class McpServer
         SUBSYSTEMS
         Beyond the room and the profile, get_forums, get_forum_threads, get_quests, get_crafting,
         get_subscriptions and get_gifts expose state the hotel only sends after the matching request.
-        Marketplace state and operations are exposed through application_marketplace_* tools; use
-        list_application_members for their authoritative parameters, client support and message evidence.
-        Everything else is reachable from a script through list_api and search_members.
+        list_application_members gives every application_* operation's parameters, client support and
+        message evidence. Everything else is reachable from a script through list_api and
+        search_members.
         """;
     private const string EditorInstructions =
         """
 
         EDITOR
         Editor tools expose open tabs, their current source, execution state, output and diagnostics.
-        A script can give its tab a panel of inputs, inline buttons and output boxes with //@ui:
-        directives and drive it through Ui. run_tab accepts timeout_ms like the saved-script runners.
+        list_tabs shows each tab's file and whether it has unsaved changes. A script can give its tab
+        a panel of inputs, inline buttons and output boxes with //@ui: directives and drive it through
+        Ui. run_tab starts the tab and returns at once; follow it with get_tab_status and
+        get_tab_output.
         """;
     private static readonly McpToolAnnotations ClosedReadOnly = new(true, false, false, false);
     private static readonly McpToolAnnotations OpenReadOnly = new(true, false, false, true);
@@ -156,7 +173,7 @@ public sealed class McpServer
         _tools = BuildTools(additional_tools);
         HashSet<string>? filter = _config.ToolFilter?.ToHashSet(StringComparer.Ordinal);
         _listed_tools = _tools
-            .Where(tool => filter is null || filter.Contains(tool.Name) || tool.Name is
+            .Where(tool => (filter?.Contains(tool.Name) ?? tool.Listed) || tool.Name is
                 "get_server_info" or "list_mcp_tools" or "describe_mcp_tool" or "read_mcp_tool" or "call_mcp_tool")
             .OrderBy(tool => tool.Name, StringComparer.Ordinal)
             .ToArray();
@@ -674,14 +691,21 @@ public sealed class McpServer
         new McpTool
         {
             Name = "run_code",
-            Description = "Compile and run a C# script against the QX API (Ext, Room, Session, Send, SendToServer/SendToClient, OnIn/OnOut, ReceiveAsync, Log, Delay). Returns the script output. The run is cancelled after timeout_ms; code that never awaits or checks Ct keeps running and is abandoned.",
+            Description =
+                "Compile and run C# against the QX API (Room, Users, Send, OnIn/OnOut, Log, Delay and the rest of " +
+                "ScriptGlobals) without saving it or opening a tab, which makes it the tool for test and debug code. " +
+                "Returns the output once the run ends; it is cancelled after timeout_ms, and code that never awaits " +
+                "or checks Ct keeps running and is abandoned. " + BackgroundSentence,
             InputSchema = MixedSchema(
                 [("code", "string", "C# script code")],
-                RunTimeoutProperty()),
+                RunTimeoutProperty(),
+                BackgroundProperty()),
             Annotations = OpenDestructiveWrite,
             Capability = McpCapability.Execute,
             Timeout = RunTimeout,
-            Handler = (args, ct) => _host.RunCodeAsync(Str(args, "code"), ct)
+            Handler = (args, ct) => Bool(args, "background")
+                ? Task.FromResult(_host.StartCode(Str(args, "code"), OptionalRunTimeout(args)))
+                : _host.RunCodeAsync(Str(args, "code"), ct)
         },
         new McpTool
         {
@@ -881,18 +905,12 @@ public sealed class McpServer
         new McpTool
         {
             Name = "list_scripts",
-            Description = "List saved script names.",
-            InputSchema = Schema(),
+            Description = "List saved script names, optionally only those containing 'query'.",
+            InputSchema = OptionalSchema(("query", "string", "optional name substring", null, null, null)),
             Annotations = ClosedReadOnly,
-            Handler = (args, ct) => Task.FromResult(string.Join("\n", _host.ListScripts()))
-        },
-        new McpTool
-        {
-            Name = "get_script",
-            Description = "Get the code of a saved script by name.",
-            InputSchema = Schema(("name", "string", "script name")),
-            Annotations = ClosedReadOnly,
-            Handler = (args, ct) => Task.FromResult(_host.GetScript(Str(args, "name")))
+            Handler = (args, ct) => Task.FromResult(string.Join("\n", Str(args, "query") is { Length: > 0 } query
+                ? _host.SearchScripts(query)
+                : _host.ListScripts()))
         },
         new McpTool
         {
@@ -1072,31 +1090,63 @@ public sealed class McpServer
         new McpTool
         {
             Name = "save_script",
-            Description = "Save a script by name with the given code.",
+            Description =
+                "Write a whole script by name, creating it when it does not exist. When the script is open in the " +
+                "editor its tab takes the code too. For changes to an existing script prefer patch_script or " +
+                "replace_script_lines, which do not resend the file.",
             InputSchema = Schema(("name", "string", "script name"), ("code", "string", "C# script code")),
             Annotations = ClosedIdempotentDestructiveWrite,
             Capability = McpCapability.FileWrite,
-            Handler = (args, ct) => Task.FromResult(_host.SaveScript(Str(args, "name"), Str(args, "code")))
+            Handler = async (args, ct) =>
+            {
+                string name = Str(args, "name");
+                string code = Str(args, "code");
+                return name.Length > 0 && await _host.EditOpenScriptAsync(name, _ => code, ct).ConfigureAwait(false) is { } done
+                    ? done
+                    : _host.SaveScript(name, code);
+            }
         },
         new McpTool
         {
             Name = "run_script",
-            Description = "Run a saved script by name and return its output. The run is cancelled after timeout_ms.",
+            Description =
+                "Run a saved script by name without a tab and return its output once it ends; it is cancelled after " +
+                "timeout_ms. An open tab's current text is what runs. For panels, and for runs the user should " +
+                "watch, prefer run_tab. " + BackgroundSentence,
             InputSchema = MixedSchema(
                 [("name", "string", "script name")],
-                RunTimeoutProperty()),
+                RunTimeoutProperty(),
+                BackgroundProperty()),
             Annotations = OpenDestructiveWrite,
             Capability = McpCapability.Execute,
             Timeout = RunTimeout,
-            Handler = (args, ct) => _host.RunScriptAsync(Str(args, "name"), ct)
+            Handler = (args, ct) => Bool(args, "background")
+                ? _host.StartScriptAsync(Str(args, "name"), OptionalRunTimeout(args), ct)
+                : _host.RunScriptAsync(Str(args, "name"), ct)
         },
         new McpTool
         {
-            Name = "get_room_data",
-            Description = "Get the current room's metadata: name, owner, description, rating, tags, group and active event.",
-            InputSchema = Schema(),
-            Annotations = OpenReadOnly,
-            Handler = (args, ct) => Task.FromResult(_host.GetRoomData())
+            Name = "get_run",
+            Description =
+                "Read a background run started by run_code or run_script: its state, errors and the output lines " +
+                "from 'since' on. Pass the returned next as since to read only new lines. Without id, lists the " +
+                "background runs.",
+            InputSchema = OptionalSchema(
+                ("id", "integer", "run id; leave it out to list the runs", null, 1, null),
+                ("since", "integer", "first output line to return", 0, 0, null)),
+            Annotations = ClosedReadOnly,
+            Handler = (args, ct) => Task.FromResult(_host.ReadRun(
+                OptionalPositiveLong(args, "id"),
+                BoundedInt(args, "since", 0, 0, int.MaxValue)))
+        },
+        new McpTool
+        {
+            Name = "stop_run",
+            Description = "Stop a background run started by run_code or run_script.",
+            InputSchema = Schema(("id", "integer", "run id")),
+            Annotations = ClosedIdempotentDestructiveWrite,
+            Capability = McpCapability.Execute,
+            Handler = (args, ct) => Task.FromResult(_host.StopRun(Long(args, "id")))
         },
         new McpTool
         {
@@ -1108,115 +1158,11 @@ public sealed class McpServer
         },
         new McpTool
         {
-            Name = "say",
-            Description = "Say a message in the room chat.",
-            InputSchema = Schema(("message", "string", "chat message")),
-            Annotations = OpenDestructiveWrite,
-            Handler = (args, ct) => Task.FromResult(_host.Say(Str(args, "message")))
-        },
-        new McpTool
-        {
-            Name = "shout",
-            Description = "Shout a message in the room.",
-            InputSchema = Schema(("message", "string", "chat message")),
-            Annotations = OpenDestructiveWrite,
-            Handler = (args, ct) => Task.FromResult(_host.Shout(Str(args, "message")))
-        },
-        new McpTool
-        {
-            Name = "walk",
-            Description = "Walk the avatar to a tile.",
-            InputSchema = Schema(("x", "integer", "tile x"), ("y", "integer", "tile y")),
-            Annotations = OpenWrite,
-            Handler = (args, ct) => Task.FromResult(_host.Walk(Int(args, "x"), Int(args, "y")))
-        },
-        new McpTool
-        {
-            Name = "wave",
-            Description = "Perform the wave action.",
-            InputSchema = Schema(),
-            Annotations = OpenWrite,
-            Handler = (args, ct) => Task.FromResult(_host.Wave())
-        },
-        new McpTool
-        {
-            Name = "dance",
-            Description = "Start a dance (1-4) or stop dancing (0).",
-            InputSchema = Schema(("style", "integer", "dance id 0-4")),
-            Annotations = OpenWrite,
-            Handler = (args, ct) => Task.FromResult(_host.Dance(Int(args, "style")))
-        },
-        new McpTool
-        {
-            Name = "sign",
-            Description = "Hold up a hand sign (0-17).",
-            InputSchema = Schema(("sign", "integer", "sign number")),
-            Annotations = OpenWrite,
-            Handler = (args, ct) => Task.FromResult(_host.Sign(Int(args, "sign")))
-        },
-        new McpTool
-        {
-            Name = "get_user_profile",
-            Description = "Fetch another user's extended profile by id (name, motto, created, level, achievement points, gems, friends, badges, groups, online status).",
-            InputSchema = Schema(("id", "id", "user id")),
-            Annotations = OpenReadOnly,
-            Handler = (args, ct) => _host.GetUserProfileAsync(Long(args, "id"), ct)
-        },
-        new McpTool
-        {
-            Name = "get_group",
-            Description = "Fetch a Habbo group's details by id (name, owner, member count, description).",
-            InputSchema = Schema(("id", "id", "group id")),
-            Annotations = OpenReadOnly,
-            Handler = (args, ct) => _host.GetGroupAsync(Long(args, "id"), ct)
-        },
-        new McpTool
-        {
-            Name = "get_badges",
-            Description = "Fetch a user's worn/selected badges by id (resolved to display names).",
-            InputSchema = Schema(("id", "id", "user id")),
-            Annotations = OpenReadOnly,
-            Handler = (args, ct) => _host.GetBadgesAsync(Long(args, "id"), ct)
-        },
-        new McpTool
-        {
-            Name = "get_relationship",
-            Description = "Fetch a user's relationship stats by id (hearts/smiles/skulls counts).",
-            InputSchema = Schema(("id", "id", "user id")),
-            Annotations = OpenReadOnly,
-            Handler = (args, ct) => _host.GetRelationshipAsync(Long(args, "id"), ct)
-        },
-        new McpTool
-        {
-            Name = "search_user",
-            Description = "Search for a user by name (returns id, motto, online status).",
-            InputSchema = Schema(("name", "string", "user name")),
-            Annotations = OpenReadOnly,
-            Handler = (args, ct) => _host.SearchUserAsync(Str(args, "name"), ct)
-        },
-        new McpTool
-        {
-            Name = "get_sticky",
-            Description = "Read a post-it / sticky note's text by furni item id.",
-            InputSchema = Schema(("id", "id", "wall item id")),
-            Annotations = OpenReadOnly,
-            Handler = (args, ct) => _host.GetStickyAsync(Long(args, "id"), ct)
-        },
-        new McpTool
-        {
             Name = "get_pet_info",
             Description = "Fetch a pet's full details by pet id (name, breed, level, xp, energy, happiness, scratches, owner).",
             InputSchema = Schema(("id", "id", "pet id")),
             Annotations = OpenReadOnly,
             Handler = (args, ct) => _host.GetPetInfoAsync(Long(args, "id"), ct)
-        },
-        new McpTool
-        {
-            Name = "get_room_settings",
-            Description = "Fetch a room's full settings by room id (name, description, door mode, category, visitor limits, trade mode, tags, pet/walkthrough/wall flags). Requires room ownership.",
-            InputSchema = Schema(("id", "id", "room id")),
-            Annotations = OpenReadOnly,
-            Handler = (args, ct) => _host.GetRoomSettingsAsync(Long(args, "id"), ct)
         },
         new McpTool
         {
@@ -1387,38 +1333,6 @@ public sealed class McpServer
         },
         new McpTool
         {
-            Name = "kick",
-            Description = "Kick a user from the room by id (needs rights).",
-            InputSchema = Schema(("id", "id", "user id")),
-            Annotations = OpenDestructiveWrite,
-            Handler = (args, ct) => Task.FromResult(_host.Kick(Long(args, "id")))
-        },
-        new McpTool
-        {
-            Name = "mute",
-            Description = "Mute a user in the room for N minutes (needs rights).",
-            InputSchema = Schema(("id", "id", "user id"), ("minutes", "integer", "mute minutes")),
-            Annotations = OpenDestructiveWrite,
-            Handler = (args, ct) => Task.FromResult(_host.Mute(Long(args, "id"), Int(args, "minutes")))
-        },
-        new McpTool
-        {
-            Name = "ban",
-            Description = "Ban a user from the room by id (needs rights).",
-            InputSchema = Schema(("id", "id", "user id")),
-            Annotations = OpenDestructiveWrite,
-            Handler = (args, ct) => Task.FromResult(_host.Ban(Long(args, "id")))
-        },
-        new McpTool
-        {
-            Name = "give_rights",
-            Description = "Give room controller rights to a user by id (room owner only).",
-            InputSchema = Schema(("id", "id", "user id")),
-            Annotations = OpenDestructiveWrite,
-            Handler = (args, ct) => Task.FromResult(_host.GiveRights(Long(args, "id")))
-        },
-        new McpTool
-        {
             Name = "remove_rights",
             Description = "Remove room controller rights from a user by id (room owner only).",
             InputSchema = Schema(("id", "id", "user id")),
@@ -1427,45 +1341,23 @@ public sealed class McpServer
         },
         new McpTool
         {
-            Name = "let_in",
-            Description = "Let a knocking user into a doorbell room by name (needs rights).",
-            InputSchema = Schema(("name", "string", "user name")),
-            Annotations = OpenDestructiveWrite,
-            Handler = (args, ct) => Task.FromResult(_host.LetIn(Str(args, "name")))
-        },
-        new McpTool
-        {
-            Name = "respect_pet",
-            Description = "Give respect/treat to a pet by id.",
-            InputSchema = Schema(("id", "id", "pet id")),
-            Annotations = OpenDestructiveWrite,
-            Handler = (args, ct) => Task.FromResult(_host.RespectPet(Long(args, "id")))
-        },
-        new McpTool
-        {
             Name = "delete_script",
-            Description = "Delete a saved script by name.",
+            Description = "Delete a saved script by name. A script that is running is refused; an open tab keeps its text as an unsaved tab.",
             InputSchema = Schema(("name", "string", "script name")),
             Annotations = ClosedIdempotentDestructiveWrite,
             Capability = McpCapability.FileWrite,
-            Handler = (args, ct) => Task.FromResult(_host.DeleteScript(Str(args, "name")))
+            Handler = (args, ct) => _host.DeleteScriptAsync(Str(args, "name"), ct)
         },
         new McpTool
         {
             Name = "rename_script",
-            Description = "Rename a saved script.",
+            Description =
+                "Rename a saved script. Its open tab, library group and panel values move with it, and a /// @name " +
+                "line follows the new name. An existing script of the new name is never replaced.",
             InputSchema = Schema(("name", "string", "current name"), ("new_name", "string", "new name")),
             Annotations = ClosedIdempotentDestructiveWrite,
             Capability = McpCapability.FileWrite,
-            Handler = (args, ct) => Task.FromResult(_host.RenameScript(Str(args, "name"), Str(args, "new_name")))
-        },
-        new McpTool
-        {
-            Name = "search_scripts",
-            Description = "Search saved script names by substring.",
-            InputSchema = Schema(("query", "string", "search text")),
-            Annotations = ClosedReadOnly,
-            Handler = (args, ct) => Task.FromResult(string.Join("\n", _host.SearchScripts(Str(args, "query"))))
+            Handler = (args, ct) => _host.RenameScriptAsync(Str(args, "name"), Str(args, "new_name"), ct)
         },
         new McpTool
         {
@@ -1584,16 +1476,6 @@ public sealed class McpServer
         },
         new McpTool
         {
-            Name = "get_active_tab",
-            Description = "Get the active editor tab's name and current code.",
-            InputSchema = Schema(),
-            Annotations = ClosedReadOnly,
-            Capability = McpCapability.Editor,
-            RuntimeCapability = McpRuntimeCapability.Editor,
-            Handler = (args, ct) => _host.GetActiveTabAsync(ct)
-        },
-        new McpTool
-        {
             Name = "open_tab",
             Description = "Open a saved script by name in a new editor tab.",
             InputSchema = Schema(("name", "string", "saved script name")),
@@ -1615,7 +1497,7 @@ public sealed class McpServer
         new McpTool
         {
             Name = "edit_tab",
-            Description = "Replace the active editor tab's code.",
+            Description = "Replace the whole code of the active editor tab. For changes prefer patch_script or replace_script_lines.",
             InputSchema = Schema(("code", "string", "new C# code")),
             Annotations = ClosedIdempotentDestructiveWrite,
             Capability = McpCapability.Editor,
@@ -1635,24 +1517,28 @@ public sealed class McpServer
         new McpTool
         {
             Name = "close_tab",
-            Description = "Close an open editor tab by name.",
-            InputSchema = Schema(("name", "string", "tab name")),
+            Description =
+                "Close an open editor tab by name. A tab with unsaved changes is refused unless 'discard' is set, " +
+                "and a running tab is stopped first.",
+            InputSchema = MixedSchema(
+                [("name", "string", "tab name")],
+                ("discard", "boolean", "drop unsaved changes", false, null, null)),
             Annotations = ClosedIdempotentDestructiveWrite,
             Capability = McpCapability.Editor,
             RuntimeCapability = McpRuntimeCapability.Editor,
-            Handler = (args, ct) => _host.CloseTabByNameAsync(Str(args, "name"), ct)
+            Handler = (args, ct) => _host.CloseTabByNameAsync(Str(args, "name"), Bool(args, "discard"), ct)
         },
         new McpTool
         {
             Name = "run_tab",
-            Description = "Run an editor tab's script by name, or the active tab when omitted. The run is cancelled after timeout_ms.",
-            InputSchema = OptionalSchema(
-                ("name", "string", "tab name (optional)", null, null, null),
-                RunTimeoutProperty()),
+            Description =
+                "Start an editor tab's script by name, or the active tab when omitted, and return at once. It runs " +
+                "the tab's current text and saves the tab first when it has a file. Follow the run with " +
+                "get_tab_status and get_tab_output, and end it with stop_tab.",
+            InputSchema = OptionalSchema(("name", "string", "tab name (optional)", null, null, null)),
             Annotations = OpenDestructiveWrite,
             Capability = McpCapability.Execute | McpCapability.Editor,
             RuntimeCapability = McpRuntimeCapability.Editor,
-            Timeout = RunTimeout,
             Handler = (args, ct) => _host.RunActiveTabAsync(Str(args, "name"), ct)
         },
         new McpTool
@@ -1905,7 +1791,7 @@ public sealed class McpServer
 
     private string ScriptTargetSentence() =>
         EditorAvailable
-            ? "Give 'name' for a saved script or leave it out for the active editor tab."
+            ? "Give 'name' for a saved script, which is taken live from its tab when it is open, or leave it out for the active editor tab."
             : "Give 'name' for the saved script. This runtime has no editor tab fallback.";
 
     private string ScriptTargetParameterDescription() =>
@@ -1980,6 +1866,17 @@ public sealed class McpServer
     private static int RunTimeout(JsonElement args) =>
         BoundedInt(args, "timeout_ms", DefaultRunTimeoutMs, MinRunTimeoutMs, MaxRunTimeoutMs);
 
+    private static int? OptionalRunTimeout(JsonElement args) =>
+        args.ValueKind == JsonValueKind.Object && args.TryGetProperty("timeout_ms", out _) ? RunTimeout(args) : null;
+
+    private const string BackgroundSentence =
+        "With background=true it returns a run id at once and keeps running, without a time limit unless " +
+        "timeout_ms is given: read it with get_run and end it with stop_run.";
+
+    private static (string Name, string Type, string Desc, object? Default, int? Minimum, int? Maximum)
+        BackgroundProperty() =>
+        ("background", "boolean", "start the run and return its id at once instead of waiting for it", false, null, null);
+
     private static object FetchSchema() =>
         OptionalSchema(
             ("fetch", "boolean", "fetch missing state before returning", true, null, null),
@@ -2015,35 +1912,41 @@ public sealed class McpServer
     private async Task<string> CodeOf(JsonElement args, CancellationToken cancellationToken)
     {
         string name = Str(args, "name");
-        if (name.Length > 0)
-            return _host.GetScript(name);
-
-        if (!EditorAvailable)
+        if (name.Length == 0 && !EditorAvailable)
             throw new ArgumentException("'name' is required because this runtime has no editor.");
-
-        string tab = await _host.GetActiveTabAsync(cancellationToken).ConfigureAwait(false);
-        const string rule = "\n----\n";
-        int at = tab.IndexOf(rule, StringComparison.Ordinal);
-        if (at < 0)
-            throw new InvalidOperationException(tab);
-        return tab[(at + rule.Length)..];
+        if (await _host.ReadOpenScriptAsync(name, cancellationToken).ConfigureAwait(false) is { } open)
+            return open;
+        return name.Length > 0 ? _host.GetScript(name) : throw new InvalidOperationException("no active tab");
     }
 
-    private async Task<string> WriteCode(JsonElement args, string code, CancellationToken cancellationToken)
+    /// <summary>
+    /// Applies an edit to the script an editing tool was pointed at. An open tab takes the edit in
+    /// one step on the editor's thread, so the user's typing and parallel edits cannot interleave
+    /// with it; a script that is not open is edited on disk.
+    /// </summary>
+    private async Task<string> EditCode(JsonElement args, Func<string, string> edit, CancellationToken cancellationToken)
     {
         string name = Str(args, "name");
-        if (name.Length > 0)
-            return _host.SaveScript(name, code);
-
-        // Editing the open tab is a different permission from writing a file, and the tool can only
-        // declare one, so the second is checked where the target is known.
-        IReadOnlyList<string> missing = Config.MissingCapabilities(McpCapability.Editor);
-        if (missing.Count > 0)
+        if (name.Length == 0)
         {
-            throw new InvalidOperationException(
-                $"Editing the active tab is disabled: set {string.Join(" and ", missing)} to true in {McpConfig.DefaultPath} and restart QX Scripter.");
+            if (!EditorAvailable)
+                throw new ArgumentException("'name' is required because this runtime has no editor.");
+
+            // Editing the open tab is a different permission from writing a file, and the tool can
+            // only declare one, so the second is checked where the target is known.
+            IReadOnlyList<string> missing = Config.MissingCapabilities(McpCapability.Editor);
+            if (missing.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Editing the active tab is disabled: set {string.Join(" and ", missing)} to true in {McpConfig.DefaultPath} and restart QX Scripter.");
+            }
         }
-        return await _host.EditActiveTabAsync(code, cancellationToken).ConfigureAwait(false);
+
+        if (await _host.EditOpenScriptAsync(name, edit, cancellationToken).ConfigureAwait(false) is { } done)
+            return done;
+        if (name.Length == 0)
+            throw new InvalidOperationException("no active tab");
+        return _host.SaveScript(name, edit(_host.GetScript(name)));
     }
 
     private async Task<string> PatchScript(JsonElement args, CancellationToken cancellationToken)
@@ -2066,9 +1969,13 @@ public sealed class McpServer
                 edit.TryGetProperty("all", out JsonElement all) && all.ValueKind == JsonValueKind.True));
         }
 
-        string code = await CodeOf(args, cancellationToken).ConfigureAwait(false);
-        string updated = McpScriptEditing.Patch(code, requested, out IReadOnlyList<string> report);
-        string wrote = await WriteCode(args, updated, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<string> report = [];
+        string updated = "";
+        string wrote = await EditCode(args, code =>
+        {
+            updated = McpScriptEditing.Patch(code, requested, out report);
+            return updated;
+        }, cancellationToken).ConfigureAwait(false);
 
         return $"{wrote}\n{string.Join("\n", report)}\n{McpScriptEditing.LineCount(updated)} lines";
     }
@@ -2076,10 +1983,11 @@ public sealed class McpServer
     private async Task<string> ReplaceScriptLines(JsonElement args, CancellationToken cancellationToken)
     {
         int first = Int(args, "first");
-        string code = await CodeOf(args, cancellationToken).ConfigureAwait(false);
         int last = Int(args, "last", first);
-        string updated = McpScriptEditing.ReplaceLines(code, first, last, Str(args, "code"));
-        string wrote = await WriteCode(args, updated, cancellationToken).ConfigureAwait(false);
+        string replacement = Str(args, "code");
+        string updated = "";
+        string wrote = await EditCode(args, code => updated = McpScriptEditing.ReplaceLines(code, first, last, replacement), cancellationToken)
+            .ConfigureAwait(false);
 
         string what = last < first
             ? $"inserted before line {first}"

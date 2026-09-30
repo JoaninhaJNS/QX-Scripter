@@ -205,11 +205,16 @@ public sealed partial class LibraryViewModel : PageViewModel
     {
         if (Target(row) is not { } script)
             return;
-        var dialog = new CategoryDialogViewModel(script.Name, _library.Get(script.Name), _library.Categories);
+        ScriptMeta current = script.DeclaredGroup is { } declared ? new ScriptMeta { Category = declared } : _library.Get(script.Name);
+        var dialog = new CategoryDialogViewModel(script.Name, current, Categories());
         ScriptMeta? meta = await _dialogs.ShowAsync(dialog, cancellation_token);
         if (meta is null || !_scripts.ContainsKey(script.Path))
             return;
-        _library.Set(script.Name, meta);
+        if (script.DeclaredGroup is not null)
+            await _commands.SetGroupAsync(script.Path, meta.Category, cancellation_token);
+        else
+            _library.Set(script.Name, meta);
+        await ReloadAsync(cancellation_token);
         Selection.Select([script]);
     }
 
@@ -247,6 +252,7 @@ public sealed partial class LibraryViewModel : PageViewModel
         if (wanted.Length == 0 || string.Equals(wanted, group.Name, StringComparison.Ordinal))
             return;
         _library.RenameCategory(group.Name, wanted);
+        await RegroupDeclaredAsync(group.Name, wanted, cancellation_token);
     }
 
     [RelayCommand]
@@ -266,7 +272,28 @@ public sealed partial class LibraryViewModel : PageViewModel
         if (!confirmed)
             return;
         _library.RemoveCategory(group.Name);
+        await RegroupDeclaredAsync(group.Name, null, cancellation_token);
     }
+
+    async Task RegroupDeclaredAsync(string from, string? to, CancellationToken cancellation_token)
+    {
+        LibraryScriptRow[] declared =
+        [
+            .. _scripts.Values.Where(row => string.Equals(row.DeclaredGroup, from, StringComparison.CurrentCultureIgnoreCase))
+        ];
+        foreach (LibraryScriptRow row in declared)
+            await _commands.SetGroupAsync(row.Path, to, cancellation_token);
+        if (declared.Length > 0)
+            await ReloadAsync(cancellation_token);
+    }
+
+    IReadOnlyList<string> Categories() =>
+    [
+        .. _library.Categories
+            .Concat(_scripts.Values.Where(row => row.HasCategory).Select(row => row.CategoryName))
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .Order(StringComparer.CurrentCultureIgnoreCase)
+    ];
 
     [RelayCommand]
     async Task CommunityAsync(CancellationToken cancellation_token)
@@ -354,6 +381,7 @@ public sealed partial class LibraryViewModel : PageViewModel
                 row = new LibraryScriptRow(full, entry.Name);
                 _scripts[full] = row;
             }
+            row.DeclaredGroup = entry.Header.Group;
             Sync(row, entry.EditedAt, now);
         }
         foreach (string gone in _scripts.Keys.Where(path => !found.Contains(path)).ToArray())
@@ -379,7 +407,7 @@ public sealed partial class LibraryViewModel : PageViewModel
     {
         bool working = _runs.WorkingPaths.Contains(row.Path);
         bool armed = !working && _runs.LivePaths.Contains(row.Path);
-        row.Apply(edited_at, _library.Get(row.Name).Category, _library.LastRunOf(row.Name), working, armed, now);
+        row.Apply(edited_at, row.DeclaredGroup ?? _library.Get(row.Name).Category, _library.LastRunOf(row.Name), working, armed, now);
     }
 
     void Apply()

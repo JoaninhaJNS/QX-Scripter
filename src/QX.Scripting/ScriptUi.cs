@@ -298,6 +298,9 @@ public sealed class ScriptUi
     /// <summary>Raised when the script appends a row to a table.</summary>
     public event Action<string, IReadOnlyList<string>>? RowAdded;
 
+    /// <summary>Raised when the script replaces every row of a table.</summary>
+    public event Action<string, IReadOnlyList<IReadOnlyList<string>>>? RowsSet;
+
     /// <summary>Raised when the script wants a short message shown.</summary>
     public event Action<string, bool>? Toasted;
 
@@ -323,8 +326,27 @@ public sealed class ScriptUi
     {
         ArgumentException.ThrowIfNullOrEmpty(table);
         ArgumentNullException.ThrowIfNull(cells);
-        RowAdded?.Invoke(table, cells.Select(cell => cell?.ToString() ?? "").ToArray());
+        RowAdded?.Invoke(table, Cells(cells));
     }
+
+    /// <summary>
+    /// Replaces every row of a table in one step.
+    /// </summary>
+    /// <remarks>
+    /// Rows that are still there are updated in place, so the table keeps its scroll position and
+    /// its selection. That makes this the way to refresh a table on a timer; clearing it and adding
+    /// the rows again throws the reader back to the top on every refresh.
+    /// </remarks>
+    /// <param name="table">The table's name.</param>
+    /// <param name="rows">The rows, top to bottom, each one left to right.</param>
+    public void SetRows(string table, IEnumerable<object?[]> rows)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(table);
+        ArgumentNullException.ThrowIfNull(rows);
+        RowsSet?.Invoke(table, [.. rows.Select(row => Cells(row ?? []))]);
+    }
+
+    static string[] Cells(object?[] cells) => [.. cells.Select(cell => cell?.ToString() ?? "")];
 
     /// <summary>
     /// Shows a short message that fades on its own.

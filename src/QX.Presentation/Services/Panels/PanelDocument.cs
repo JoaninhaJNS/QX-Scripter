@@ -60,6 +60,9 @@ public sealed partial class PanelDocument : ObservableObject, IPanelRunTarget, I
     public partial string Description { get; private set; } = "";
 
     [ObservableProperty]
+    public partial UiLayout? Layout { get; private set; }
+
+    [ObservableProperty]
     public partial bool IsStarting { get; private set; }
 
     [ObservableProperty]
@@ -85,6 +88,7 @@ public sealed partial class PanelDocument : ObservableObject, IPanelRunTarget, I
         ClearRegistries();
         Title = spec.Title;
         Description = spec.Description;
+        Layout = spec.Layout;
         bool first_button = true;
         List<PanelNode> built = Build(spec.Nodes, in_row: false, ref first_button);
         Dictionary<string, string> kept = new(_values, StringComparer.OrdinalIgnoreCase);
@@ -198,6 +202,12 @@ public sealed partial class PanelDocument : ObservableObject, IPanelRunTarget, I
             node.AddRow(cells);
     }
 
+    public void SetRows(string table, IReadOnlyList<IReadOnlyList<string>> rows)
+    {
+        if (_tables.TryGetValue(table, out PanelTableNode? node))
+            node.SetRows(rows);
+    }
+
     public void Toast(string text, bool problem)
     {
         if (IsShown && !string.IsNullOrWhiteSpace(text))
@@ -230,9 +240,10 @@ public sealed partial class PanelDocument : ObservableObject, IPanelRunTarget, I
         ApplyBusy();
     }
 
-    public IDisposable Attach(ScriptUi ui, long run_epoch, string file_name, string? pressed_button, CancellationToken run_token)
+    public IDisposable Attach(ScriptUi ui, string code, long run_epoch, string file_name, string? pressed_button, CancellationToken run_token)
     {
         ArgumentNullException.ThrowIfNull(ui);
+        Rebuild(code);
         _run_epoch = run_epoch;
         return new PanelRunLink(this, ui, _dispatcher, pressed_button, run_token);
     }

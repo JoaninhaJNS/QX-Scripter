@@ -48,6 +48,7 @@ internal sealed class McpHost(
         };
     private readonly string scripts_root = Path.GetFullPath(scripts_directory);
     private readonly ScriptExecutionService script_execution = execution_service;
+    private readonly BackgroundRuns background_runs = new(execution_service);
     private readonly GameQueryService queries = query_service;
     private readonly IApplicationRuntime application_runtime = application;
 
@@ -55,14 +56,13 @@ internal sealed class McpHost(
         editor is null ? McpRuntimeCapability.None : McpRuntimeCapability.Editor;
 
     public string ListTabs() => Editor(editor, static value => value.ListTabs());
-    public string GetActiveTab() => Editor(editor, static value => value.GetActiveTab());
     public string OpenTab(string name) => Editor(editor, value => value.OpenTab(name));
     public string CreateTab(string name, string code) =>
         Editor(editor, value => value.CreateTab(name, code));
 
     public string EditActiveTab(string code) => Editor(editor, value => value.EditActiveTab(code));
     public string SelectTab(string name) => Editor(editor, value => value.SelectTab(name));
-    public string CloseTabByName(string name) => Editor(editor, value => value.CloseTab(name));
+    public string CloseTabByName(string name, bool discard) => Editor(editor, value => value.CloseTab(name, discard));
     public string RunActiveTab(string name) => Editor(editor, value => value.RunActiveTab(name));
     public string StopActiveTab(string name) => Editor(editor, value => value.StopActiveTab(name));
     public string GetTabOutput(string name) => Editor(editor, value => value.GetTabOutput(name));
@@ -71,9 +71,6 @@ internal sealed class McpHost(
 
     public Task<string> ListTabsAsync(CancellationToken cancellationToken) =>
         editor?.ListTabsAsync(cancellationToken) ?? Task.FromResult("editor UI not available");
-
-    public Task<string> GetActiveTabAsync(CancellationToken cancellationToken) =>
-        editor?.GetActiveTabAsync(cancellationToken) ?? Task.FromResult("editor UI not available");
 
     public Task<string> OpenTabAsync(string name, CancellationToken cancellationToken) =>
         editor?.OpenTabAsync(name, cancellationToken) ?? Task.FromResult("editor UI not available");
@@ -87,8 +84,14 @@ internal sealed class McpHost(
     public Task<string> SelectTabAsync(string name, CancellationToken cancellationToken) =>
         editor?.SelectTabAsync(name, cancellationToken) ?? Task.FromResult("editor UI not available");
 
-    public Task<string> CloseTabByNameAsync(string name, CancellationToken cancellationToken) =>
-        editor?.CloseTabAsync(name, cancellationToken) ?? Task.FromResult("editor UI not available");
+    public Task<string> CloseTabByNameAsync(string name, bool discard, CancellationToken cancellationToken) =>
+        editor?.CloseTabAsync(name, discard, cancellationToken) ?? Task.FromResult("editor UI not available");
+
+    public Task<string?> ReadOpenScriptAsync(string name, CancellationToken cancellationToken) =>
+        editor?.ReadOpenScriptAsync(name, cancellationToken) ?? Task.FromResult<string?>(null);
+
+    public Task<string?> EditOpenScriptAsync(string name, Func<string, string> edit, CancellationToken cancellationToken) =>
+        editor?.EditOpenScriptAsync(name, edit, cancellationToken) ?? Task.FromResult<string?>(null);
 
     public Task<string> RunActiveTabAsync(string name, CancellationToken cancellationToken) =>
         editor?.RunActiveTabAsync(name, cancellationToken) ?? Task.FromResult("editor UI not available");
@@ -1904,28 +1907,18 @@ internal sealed class McpHost(
     public string GetScript(string name)
     {
         string path = ScriptPath(name);
-        return File.Exists(path) ? File.ReadAllText(path) : $"no script named '{name}'";
+        return File.Exists(path) ? File.ReadAllText(path) : throw new InvalidOperationException($"no script named '{name}'");
     }
 
     public string SaveScript(string name, string code)
     {
+        ArgumentNullException.ThrowIfNull(code);
+        string path = ScriptPath(name);
         Directory.CreateDirectory(scripts_root);
-        File.WriteAllText(ScriptPath(name), code);
+        string staging = path + ".tmp";
+        File.WriteAllText(staging, code);
+        File.Move(staging, path, overwrite: true);
         return $"saved '{name}'";
-    }
-
-    public string GetRoomData()
-    {
-        if (room.Data is not { } d)
-            return room.IsInRoom ? "room data not loaded yet" : "not in a room";
-
-        var sb = new StringBuilder($"{d.Name} (#{d.Id}) by {d.OwnerName}");
-        sb.Append($"\n  {d.UserCount}/{d.MaxUserCount} users · rating {d.Score} · category {d.Category}");
-        if (d.Description.Length > 0) sb.Append($"\n  desc: {d.Description}");
-        if (d.Tags.Count > 0) sb.Append($"\n  tags: {string.Join(", ", d.Tags)}");
-        if (d.HasGroup) sb.Append($"\n  group: {d.GroupName} (#{d.GroupId})");
-        if (d.HasEvent) sb.Append($"\n  event: {d.EventName} — {d.EventDescription} ({d.EventMinutesRemaining}m left)");
-        return sb.ToString();
     }
 
     public string GetAvatar(string name)
@@ -1945,31 +1938,6 @@ internal sealed class McpHost(
         if (u.IsTyping) sb.Append("\n  typing");
         return sb.ToString();
     }
-
-    public string Say(string message) { Globals().Talk(message); return $"said: {message}"; }
-    public string Shout(string message) { Globals().Shout(message); return $"shouted: {message}"; }
-    public string Walk(int x, int y) { Globals().Walk(x, y); return $"walking to ({x},{y})"; }
-    public string Wave() { Globals().Wave(); return "waved"; }
-    public string Dance(int style) { Globals().Dance(style); return style == 0 ? "stopped dancing" : $"dancing ({style})"; }
-    public string Sign(int sign) { Globals().Sign(sign); return $"holding sign {sign}"; }
-
-    public async Task<string> GetUserProfileAsync(long userId, CancellationToken cancellationToken)
-        => await QueryAsync("user_profile", cancellationToken, globals => globals.GetProfile(userId));
-
-    public async Task<string> GetGroupAsync(long groupId, CancellationToken cancellationToken)
-        => await QueryAsync("group", cancellationToken, globals => globals.GetGroup(groupId));
-
-    public async Task<string> GetBadgesAsync(long userId, CancellationToken cancellationToken)
-        => await QueryAsync("badges", cancellationToken, globals => globals.GetBadges(userId));
-
-    public async Task<string> GetRelationshipAsync(long userId, CancellationToken cancellationToken)
-        => await QueryAsync("relationship", cancellationToken, globals => globals.GetRelationship(userId));
-
-    public async Task<string> SearchUserAsync(string name, CancellationToken cancellationToken)
-        => await QueryAsync("user_search", cancellationToken, globals => globals.SearchUser(name));
-
-    public async Task<string> GetStickyAsync(long itemId, CancellationToken cancellationToken)
-        => await QueryAsync("sticky", cancellationToken, globals => globals.GetSticky(itemId));
 
     public async Task<string> GetPetInfoAsync(long petId, CancellationToken cancellationToken)
     {
@@ -2050,74 +2018,10 @@ internal sealed class McpHost(
             start + tile_limit < available ? start + tile_limit : null));
     }
 
-    public async Task<string> GetRoomSettingsAsync(long roomId, CancellationToken cancellationToken)
-    {
-        const string query = "room_settings";
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            RoomSettingsStateView state = await application_runtime.InvokeAsync<
-                RoomSettingsGetRequest,
-                RoomSettingsStateView>(
-                ApplicationMemberIds.RoomSettingsGet,
-                new RoomSettingsGetRequest(roomId),
-                cancellationToken).ConfigureAwait(false);
-            return QueryJson.Serialize(QueryResults.Success(query, ToLegacyRoomSettings(state)));
-        }
-        catch (Exception error)
-        {
-            return QueryJson.SerializeFailure(query, error, cancellationToken);
-        }
-    }
-
-    private static RoomSettings ToLegacyRoomSettings(RoomSettingsStateView state)
-    {
-        if (!state.Loaded || state.Settings is not { } settings || state.Metadata is not { } metadata)
-            throw new InvalidOperationException($"Room settings for room {state.RoomId} were not loaded.");
-
-        return new RoomSettings
-        {
-            RoomId = settings.RoomId,
-            Name = settings.Name,
-            Description = settings.Description,
-            DoorMode = settings.DoorMode,
-            CategoryId = settings.CategoryId,
-            MaximumVisitors = settings.MaximumVisitors,
-            MaximumVisitorsLimit = metadata.MaximumVisitorsLimit,
-            MaximumVisitorsLowerLimit = metadata.MaximumVisitorsLowerLimit,
-            Tags = settings.Tags,
-            TradeMode = settings.TradeMode,
-            AllowPets = settings.AllowPets,
-            AllowFoodConsume = settings.AllowFoodConsume,
-            AllowWalkThrough = settings.AllowWalkThrough,
-            HideWalls = settings.HideWalls,
-            WallThickness = settings.WallThickness,
-            FloorThickness = settings.FloorThickness,
-            ChatFloodSensitivity = settings.ChatFloodSensitivity,
-            LeaveOnDoorTile = settings.LeaveOnDoorTile,
-            IdleSleepEnabled = settings.IdleSleepEnabled,
-            IdleSleepTimeoutSeconds = settings.IdleSleepTimeoutSeconds,
-            IdleAutokickEnabled = settings.IdleAutokickEnabled,
-            IdleAutokickTimeoutSeconds = settings.IdleAutokickTimeoutSeconds,
-            MuteAllPets = settings.MuteAllPets,
-            HiddenByBc = metadata.HiddenByBuildersClub,
-            IsGroupRoom = metadata.IsGroupRoom,
-            GroupRightsPolicy = metadata.GroupRightsPolicy,
-            RequiresBuildersClub = metadata.RequiresBuildersClub,
-            NftGroupIds = settings.NftGroupIds,
-            IsHabboXDemoRoom = metadata.IsHabboXDemoRoom,
-            WhoCanMute = settings.WhoCanMute,
-            WhoCanKick = settings.WhoCanKick,
-            WhoCanBan = settings.WhoCanBan
-        };
-    }
-
     public async Task<string> RunScriptAsync(string name, CancellationToken cancellationToken)
     {
         string path = ScriptPath(name);
-        if (!File.Exists(path))
-            return $"no script named '{name}'";
-        string code = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
+        string code = await RunnableTextAsync(name, path, cancellationToken).ConfigureAwait(false);
         ScriptExecutionResult result = await RunSourceAsync(
             code,
             path,
@@ -2125,6 +2029,40 @@ internal sealed class McpHost(
             cancellationToken).ConfigureAwait(false);
         return SerializeExecution(result);
     }
+
+    public string StartCode(string code, int? timeoutMs) =>
+        JsonSerializer.Serialize(
+            background_runs.Start(code, "run_code", null, "mcp.csx", RunLimit(timeoutMs)).Read(0),
+            JsonOptions);
+
+    public async Task<string> StartScriptAsync(string name, int? timeoutMs, CancellationToken cancellationToken)
+    {
+        string path = ScriptPath(name);
+        string code = await RunnableTextAsync(name, path, cancellationToken).ConfigureAwait(false);
+        return JsonSerializer.Serialize(
+            background_runs.Start(code, Path.GetFileNameWithoutExtension(path), path, path, RunLimit(timeoutMs)).Read(0),
+            JsonOptions);
+    }
+
+    public string ReadRun(long? id, int since) =>
+        id is { } value
+            ? JsonSerializer.Serialize(FindRun(value).Read(since), JsonOptions)
+            : JsonSerializer.Serialize(background_runs.All.Select(run => run.Read(int.MaxValue)), JsonOptions);
+
+    public string StopRun(long id) =>
+        FindRun(id).Stop() ? $"stopping run {id}" : $"run {id} has already ended";
+
+    private BackgroundRun FindRun(long id) =>
+        background_runs.Find(id) ?? throw new InvalidOperationException($"no background run {id}; get_run without an id lists them");
+
+    private static TimeSpan? RunLimit(int? timeout_ms) =>
+        timeout_ms is { } milliseconds ? TimeSpan.FromMilliseconds(milliseconds) : null;
+
+    private async Task<string> RunnableTextAsync(string name, string path, CancellationToken cancellation_token) =>
+        await ReadOpenScriptAsync(name, cancellation_token).ConfigureAwait(false)
+            ?? (File.Exists(path)
+                ? await File.ReadAllTextAsync(path, cancellation_token).ConfigureAwait(false)
+                : throw new InvalidOperationException($"no script named '{name}'"));
 
     private static string SerializeExecution(ScriptExecutionResult result) =>
         JsonSerializer.Serialize(new ScriptExecutionSnapshot(
@@ -2146,39 +2084,7 @@ internal sealed class McpHost(
             FileName = file_name
         }, cancellation_token);
 
-    public string Kick(long userId)
-    {
-        RoomModerationDispatchResult result = application_runtime.Invoke<
-            RoomModerationTargetRequest,
-            RoomModerationDispatchResult>(
-                ApplicationMemberIds.RoomModerationKick,
-                new RoomModerationTargetRequest((Id)userId));
-        return $"dispatched kick for #{result.UserId} in room #{result.RoomId}";
-    }
-
-    public string Mute(long userId, int minutes)
-    {
-        RoomModerationDispatchResult result = application_runtime.Invoke<
-            RoomModerationMuteRequest,
-            RoomModerationDispatchResult>(
-                ApplicationMemberIds.RoomModerationMute,
-                new RoomModerationMuteRequest((Id)userId, minutes));
-        return $"dispatched {minutes}m mute for #{result.UserId} in room #{result.RoomId}";
-    }
-
-    public string Ban(long userId)
-    {
-        RoomModerationDispatchResult result = application_runtime.Invoke<
-            RoomModerationBanRequest,
-            RoomModerationDispatchResult>(
-                ApplicationMemberIds.RoomModerationBan,
-                new RoomModerationBanRequest((Id)userId, BanLength.Hour));
-        return $"dispatched one-hour ban for #{result.UserId} in room #{result.RoomId}";
-    }
-    public string GiveRights(long userId) { Globals().GiveRights(userId); return $"gave rights to #{userId}"; }
     public string RemoveRights(long userId) { Globals().RemoveRights(userId); return $"removed rights from #{userId}"; }
-    public string LetIn(string name) { Globals().LetIn(name, true); return $"let {name} in"; }
-    public string RespectPet(long petId) { Globals().RespectPet(petId); return $"respected pet #{petId}"; }
 
     public string GetControllers() => QueryJson.Serialize(queries.Controllers());
 
@@ -2205,21 +2111,28 @@ internal sealed class McpHost(
             queries.Currencies,
             static snapshot => snapshot);
 
-    public string DeleteScript(string name)
+    public async Task<string> DeleteScriptAsync(string name, CancellationToken cancellationToken)
     {
         string path = ScriptPath(name);
         if (!File.Exists(path))
-            return $"no script named '{name}'";
+            throw new InvalidOperationException($"no script named '{name}'");
+        if (editor is not null && await editor.DeleteScriptAsync(name, cancellationToken).ConfigureAwait(false) is { } done)
+            return done;
         File.Delete(path);
         return $"deleted '{name}'";
     }
 
-    public string RenameScript(string name, string newName)
+    public async Task<string> RenameScriptAsync(string name, string newName, CancellationToken cancellationToken)
     {
-        string src = ScriptPath(name);
-        if (!File.Exists(src))
-            return $"no script named '{name}'";
-        File.Move(src, ScriptPath(newName), overwrite: true);
+        string source = ScriptPath(name);
+        string target = ScriptPath(newName);
+        if (!File.Exists(source))
+            throw new InvalidOperationException($"no script named '{name}'");
+        if (editor is not null && await editor.RenameScriptAsync(name, newName, cancellationToken).ConfigureAwait(false) is { } done)
+            return done;
+        if (File.Exists(target) && !string.Equals(Path.GetFullPath(source), Path.GetFullPath(target), StoragePaths.FileComparison))
+            throw new InvalidOperationException($"a script named '{newName}' already exists");
+        File.Move(source, target);
         return $"renamed '{name}' to '{newName}'";
     }
 
@@ -2285,7 +2198,7 @@ internal sealed class McpHost(
 
     public string CompileCheck(string code)
     {
-        var errors = ScriptEngine.Compile(code)
+        var errors = script_execution.Compile(code, "mcp.csx")
             .Where(d => d.Severity is Microsoft.CodeAnalysis.DiagnosticSeverity.Error or Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
             .ToList();
         if (errors.Count == 0)
@@ -2297,6 +2210,9 @@ internal sealed class McpHost(
     public string GetScriptingGuide() =>
         """
         QX scripts are C# scripts. Public ScriptGlobals members are available as top-level symbols.
+
+        SHARED CODE
+        #load "Engine.csx" compiles another script from the library into this one, so helpers live in one file and every script that loads them gets its fixes; loops in loaded files stop with the run like the script's own. #r "path/Library.dll" references an assembly. Both paths resolve against the script library unless they are absolute. A throwaway test is then only its own lines, run with run_code, and leaves nothing in the library.
 
         STATE
         Session, Client, Self, Me, Room, RoomState, IsRoomReady, Users, Pets, Bots, FloorItems, WallItems, Friends, InventoryItems, InventoryPets, Achievements, Credits, Diamonds, Duckets, Controllers, FloorPlan and Heightmap.
@@ -2340,7 +2256,7 @@ internal sealed class McpHost(
         Out["Name"] and In["Name"] resolve stable message names. SendToServer/SendToClient send Flash packet values.
 
         PANEL UI
-        A tab can declare a panel with //@ui: directives. Chrome: //@ui:title and //@ui:desc. Layout containers nest and are closed by their end directive; one left open is closed by the end of the file:
+        A tab can declare a panel with //@ui: directives. Chrome: //@ui:title and //@ui:desc. //@ui:required marks a script that only works with its panel: it opens in panel view, Run and F5 switch to the panel and start a panel run, and a run without a panel (run_script, run_code, the CLI) is refused with an error instead of finishing at once with default values. //@ui:console [collapsed] [height=N] shows the tab's own output - Log(), warnings and errors - under the panel. //@ui:layout [center] [width=N | full] places the content: left-aligned at 720px by default, centred, a different width, or the full page. Layout containers nest and are closed by their end directive; one left open is closed by the end of the file:
         //@ui:row [gap=12] [align=start|center|end|stretch] ... //@ui:endrow      (//@ui:end closes a row too)
         //@ui:group "Title" [collapsed=true] ... //@ui:endgroup
         //@ui:separator (or //@ui:divider), //@ui:spacer [height=12], //@ui:section Heading
@@ -2365,7 +2281,7 @@ internal sealed class McpHost(
         //@ui:table    name "Label" [Column,Column,Column] [height=220] [selectable=false] [toolbar=false]
         Every directive is named first and labelled second: the name is the identifier the script uses, the quoted text is what the panel shows. Leave the label out and the name is humanised into one (max_speed becomes "Max speed"). A directive with no usable name is dropped rather than half-built. A flag may be written bare, so wrap and wrap=true agree. An attribute the renderer does not know is kept, not rejected.
         Buttons render inline where they are declared, not in a bar at the bottom - put one in a row beside the input it acts on. Controls sit side by side inside //@ui:row: grow= shares the leftover width, width= pins a size. A panel may declare several output boxes; each gets its own clear and copy toolbar (toolbar=false removes it). Nothing appears in a box unless the script writes it.
-        Tables. The columns are the bracket list, declared the way a select declares its options. Ui.AddRow(table, cells) appends a row and Ui.Clear(name) empties an output box or a table of that name; cells are converted with ToString, a null cell becomes an empty one, and cells beyond the declared columns are kept but not shown. height is 220, selectable and toolbar are on unless turned off. Ui.String(table) reads the selected row back as its cells joined with tabs, or the fallback when nothing is selected:
+        Tables. The columns are the bracket list, declared the way a select declares its options. Ui.AddRow(table, cells) appends a row, Ui.SetRows(table, rows) replaces every row in one step (rows as object[] per row) and updates the rows that stay in place, so a table refreshed on a timer keeps its scroll position and selection, and Ui.Clear(name) empties an output box or a table of that name; cells are converted with ToString, a null cell becomes an empty one, and cells beyond the declared columns are kept but not shown. height is 220, selectable and toolbar are on unless turned off. Ui.String(table) reads the selected row back as its cells joined with tabs, or the fallback when nothing is selected:
         string[] cells = Ui.String("results").Split('\t');
         A table is a separate control from an output box even when both are given the same name, so a panel that declares //@ui:output results and //@ui:table results has two of them and Ui.Log and Ui.AddRow reach different ones. Name them apart.
 
@@ -2374,10 +2290,10 @@ internal sealed class McpHost(
         Compatibility: a script that registers no handlers keeps the old behaviour - a press starts the script from the top, runs it to the end and stops it, and Ui.Clicked(name) says which button it was. Pick that style for a panel that is a form: fill it in, press once, read the result. Pick handlers for anything that starts, keeps going and has to be stopped, or for any panel with more than one button, because a restart cannot answer a second press while the first is still running. New panels should use handlers.
         Wire: Ui.OnClick(name, async () => { ... }) - Func<Task> or Action, returns void. Reading inside a handler reads what the panel says now, so a running loop picks up edits made while it runs.
         Read (each returns the fallback when the control is missing or empty): Ui.String/Text/Select(name, fallback = "") -> string; Ui.Int(name, fallback = 0) -> int; Ui.Number(name, fallback = 0) -> double; Ui.Bool(name, fallback = false) -> bool, where only "true" and "1" count as yes and the fallback is for a control that was never set rather than one holding something unreadable; Ui.File(name) -> string? path or null; Ui.FileText(name) -> string, empty when there is no file; Ui.Clicked(name) -> bool, matched without regard to case; Ui.ClickedButton -> string?; Ui.HasClickHandlers -> bool; Ui.HandledButtons -> IReadOnlyCollection<string>.
-        Write (all void): Ui.Log(box, text) - with several boxes always name one, an empty name goes to the first; Ui.Clear(name) - empties the output box or the table of that name; Ui.Set(name, value) - changes what the panel shows and what a later read returns; Ui.Progress(name, 0..1) or Ui.Progress(name, done, total) - clamped, and a total of zero leaves the bar at nothing; Ui.Status(name, text); Ui.Enable(name, on); Ui.Show(name, on) - a hidden control takes no space; Ui.Download(fileName, content); Ui.AddRow(table, cells); Ui.Toast(text, problem = false) - a short message that fades, for something worth noticing but not worth a line in a box; Ui.Busy(button, busy = true) - marks a button as working without disabling it, so a Stop can spin and still be pressed. The panel already spins the pressed button for as long as its handler runs and clears it when the handler returns, so this is for work that outlives the press: a handler that arms a subscription and returns marks its button busy itself, and whatever tears the subscription down clears it.
+        Write (all void): Ui.Log(box, text) - with several boxes always name one, an empty name goes to the first; Ui.Clear(name) - empties the output box or the table of that name; Ui.Set(name, value) - changes what the panel shows and what a later read returns; Ui.Progress(name, 0..1) or Ui.Progress(name, done, total) - clamped, and a total of zero leaves the bar at nothing; Ui.Status(name, text); Ui.Enable(name, on); Ui.Show(name, on) - a hidden control takes no space; Ui.Download(fileName, content); Ui.AddRow(table, cells); Ui.SetRows(table, rows) - refresh a whole table without losing its scroll position; Ui.Toast(text, problem = false) - a short message that fades, for something worth noticing but not worth a line in a box; Ui.Busy(button, busy = true) - marks a button as working without disabling it, so a Stop can spin and still be pressed. The panel already spins the pressed button for as long as its handler runs and clears it when the handler returns, so this is for work that outlives the press: a handler that arms a subscription and returns marks its button busy itself, and whatever tears the subscription down clears it.
         Ask (awaited): await Ui.Confirm(title, message) -> Task<bool>; await Ui.Prompt(title, initial = "") -> Task<string?>, which is either a value with something in it or null. The dialog will not accept a blank answer, so an empty string never comes back and branching on null is enough: null means dismissed, or nobody there to ask.
         In the app both are really asked as long as the run is still that tab's current run and the window is open - a tab that is not the selected one, or a panel scrolled out of sight, still raises the question, so a script is never answered behind the user's back. They answer false and null at once only where nothing can answer: the run was replaced or stopped, the tab was closed, the app is shutting down, or there is no panel at all, which is every headless and CLI run. That is why a false is not proof that a user said no. Ask from inside a handler, where a panel exists by definition, and never gate a destructive step on a Confirm that a run without a panel would answer for the user.
-        Stopping: in panel mode the toolbar has no Run or Stop, and F5 does nothing. The panel carries a badge in its top right corner for as long as a run exists - compiling, running, or ready once it is parked on its handlers - and the stop next to it is the hard stop. A Stop button the script declares is a soft one that does only what its handler does, so a script that wants a clean shutdown still has to write it.
+        Running and stopping: the toolbar Run and F5 start the script in the view that is shown. In panel view that is a panel run, which stays alive on its handlers after the body returns; in code view it is a plain run, which ends when the body returns and cancels everything the script started, so a panel script meant to keep running declares //@ui:required. The toolbar Stop is the hard stop. A Stop button the script declares is a soft one that does only what its handler does, so a script that wants a clean shutdown still has to write it.
         Outside panel mode every getter returns its fallback, Ui.Clicked is false, Ui.OnClick is never called and the writers do nothing, so a paneled script still runs from the editor.
         Ui.Invoke(button) -> Task?, the host's click path, null when the button has no handler, and Ui.SetClicked(button) which records the press Ui.Clicked reads, are the host's own. Scripts do not call either.
         Example - a Start button looping while Stop and Clear stay responsive:

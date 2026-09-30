@@ -21,7 +21,7 @@ if ((Test-Path -LiteralPath $package) -or (Test-Path -LiteralPath $archive)) {
 $project = if ($edition -eq 'Desktop') { 'src/QX.Desktop/QX.Desktop.csproj' } else { 'src/QX.App/QX.App.csproj' }
 $binary_directory = if ($mac_bundle) { Join-Path $package 'QX Scripter.app/Contents/MacOS' } else { $package }
 $arguments = @('publish', (Join-Path $root $project), '-c', 'Release', '-r', $runtime,
-    '--self-contained', 'false', '-p:PublishSingleFile=false', '-p:UseAppHost=true',
+    '--self-contained', 'false', '-p:PublishSingleFile=false', '-p:PublishReadyToRun=true', '-p:UseAppHost=true',
     '-p:DebugType=None', '-p:DebugSymbols=false', '-p:RestoreLockedMode=true',
     '--disable-build-servers', '-o', $binary_directory)
 if ($version) {

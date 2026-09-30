@@ -6,6 +6,33 @@ namespace Qx.Hosting;
 
 public static class ApplicationMcpTools
 {
+    private static readonly HashSet<string> listed = new(StringComparer.Ordinal)
+    {
+        ApplicationMemberIds.RoomEnter,
+        ApplicationMemberIds.RoomLeave,
+        ApplicationMemberIds.RoomChatTalk,
+        ApplicationMemberIds.RoomChatShout,
+        ApplicationMemberIds.RoomChatWhisper,
+        ApplicationMemberIds.RoomAvatarWalk,
+        ApplicationMemberIds.RoomAvatarDance,
+        ApplicationMemberIds.RoomAvatarExpression,
+        ApplicationMemberIds.RoomAvatarSign,
+        ApplicationMemberIds.RoomDoorbellAnswer,
+        ApplicationMemberIds.RoomPeopleRightsGrant,
+        ApplicationMemberIds.RoomPetRespect,
+        ApplicationMemberIds.RoomModerationKick,
+        ApplicationMemberIds.RoomModerationMute,
+        ApplicationMemberIds.RoomModerationBan,
+        ApplicationMemberIds.RoomSettingsGet,
+        ApplicationMemberIds.RoomStickyGet,
+        ApplicationMemberIds.PeopleProfileGet,
+        ApplicationMemberIds.PeopleBadgesGet,
+        ApplicationMemberIds.PeopleRelationshipGet,
+        ApplicationMemberIds.GroupsDetailsGet,
+        ApplicationMemberIds.FriendsSearch,
+        ApplicationMemberIds.NavigatorSearchText
+    };
+
     public static IReadOnlyList<McpTool> Create(IApplicationRuntime application)
     {
         ArgumentNullException.ThrowIfNull(application);
@@ -101,6 +128,7 @@ public static class ApplicationMcpTools
             InputSchema = ApplicationJson.InputSchema(descriptor),
             OutputSchema = ApplicationJson.OutputSchema(descriptor.ResultType),
             Metadata = Metadata(descriptor),
+            Listed = listed.Contains(descriptor.Id),
             Annotations = new McpToolAnnotations(
                 hints.ReadOnly,
                 hints.Destructive,

@@ -66,7 +66,7 @@ internal sealed class ScriptSession(RuntimeHost runtime, TextReader input, TextW
                             break;
                         case "check":
                             ScriptExecutionRequest request = await ReadScriptAsync(FileArgument(argument), cancellation_token);
-                            var diagnostics = await Task.Run(() => ScriptEngine.Compile(request.Code, request.FileName), cancellation_token);
+                            var diagnostics = await Task.Run(() => runtime.ScriptExecution.Compile(request.Code, request.FileName), cancellation_token);
                             foreach (var diagnostic in diagnostics)
                                 output.WriteLine(diagnostic);
                             output.WriteLine(diagnostics.Any(value => value.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)

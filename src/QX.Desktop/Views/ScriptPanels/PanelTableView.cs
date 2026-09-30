@@ -2,11 +2,13 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Qx.Presentation.Services.Panels;
 
 namespace Qx.Desktop.Views.ScriptPanels;
@@ -86,13 +88,7 @@ public sealed class PanelTableView : Decorator
                 CanUserSort = false,
                 MinWidth = min,
                 Width = new DataGridLength(1, DataGridLengthUnitType.Star),
-                CellTemplate = new FuncDataTemplate<PanelTableRow>((row, _) => new TextBlock
-                {
-                    Text = row?.Cell(index) ?? "",
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(12, 0)
-                })
+                CellTemplate = new FuncDataTemplate<PanelTableRow>((_, _) => new PanelTableCell(index))
             });
         }
     }
@@ -127,8 +123,13 @@ public sealed class PanelTableView : Decorator
     {
         if (args.Action != NotifyCollectionChangedAction.Add || _node is not { Rows.Count: > 0 } node || node.Selected is not null)
             return;
-        Trail(node);
+        if (AtEnd())
+            Trail(node);
     }
+
+    bool AtEnd() =>
+        _grid.GetVisualDescendants().OfType<ScrollBar>().FirstOrDefault(bar => bar.Orientation == Orientation.Vertical) is not { IsVisible: true } bar ||
+        bar.Value >= bar.Maximum - 1;
 
     void Trail(PanelTableNode node)
     {

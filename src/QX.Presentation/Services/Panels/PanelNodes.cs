@@ -404,13 +404,39 @@ public sealed partial class PanelOutputNode : PanelNode
     }
 }
 
-public sealed class PanelTableRow(IReadOnlyList<string> cells)
+public sealed class PanelTableRow : ObservableObject
 {
-    public IReadOnlyList<string> Cells { get; } = cells ?? throw new ArgumentNullException(nameof(cells));
+    IReadOnlyList<string> _cells;
+
+    public PanelTableRow(IReadOnlyList<string> cells)
+    {
+        _cells = Format(cells);
+    }
+
+    public IReadOnlyList<string> Cells
+    {
+        get => _cells;
+        private set => SetProperty(ref _cells, value);
+    }
 
     public string Cell(int index) => index >= 0 && index < Cells.Count ? Cells[index] : "";
 
     public string Joined => string.Join('\t', Cells);
+
+    public bool Update(IReadOnlyList<string> cells)
+    {
+        string[] formatted = Format(cells);
+        if (Cells.SequenceEqual(formatted))
+            return false;
+        Cells = formatted;
+        return true;
+    }
+
+    static string[] Format(IReadOnlyList<string> cells)
+    {
+        ArgumentNullException.ThrowIfNull(cells);
+        return [.. cells.Select(PanelValueFormats.Cell)];
+    }
 }
 
 public sealed partial class PanelTableNode : PanelNode
@@ -459,8 +485,20 @@ public sealed partial class PanelTableNode : PanelNode
 
     public void AddRow(IReadOnlyList<string> cells)
     {
-        ArgumentNullException.ThrowIfNull(cells);
-        Rows.Add(new PanelTableRow([.. cells.Select(PanelValueFormats.Cell)]));
+        Rows.Add(new PanelTableRow(cells));
+        OnPropertyChanged(nameof(RowCountText));
+    }
+
+    public void SetRows(IReadOnlyList<IReadOnlyList<string>> rows)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+        int kept = Math.Min(Rows.Count, rows.Count);
+        for (int index = 0; index < kept; index++)
+            Rows[index].Update(rows[index]);
+        while (Rows.Count > rows.Count)
+            Rows.RemoveAt(Rows.Count - 1);
+        for (int index = kept; index < rows.Count; index++)
+            Rows.Add(new PanelTableRow(rows[index]));
         OnPropertyChanged(nameof(RowCountText));
     }
 

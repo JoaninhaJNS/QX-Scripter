@@ -1,13 +1,19 @@
+using System.Collections.Concurrent;
 using System.Text;
 using Qx.Diagnostics;
 using Qx.Presentation.Platform;
 using Qx.Presentation.Services.Library;
+using Qx.Scripting;
 
 namespace Qx.Presentation.Services.Files;
 
 public sealed class ScriptFileService(IAppPaths paths) : IScriptFileService
 {
+    const int HeaderLength = 4096;
+
     static readonly UTF8Encoding _utf8 = new(encoderShouldEmitUTF8Identifier: false);
+
+    readonly ConcurrentDictionary<string, (DateTime EditedAt, long Length, ScriptHeader Header)> _headers = new(PathComparison.Comparer);
 
     public string ScriptsDirectory { get; } = (paths ?? throw new ArgumentNullException(nameof(paths))).ScriptsDirectory;
 
@@ -27,10 +33,29 @@ public sealed class ScriptFileService(IAppPaths paths) : IScriptFileService
                 var info = new FileInfo(path);
                 if (!info.Exists)
                     continue;
-                entries.Add(new ScriptFileEntry(info.FullName, ScriptFileName.NameOf(info.FullName), info.LastWriteTimeUtc, info.Length));
+                entries.Add(new ScriptFileEntry(info.FullName, ScriptFileName.NameOf(info.FullName), info.LastWriteTimeUtc, info.Length, HeaderOf(info)));
             }
             return entries;
         }, cancellation_token);
+
+    ScriptHeader HeaderOf(FileInfo info)
+    {
+        if (_headers.TryGetValue(info.FullName, out var cached) && cached.EditedAt == info.LastWriteTimeUtc && cached.Length == info.Length)
+            return cached.Header;
+        ScriptHeader header;
+        try
+        {
+            using var reader = new StreamReader(info.FullName, _utf8, detectEncodingFromByteOrderMarks: true);
+            char[] start = new char[HeaderLength];
+            header = ScriptHeader.Parse(new string(start, 0, reader.ReadBlock(start, 0, start.Length)));
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            header = new ScriptHeader(null, null);
+        }
+        _headers[info.FullName] = (info.LastWriteTimeUtc, info.Length, header);
+        return header;
+    }
 
     public Task<string?> ReadAsync(string path, CancellationToken cancellation_token) =>
         Task.Run<string?>(() =>

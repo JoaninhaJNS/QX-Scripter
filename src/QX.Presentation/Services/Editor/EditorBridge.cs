@@ -42,27 +42,69 @@ public sealed class EditorBridge : IEditorBridge
     public Task<string> ListTabsAsync(CancellationToken cancellation_token) =>
         _ui.InvokeAsync(() => _workspace.Documents.Count == 0
             ? "no open tabs"
-            : string.Join("\n", _workspace.Documents.Select(document =>
-                $"{(ReferenceEquals(document, _workspace.Active) ? "* " : "  ")}{document.Name} [{StateWord(document)}]{(document.IsModified ? " ●" : "")}")),
+            : string.Join("\n", _workspace.Documents.Select(Describe)),
             cancellation_token);
 
-    public Task<string> GetActiveTabAsync(CancellationToken cancellation_token) =>
-        _ui.InvokeAsync(() => _workspace.Active is { } document ? $"{document.Name}\n----\n{document.Text}" : "no active tab", cancellation_token);
+    public Task<string?> ReadOpenScriptAsync(string name, CancellationToken cancellation_token) =>
+        _ui.InvokeAsync(() => OpenScript(name)?.Text, cancellation_token);
+
+    public Task<string?> EditOpenScriptAsync(string name, Func<string, string> edit, CancellationToken cancellation_token)
+    {
+        ArgumentNullException.ThrowIfNull(edit);
+        return _ui.InvokeAsync<string?>(async () =>
+        {
+            if (OpenScript(name) is not { } document)
+                return null;
+            bool clean = document.IsSaved && !document.IsModified;
+            string updated = edit(document.Text);
+            if (!string.Equals(updated, document.Text, StringComparison.Ordinal))
+                document.ReplaceText(updated);
+            if (!clean)
+            {
+                return document.IsSaved
+                    ? $"updated the open tab '{document.Name}'; it had unsaved changes, so its file changes when the tab is saved"
+                    : $"updated tab '{document.Name}'";
+            }
+            if (!await _commands.SaveInPlaceAsync(document, cancellation_token))
+                throw new InvalidOperationException($"updated the open tab '{document.Name}', but its file could not be written");
+            return $"saved '{document.Name}' and its open tab";
+        }, cancellation_token);
+    }
+
+    public Task<string?> RenameScriptAsync(string name, string newName, CancellationToken cancellation_token) =>
+        _ui.InvokeAsync<string?>(async () =>
+        {
+            FileOperationResult renamed = await _commands.RenameUnattendedAsync(_files.PathFor(name), newName, cancellation_token);
+            return renamed.Succeeded
+                ? $"renamed '{name}' to '{ScriptFileName.Normalize(newName)}'"
+                : throw new InvalidOperationException(renamed.Failure ?? $"'{name}' could not be renamed");
+        }, cancellation_token);
+
+    public Task<string?> DeleteScriptAsync(string name, CancellationToken cancellation_token) =>
+        _ui.InvokeAsync<string?>(async () =>
+        {
+            FileOperationResult deleted = await _commands.DeleteUnattendedAsync(_files.PathFor(name), cancellation_token);
+            return deleted.Succeeded
+                ? $"deleted '{name}'"
+                : throw new InvalidOperationException(deleted.Failure ?? $"'{name}' could not be deleted");
+        }, cancellation_token);
 
     public Task<string> OpenTabAsync(string name, CancellationToken cancellation_token) =>
         _ui.InvokeAsync(async () =>
         {
             string typed = name ?? "";
             if (typed.Trim().Length == 0 || !string.Equals(ScriptFileName.Normalize(typed), typed.Trim(), StringComparison.Ordinal))
-                return $"no saved script named '{name}'";
+                throw new InvalidOperationException($"no saved script named '{name}'");
             string path = _files.PathFor(typed);
             if (!_files.Exists(path))
-                return $"no saved script named '{name}'";
+                throw new InvalidOperationException($"no saved script named '{name}'");
             OpenResult opened = await _workspace.OpenAsync(path, cancellation_token);
             if (opened.Document is not { } document)
-                return $"no saved script named '{name}'";
+                throw new InvalidOperationException($"no saved script named '{name}'");
             Reveal(document, "opened");
-            return $"opened '{name}'";
+            return opened.Outcome == OpenOutcome.AlreadyOpen
+                ? $"'{name}' is already open as tab '{document.Name}'"
+                : $"opened '{name}' as tab '{document.Name}'";
         }, cancellation_token);
 
     public Task<string> CreateTabAsync(string name, string code, CancellationToken cancellation_token) =>
@@ -79,39 +121,38 @@ public sealed class EditorBridge : IEditorBridge
         _ui.InvokeAsync(() =>
         {
             if (_workspace.Active is not { } document)
-                return "no active tab";
+                throw new InvalidOperationException("no active tab");
             document.ReplaceText(code ?? "");
-            return "updated active tab";
+            return $"updated tab '{document.Name}'";
         }, cancellation_token);
 
     public Task<string> SelectTabAsync(string name, CancellationToken cancellation_token) =>
         _ui.InvokeAsync(() =>
         {
-            if (_workspace.FindByName(name) is not { } document)
-                return $"no tab named '{name}'";
+            ScriptDocument document = Require(name);
             Reveal(document, "selected");
-            return $"selected '{name}'";
+            return $"selected '{document.Name}'";
         }, cancellation_token);
 
-    public Task<string> CloseTabAsync(string name, CancellationToken cancellation_token) =>
-        _ui.InvokeAsync(async () =>
+    public Task<string> CloseTabAsync(string name, bool discard, CancellationToken cancellation_token) =>
+        _ui.InvokeAsync(() =>
         {
-            if (_workspace.FindByName(name) is not { } document)
-                return $"no tab named '{name}'";
-            CloseOutcome outcome = await _commands.CloseAsync(document, cancellation_token);
-            return outcome switch
+            ScriptDocument document = Require(name);
+            if (document.Run.IsWorking)
             {
-                CloseOutcome.Closed => $"closed '{name}'",
-                CloseOutcome.Stopping => $"stopping '{name}'",
-                _ => $"close cancelled for '{name}'"
-            };
+                document.Run.RequestStop();
+                return $"stopping '{document.Name}'; close it again once it has stopped";
+            }
+            if (document.IsModified && !discard)
+                throw new InvalidOperationException($"'{document.Name}' has unsaved changes; save it first, or pass discard to drop them");
+            _workspace.Remove(document);
+            return $"closed '{document.Name}'";
         }, cancellation_token);
 
     public Task<string> RunActiveTabAsync(string name, CancellationToken cancellation_token) =>
         _ui.InvokeAsync(() =>
         {
-            if (Target(name) is not { } document)
-                return string.IsNullOrWhiteSpace(name) ? "no active tab" : $"no tab named '{name}'";
+            ScriptDocument document = Target(name);
             if (document.Run.IsAlive)
                 return document.Run.IsArmedIdle ? "panel already running; press its buttons or stop it" : "already running";
             document.Run.Start(null, document.PanelMode);
@@ -121,8 +162,7 @@ public sealed class EditorBridge : IEditorBridge
     public Task<string> StopActiveTabAsync(string name, CancellationToken cancellation_token) =>
         _ui.InvokeAsync(() =>
         {
-            if (Target(name) is not { } document)
-                return string.IsNullOrWhiteSpace(name) ? "no active tab" : $"no tab named '{name}'";
+            ScriptDocument document = Target(name);
             if (!document.Run.IsAlive)
                 return "not running";
             document.Run.RequestStop();
@@ -132,16 +172,14 @@ public sealed class EditorBridge : IEditorBridge
     public Task<string> GetTabOutputAsync(string name, CancellationToken cancellation_token) =>
         _ui.InvokeAsync(() =>
         {
-            if (Target(name) is not { } document)
-                return string.IsNullOrWhiteSpace(name) ? "no tab" : $"no tab named '{name}'";
+            ScriptDocument document = Target(name);
             return document.Run.Output.Lines.Count == 0 ? "(no output)" : document.Run.Output.Text();
         }, cancellation_token);
 
     public Task<string> GetTabStatusAsync(string name, CancellationToken cancellation_token) =>
         _ui.InvokeAsync(() =>
         {
-            if (Target(name) is not { } document)
-                return string.IsNullOrWhiteSpace(name) ? "no tab" : $"no tab named '{name}'";
+            ScriptDocument document = Target(name);
             ScriptRunController run = document.Run;
             return JsonSerializer.Serialize(new
             {
@@ -163,28 +201,46 @@ public sealed class EditorBridge : IEditorBridge
     public Task<string> GetTabErrorsAsync(string name, CancellationToken cancellation_token) =>
         _ui.InvokeAsync(() =>
         {
-            if (Target(name) is not { } document)
-                return string.IsNullOrWhiteSpace(name) ? "no tab" : $"no tab named '{name}'";
+            ScriptDocument document = Target(name);
             return document.Run.Errors.Count == 0 ? "no errors" : JsonSerializer.Serialize(document.Run.Errors.ToList(), _errors_json);
         }, cancellation_token);
 
-    ScriptDocument? Target(string name) =>
-        string.IsNullOrWhiteSpace(name) ? _workspace.Active : _workspace.FindByName(name);
+    ScriptDocument Target(string name) =>
+        string.IsNullOrWhiteSpace(name)
+            ? _workspace.Active ?? throw new InvalidOperationException("no active tab")
+            : Require(name);
+
+    ScriptDocument Require(string name) =>
+        _workspace.FindByName(name) ?? throw new InvalidOperationException($"no tab named '{name}'");
+
+    ScriptDocument? OpenScript(string name) =>
+        string.IsNullOrWhiteSpace(name) ? _workspace.Active : _workspace.FindByPath(_files.PathFor(name)) ?? _workspace.FindByName(name);
+
+    string Describe(ScriptDocument document)
+    {
+        string active = ReferenceEquals(document, _workspace.Active) ? "* " : "  ";
+        string file = document.LibraryName is not { } saved
+            ? " (unsaved)"
+            : string.Equals(saved, document.Name, StringComparison.Ordinal) ? "" : $" (file '{saved}')";
+        return $"{active}{document.Name}{file} [{StateWord(document)}]{(document.IsModified ? " ● modified" : "")}";
+    }
 
     static string StateWord(ScriptDocument document) =>
         document.Run.IsArmedIdle ? "armed" : document.Run.State.ToString().ToLowerInvariant();
 
     string Unique(string requested)
     {
-        if (_workspace.FindByName(requested) is null)
+        if (Free(requested))
             return requested;
         for (int number = 2; ; number++)
         {
             string candidate = $"{requested} {number}";
-            if (_workspace.FindByName(candidate) is null)
+            if (Free(candidate))
                 return candidate;
         }
     }
+
+    bool Free(string name) => _workspace.FindByName(name) is null && !_files.Exists(_files.PathFor(name));
 
     void Reveal(ScriptDocument document, string verb)
     {

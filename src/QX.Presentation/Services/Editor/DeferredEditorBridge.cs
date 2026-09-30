@@ -21,9 +21,6 @@ public sealed class DeferredEditorBridge : IEditorBridge
     public Task<string> ListTabsAsync(CancellationToken cancellation_token) =>
         Target?.ListTabsAsync(cancellation_token) ?? MissingAsync();
 
-    public Task<string> GetActiveTabAsync(CancellationToken cancellation_token) =>
-        Target?.GetActiveTabAsync(cancellation_token) ?? MissingAsync();
-
     public Task<string> OpenTabAsync(string name, CancellationToken cancellation_token) =>
         Target?.OpenTabAsync(name, cancellation_token) ?? MissingAsync();
 
@@ -36,8 +33,8 @@ public sealed class DeferredEditorBridge : IEditorBridge
     public Task<string> SelectTabAsync(string name, CancellationToken cancellation_token) =>
         Target?.SelectTabAsync(name, cancellation_token) ?? MissingAsync();
 
-    public Task<string> CloseTabAsync(string name, CancellationToken cancellation_token) =>
-        Target?.CloseTabAsync(name, cancellation_token) ?? MissingAsync();
+    public Task<string> CloseTabAsync(string name, bool discard, CancellationToken cancellation_token) =>
+        Target?.CloseTabAsync(name, discard, cancellation_token) ?? MissingAsync();
 
     public Task<string> RunActiveTabAsync(string name, CancellationToken cancellation_token) =>
         Target?.RunActiveTabAsync(name, cancellation_token) ?? MissingAsync();
@@ -53,6 +50,18 @@ public sealed class DeferredEditorBridge : IEditorBridge
 
     public Task<string> GetTabErrorsAsync(string name, CancellationToken cancellation_token) =>
         Target?.GetTabErrorsAsync(name, cancellation_token) ?? MissingAsync();
+
+    public Task<string?> ReadOpenScriptAsync(string name, CancellationToken cancellation_token) =>
+        Target?.ReadOpenScriptAsync(name, cancellation_token) ?? Task.FromResult<string?>(null);
+
+    public Task<string?> EditOpenScriptAsync(string name, Func<string, string> edit, CancellationToken cancellation_token) =>
+        Target?.EditOpenScriptAsync(name, edit, cancellation_token) ?? Task.FromResult<string?>(null);
+
+    public Task<string?> RenameScriptAsync(string name, string newName, CancellationToken cancellation_token) =>
+        Target?.RenameScriptAsync(name, newName, cancellation_token) ?? Task.FromResult<string?>(null);
+
+    public Task<string?> DeleteScriptAsync(string name, CancellationToken cancellation_token) =>
+        Target?.DeleteScriptAsync(name, cancellation_token) ?? Task.FromResult<string?>(null);
 
     IEditorBridge? Target => Volatile.Read(ref _target);
 

@@ -305,32 +305,24 @@ public interface IMcpHost
     string GetScript(string name);
     string SaveScript(string name, string code);
 
-    string GetRoomData();
     string GetAvatar(string name);
-    string Say(string message);
-    string Shout(string message);
-    string Walk(int x, int y);
-    string Wave();
-    string Dance(int style);
-    string Sign(int sign);
 
-    Task<string> GetUserProfileAsync(long userId, CancellationToken cancellationToken);
-    Task<string> GetGroupAsync(long groupId, CancellationToken cancellationToken);
-    Task<string> GetBadgesAsync(long userId, CancellationToken cancellationToken);
-    Task<string> GetRelationshipAsync(long userId, CancellationToken cancellationToken);
-    Task<string> SearchUserAsync(string name, CancellationToken cancellationToken);
-    Task<string> GetStickyAsync(long itemId, CancellationToken cancellationToken);
     Task<string> GetPetInfoAsync(long petId, CancellationToken cancellationToken);
-    Task<string> GetRoomSettingsAsync(long roomId, CancellationToken cancellationToken);
     Task<string> RunScriptAsync(string name, CancellationToken cancellationToken);
 
-    string Kick(long userId);
-    string Mute(long userId, int minutes);
-    string Ban(long userId);
-    string GiveRights(long userId);
+    /// <summary>Starts code without waiting for it and returns the new background run.</summary>
+    string StartCode(string code, int? timeoutMs);
+
+    /// <summary>Starts a saved script without waiting for it and returns the new background run.</summary>
+    Task<string> StartScriptAsync(string name, int? timeoutMs, CancellationToken cancellationToken);
+
+    /// <summary>One background run with its output from line <paramref name="since"/> on, or every run when no id is given.</summary>
+    string ReadRun(long? id, int since);
+
+    /// <summary>Asks a background run to stop.</summary>
+    string StopRun(long id);
+
     string RemoveRights(long userId);
-    string LetIn(string name);
-    string RespectPet(long petId);
     string GetControllers();
     string GetCurrencies();
     string GetHeightmap();
@@ -351,8 +343,8 @@ public interface IMcpHost
         CancellationToken cancellationToken) =>
         GetHeightmapAsync(detail, limit, cancellationToken);
 
-    string DeleteScript(string name);
-    string RenameScript(string name, string newName);
+    Task<string> DeleteScriptAsync(string name, CancellationToken cancellationToken);
+    Task<string> RenameScriptAsync(string name, string newName, CancellationToken cancellationToken);
     IReadOnlyList<string> SearchScripts(string query);
 
     string ListApi(string filter);
@@ -368,12 +360,11 @@ public interface IMcpHost
     string CompileCheck(string code);
 
     string ListTabs() => AsyncOnly(nameof(ListTabsAsync));
-    string GetActiveTab() => AsyncOnly(nameof(GetActiveTabAsync));
     string OpenTab(string name) => AsyncOnly(nameof(OpenTabAsync));
     string CreateTab(string name, string code) => AsyncOnly(nameof(CreateTabAsync));
     string EditActiveTab(string code) => AsyncOnly(nameof(EditActiveTabAsync));
     string SelectTab(string name) => AsyncOnly(nameof(SelectTabAsync));
-    string CloseTabByName(string name) => AsyncOnly(nameof(CloseTabByNameAsync));
+    string CloseTabByName(string name, bool discard) => AsyncOnly(nameof(CloseTabByNameAsync));
     string RunActiveTab(string name) => AsyncOnly(nameof(RunActiveTabAsync));
     string StopActiveTab(string name) => AsyncOnly(nameof(StopActiveTabAsync));
     string GetTabOutput(string name) => AsyncOnly(nameof(GetTabOutputAsync));
@@ -382,9 +373,6 @@ public interface IMcpHost
 
     Task<string> ListTabsAsync(CancellationToken cancellationToken) =>
         FromSynchronous(ListTabs, cancellationToken);
-
-    Task<string> GetActiveTabAsync(CancellationToken cancellationToken) =>
-        FromSynchronous(GetActiveTab, cancellationToken);
 
     Task<string> OpenTabAsync(string name, CancellationToken cancellationToken) =>
         FromSynchronous(() => OpenTab(name), cancellationToken);
@@ -398,8 +386,8 @@ public interface IMcpHost
     Task<string> SelectTabAsync(string name, CancellationToken cancellationToken) =>
         FromSynchronous(() => SelectTab(name), cancellationToken);
 
-    Task<string> CloseTabByNameAsync(string name, CancellationToken cancellationToken) =>
-        FromSynchronous(() => CloseTabByName(name), cancellationToken);
+    Task<string> CloseTabByNameAsync(string name, bool discard, CancellationToken cancellationToken) =>
+        FromSynchronous(() => CloseTabByName(name, discard), cancellationToken);
 
     Task<string> RunActiveTabAsync(string name, CancellationToken cancellationToken) =>
         FromSynchronous(() => RunActiveTab(name), cancellationToken);
@@ -415,6 +403,14 @@ public interface IMcpHost
 
     Task<string> GetTabErrorsAsync(string name, CancellationToken cancellationToken) =>
         FromSynchronous(() => GetTabErrors(name), cancellationToken);
+
+    /// <inheritdoc cref="IEditorBridge.ReadOpenScriptAsync"/>
+    Task<string?> ReadOpenScriptAsync(string name, CancellationToken cancellationToken) =>
+        Task.FromResult<string?>(null);
+
+    /// <inheritdoc cref="IEditorBridge.EditOpenScriptAsync"/>
+    Task<string?> EditOpenScriptAsync(string name, Func<string, string> edit, CancellationToken cancellationToken) =>
+        Task.FromResult<string?>(null);
 
     private static Task<string> FromSynchronous(
         Func<string> operation,

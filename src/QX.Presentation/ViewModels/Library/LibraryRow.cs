@@ -64,6 +64,8 @@ public sealed partial class LibraryScriptRow : LibraryRow
 
     public string Path { get; }
 
+    public string? DeclaredGroup { get; set; }
+
     public string Name { get; }
 
     public string DeleteAccessibilityText => $"Delete {Name}";

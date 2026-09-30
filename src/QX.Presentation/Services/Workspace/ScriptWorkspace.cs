@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Qx.Diagnostics;
 using Qx.Presentation.Services.Drafts;
 using Qx.Presentation.Services.Files;
+using Qx.Presentation.Services.Output;
 using Qx.Presentation.Services.Settings;
 using Qx.Presentation.Threading;
 
@@ -10,6 +11,7 @@ namespace Qx.Presentation.Services.Workspace;
 public sealed class ScriptWorkspace : IScriptWorkspace, IDisposable
 {
     public static readonly TimeSpan AutosaveInterval = TimeSpan.FromSeconds(5);
+    public static readonly TimeSpan DiskCheckDelay = TimeSpan.FromMilliseconds(300);
     public const int ClosedHistoryLimit = 20;
 
     readonly ObservableCollection<ScriptDocument> _documents = [];
@@ -25,6 +27,8 @@ public sealed class ScriptWorkspace : IScriptWorkspace, IDisposable
     CancellationTokenSource? _autosave;
     Task? _autosave_loop;
     ScriptDocument? _active;
+    Debouncer? _disk_check;
+    IDisposable? _disk_watch;
 
     public ScriptWorkspace(
         ScriptDocumentFactory factory,
@@ -88,15 +92,20 @@ public sealed class ScriptWorkspace : IScriptWorkspace, IDisposable
         if (path is not null && _settings.PanelFor(PathComparison.Full(path)) is { } memory)
         {
             document.Panel.Restore(memory.Values);
-            document.SetPanelMode(memory.Panel);
-            if (document.PanelMode)
-                document.Panel.Rebuild(document.Text);
+            document.SetPanelMode(memory.Panel || document.PanelRequired);
         }
+        else if (document.PanelRequired)
+        {
+            document.SetPanelMode(true);
+        }
+        if (document.PanelMode)
+            document.Panel.Rebuild(document.Text);
         if (modified)
             document.MarkModified();
         _documents.Add(document);
         Active = document;
         DocumentsChanged?.Invoke();
+        WatchDisk();
         return document;
     }
 
@@ -120,7 +129,10 @@ public sealed class ScriptWorkspace : IScriptWorkspace, IDisposable
         string.IsNullOrWhiteSpace(path) ? null : _documents.FirstOrDefault(document => PathComparison.Same(document.FilePath, path));
 
     public ScriptDocument? FindByName(string name) =>
-        string.IsNullOrWhiteSpace(name) ? null : _documents.FirstOrDefault(document => string.Equals(document.Name, name, StringComparison.OrdinalIgnoreCase));
+        string.IsNullOrWhiteSpace(name)
+            ? null
+            : _documents.FirstOrDefault(document => string.Equals(document.Name, name, StringComparison.OrdinalIgnoreCase)) ??
+              _documents.FirstOrDefault(document => document.LibraryName is { } file && string.Equals(file, name, StringComparison.OrdinalIgnoreCase));
 
     public bool Contains(ScriptDocument document) => document is not null && _documents.Contains(document);
 
@@ -313,9 +325,42 @@ public sealed class ScriptWorkspace : IScriptWorkspace, IDisposable
     public void Dispose()
     {
         StopAutosave();
+        _disk_watch?.Dispose();
+        _disk_check?.Dispose();
         foreach (ScriptDocument document in _documents)
             document.Dispose();
         _documents.Clear();
+    }
+
+    void WatchDisk()
+    {
+        if (_disk_watch is not null)
+            return;
+        _disk_check = new Debouncer(_dispatcher, _time, DiskCheckDelay, () => CheckDiskAsync().Observe("workspace"));
+        try
+        {
+            _disk_watch = _files.Watch(_disk_check.Trigger);
+        }
+        catch (Exception error) when (error is IOException or ArgumentException or PlatformNotSupportedException)
+        {
+            Diag.Warn($"Open scripts will not follow changes made outside QX: {error.Message}", "workspace");
+        }
+    }
+
+    async Task CheckDiskAsync()
+    {
+        foreach (ScriptDocument document in _documents.ToArray())
+        {
+            if (document.FilePath is not { } path || document.IsClosed)
+                continue;
+            string? text = await _files.ReadAsync(path, _lifetime.Token);
+            if (text is null || !_documents.Contains(document) || !document.NoteDiskText(text))
+                continue;
+            if (document.IsModified)
+                document.Run.Output.Write("The file changed outside QX. Saving this tab replaces that change.", OutputLevel.Warning);
+            else
+                document.Reload(text);
+        }
     }
 
     (CancellationTokenSource? Source, Task? Loop) DetachAutosave()

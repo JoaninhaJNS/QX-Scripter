@@ -95,6 +95,9 @@ public sealed partial class WorkspaceView : UserControl
                 ApplyView();
                 ApplyConsole();
                 break;
+            case nameof(WorkspaceViewModel.ConsoleVisible):
+                ApplyConsole();
+                break;
             case nameof(WorkspaceViewModel.Console):
                 BindConsole();
                 ApplyConsole();

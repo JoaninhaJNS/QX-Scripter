@@ -5,18 +5,30 @@ using Microsoft.CodeAnalysis.Scripting;
 
 namespace Qx.Scripting;
 
+/// <summary>The rewritten script and the rewritten text of every file it loads.</summary>
+/// <param name="Main">The script's own code.</param>
+/// <param name="Loaded">Each <c>#load</c>ed file's code, keyed by its resolved path.</param>
+internal sealed record ScriptRewrite(string Main, IReadOnlyDictionary<string, string> Loaded);
+
 internal sealed class ScriptCancellationRewriter(SemanticModel semanticModel) : CSharpSyntaxRewriter
 {
-    public static string Rewrite(Script<object> script)
+    public static ScriptRewrite Rewrite(Script<object> script)
     {
         Compilation compilation = script.GetCompilation();
-        SyntaxTree syntaxTree = compilation.SyntaxTrees.FirstOrDefault(tree =>
+        SyntaxTree main = compilation.SyntaxTrees.FirstOrDefault(tree =>
                 string.Equals(tree.FilePath, script.Options.FilePath, StringComparison.OrdinalIgnoreCase))
             ?? compilation.SyntaxTrees.Last();
-        SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree, true);
-        SyntaxNode root = syntaxTree.GetRoot();
-        return new ScriptCancellationRewriter(semanticModel).Visit(root)!.ToFullString();
+        var loaded = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (SyntaxTree tree in compilation.SyntaxTrees)
+        {
+            if (!ReferenceEquals(tree, main))
+                loaded[tree.FilePath] = Rewrite(compilation, tree);
+        }
+        return new ScriptRewrite(Rewrite(compilation, main), loaded);
     }
+
+    private static string Rewrite(Compilation compilation, SyntaxTree tree) =>
+        new ScriptCancellationRewriter(compilation.GetSemanticModel(tree, true)).Visit(tree.GetRoot())!.ToFullString();
 
     public override SyntaxNode? VisitWhileStatement(WhileStatementSyntax node)
     {
