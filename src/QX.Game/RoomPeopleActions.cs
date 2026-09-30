@@ -9,35 +9,46 @@ using Qx.Protocol;
 
 namespace Qx.Game;
 
-/// <summary>How long somebody is barred for.</summary>
+/// <summary>Specifies how long a room ban lasts.</summary>
 public enum BanLength
 {
+    /// <summary>A ban that lasts one hour.</summary>
     Hour,
+    /// <summary>A ban that lasts one day.</summary>
     Day,
+    /// <summary>A ban that does not expire.</summary>
     Permanent
 }
 
 /// <summary>
-/// The things you do to a person rather than to the room.
+/// Provides actions that target a person, pet or bot in the room rather than the room itself.
 /// </summary>
+/// <remarks>
+/// The type holds no game state. Each action sends one message and does not wait for a response.
+/// </remarks>
 public sealed class RoomPeopleActions : GameStateManager
 {
-    /// <summary>The room, for the id the moderation messages carry.</summary>
+    /// <summary>
+    /// Gets or sets the room manager used to check that the room has not changed before a message is sent.
+    /// </summary>
     public RoomManager? Room { get; set; }
     internal Func<IRemotePeopleOperations?>? RemotePeopleOperations { get; set; }
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
     }
 
     /// <summary>
-    /// Makes somebody's own bubble appear over their head, so you can see where they are.
+    /// Shows a whisper bubble over an avatar's head in the local client to locate it.
     /// </summary>
     /// <remarks>
-    /// Written to the client and never to the hotel, so nobody is whispered at and nothing is said
-    /// in the room. The index is what the client uses to place a bubble, which is why this needs
-    /// the room's numbering rather than the account id.
+    /// The message is written to the client only and never sent to the hotel, so nobody receives a
+    /// whisper and nothing is said in the room. The bubble is placed by the avatar's room index.
     /// </remarks>
+    /// <param name="avatar">The avatar to mark.</param>
+    /// <param name="text">The text shown in the bubble.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="avatar"/> is <see langword="null"/>.</exception>
     public void Find(Avatar avatar, string text = "(here)")
     {
         ArgumentNullException.ThrowIfNull(avatar);
@@ -47,12 +58,16 @@ public sealed class RoomPeopleActions : GameStateManager
             new AvatarChat(avatar.Index, text, 0, 0, [], 0, ChatType.Whisper));
     }
 
-    /// <summary>Opens somebody's profile inside the game client.</summary>
+    /// <summary>Opens a user's profile in the game client.</summary>
+    /// <param name="userId">The id of the user.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the remote people operations are not available.</exception>
     public void OpenProfile(Id userId) =>
         (RemotePeopleOperations?.Invoke() ??
             throw new InvalidOperationException("Remote-people operations are unavailable."))
             .OpenProfile(new RemoteProfileOpenRequest(userId));
 
+    /// <summary>Sends a respect to a user.</summary>
+    /// <param name="userId">The id of the user.</param>
     public void Respect(Id userId) =>
         SendMessage(
             MessageContracts.Room.Occupants.RespectRequest,
@@ -70,6 +85,8 @@ public sealed class RoomPeopleActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Sends a respect to a pet.</summary>
+    /// <param name="pet_id">The id of the pet.</param>
     public void RespectPet(Id pet_id) =>
         SendMessage(
             MessageContracts.Room.Occupants.Pet.RespectRequest,
@@ -87,6 +104,9 @@ public sealed class RoomPeopleActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Mounts or dismounts a rideable pet.</summary>
+    /// <param name="pet_id">The id of the pet.</param>
+    /// <param name="mount"><see langword="true"/> to mount the pet, <see langword="false"/> to dismount it.</param>
     public void MountPet(Id pet_id, bool mount) =>
         SendMessage(
             MessageContracts.Room.Occupants.Pet.MountRequest,
@@ -105,6 +125,8 @@ public sealed class RoomPeopleActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Removes a pet from the room.</summary>
+    /// <param name="pet_id">The id of the pet.</param>
     public void RemovePet(Id pet_id) =>
         SendMessage(
             MessageContracts.Room.Occupants.Pet.RemoveRequest,
@@ -122,6 +144,8 @@ public sealed class RoomPeopleActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Removes a bot from the room.</summary>
+    /// <param name="bot_id">The id of the bot.</param>
     public void RemoveBot(Id bot_id) =>
         SendMessage(
             MessageContracts.Room.Occupants.Bot.RemoveRequest,
@@ -139,6 +163,8 @@ public sealed class RoomPeopleActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Gives a user rights in the current room.</summary>
+    /// <param name="user_id">The id of the user.</param>
     public void GiveRights(Id user_id) =>
         SendMessage(
             MessageContracts.Room.Authority.ControllerGrantRequest,

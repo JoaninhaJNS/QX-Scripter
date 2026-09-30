@@ -46,6 +46,17 @@ internal sealed record CraftingStateUpdate(
     long PublicationEpoch,
     bool PublishLegacyReset);
 
+/// <summary>
+/// Manages the crafting state of the current session: the craftable products, the open recipe, the
+/// last crafting result and the recipes available for a set of ingredients.
+/// </summary>
+/// <remarks>
+/// <para>All members are safe to call from any thread.</para>
+/// <para>
+/// Each value is replaced by the latest message the server sends, and events are raised after the
+/// state is updated. The state is cleared when the hotel connection closes and when a new session starts.
+/// </para>
+/// </remarks>
 public sealed class CraftingManager : GameStateManager
 {
     private readonly object operations_sync = new();
@@ -65,21 +76,48 @@ public sealed class CraftingManager : GameStateManager
     private bool delivering;
     private int delivery_thread_id;
 
+    /// <summary>
+    /// Gets the craftable products the server sent last, or <see langword="null"/> if none have been
+    /// received in this session.
+    /// </summary>
     public CraftableProducts? Products => State.Products;
+    /// <summary>
+    /// Gets the recipe ingredients the server sent last, or <see langword="null"/> if none have been
+    /// received in this session.
+    /// </summary>
     public CraftingRecipe? Recipe => State.Recipe;
+    /// <summary>
+    /// Gets the result of the last craft, or <see langword="null"/> if none has been received in
+    /// this session.
+    /// </summary>
     public CraftingResult? LastResult => State.LastResult;
+    /// <summary>
+    /// Gets the recipe availability the server sent last for a set of ingredients, or
+    /// <see langword="null"/> if none has been received in this session.
+    /// </summary>
     public CraftingRecipesAvailable? AvailableRecipes => State.AvailableRecipes;
 
     internal CraftingState State => Volatile.Read(ref state);
 
+    /// <summary>Occurs when the server sends the list of craftable products.</summary>
+    /// <remarks>The argument is the new value of <see cref="Products"/>.</remarks>
     public event Action<CraftableProducts>? ProductsReceived;
+    /// <summary>Occurs when the server sends the ingredients of a recipe.</summary>
+    /// <remarks>The argument is the new value of <see cref="Recipe"/>.</remarks>
     public event Action<CraftingRecipe>? RecipeReceived;
+    /// <summary>Occurs when the server sends the result of a craft.</summary>
+    /// <remarks>The argument is the new value of <see cref="LastResult"/>.</remarks>
     public event Action<CraftingResult>? ResultReceived;
+    /// <summary>Occurs when the server sends the number of recipes available for a set of ingredients.</summary>
+    /// <remarks>The argument is the new value of <see cref="AvailableRecipes"/>.</remarks>
     public event Action<CraftingRecipesAvailable>? AvailableRecipesReceived;
+    /// <summary>Occurs when the crafting state is cleared after the hotel connection closes.</summary>
+    /// <remarks>Not raised when the state is cleared because a new session starts.</remarks>
     public event Action? ResetCompleted;
     internal event Action<CraftingStateUpdate>? StateCommitted;
     internal event Action<CraftingStateUpdate>? StateChanged;
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         CommitReset(CurrentSession, false);
@@ -105,21 +143,54 @@ public sealed class CraftingManager : GameStateManager
         OnIncoming(MessageContracts.Crafting.AvailabilitySnapshot, ApplyAvailability);
     }
 
+    /// <summary>Requests the products that can be crafted with a crafting furniture.</summary>
+    /// <param name="crafting_furniture_id">The id of the crafting furniture in the room.</param>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response updates
+    /// <see cref="Products"/> and raises <see cref="ProductsReceived"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void RequestProducts(Id crafting_furniture_id) =>
         Operations().RequestProducts(crafting_furniture_id);
 
+    /// <summary>Requests the ingredients of a recipe.</summary>
+    /// <param name="recipe_code">The code of the recipe.</param>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response updates
+    /// <see cref="Recipe"/> and raises <see cref="RecipeReceived"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="recipe_code"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void RequestRecipe(string recipe_code)
     {
         ArgumentNullException.ThrowIfNull(recipe_code);
         Operations().RequestRecipe(recipe_code);
     }
 
+    /// <summary>Crafts a recipe with a crafting furniture.</summary>
+    /// <param name="crafting_furniture_id">The id of the crafting furniture in the room.</param>
+    /// <param name="recipe_code">The code of the recipe to craft.</param>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response updates
+    /// <see cref="LastResult"/> and raises <see cref="ResultReceived"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="recipe_code"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void Craft(Id crafting_furniture_id, string recipe_code)
     {
         ArgumentNullException.ThrowIfNull(recipe_code);
         Operations().Craft(crafting_furniture_id, recipe_code);
     }
 
+    /// <summary>Crafts a secret recipe from a set of ingredient items.</summary>
+    /// <param name="crafting_furniture_id">The id of the crafting furniture in the room.</param>
+    /// <param name="ingredient_item_ids">The ids of the inventory items to use as ingredients.</param>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response updates
+    /// <see cref="LastResult"/> and raises <see cref="ResultReceived"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="ingredient_item_ids"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void CraftSecret(
         Id crafting_furniture_id,
         IReadOnlyList<Id> ingredient_item_ids)
@@ -128,6 +199,15 @@ public sealed class CraftingManager : GameStateManager
         Operations().CraftSecret(crafting_furniture_id, ingredient_item_ids);
     }
 
+    /// <summary>Requests the number of recipes that match a set of ingredient items.</summary>
+    /// <param name="crafting_furniture_id">The id of the crafting furniture in the room.</param>
+    /// <param name="ingredient_item_ids">The ids of the inventory items to check.</param>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response updates
+    /// <see cref="AvailableRecipes"/> and raises <see cref="AvailableRecipesReceived"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="ingredient_item_ids"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void RequestAvailableRecipes(
         Id crafting_furniture_id,
         IReadOnlyList<Id> ingredient_item_ids)
@@ -236,6 +316,7 @@ public sealed class CraftingManager : GameStateManager
     internal bool IsCurrentPublication(CraftingStateUpdate update) =>
         UpdateCurrent(update);
 
+    /// <inheritdoc/>
     protected override void Reset() => CommitReset(CurrentSession, true);
 
     private void BindSession(Session session) => CommitReset(session, false);

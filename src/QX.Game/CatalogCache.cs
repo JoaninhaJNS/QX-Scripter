@@ -3,12 +3,21 @@ using Qx.Model.Messages.Incoming;
 
 namespace Qx.Game;
 
+/// <summary>Represents what the catalog cache holds for one catalog type.</summary>
+/// <param name="CatalogType">The catalog type, <c>NORMAL</c> or <c>BUILDERS_CLUB</c>.</param>
+/// <param name="IndexAge">The time since the cached index was received, or <see langword="null"/> when no index is cached.</param>
+/// <param name="PageCount">The number of cached pages.</param>
+/// <param name="OfferCount">The number of offers across the cached pages.</param>
 public sealed record CatalogCacheState(
     string CatalogType,
     TimeSpan? IndexAge,
     int PageCount,
     int OfferCount);
 
+/// <summary>Represents a cached catalog offer together with the page that holds it.</summary>
+/// <param name="Offer">The offer.</param>
+/// <param name="Page">The cached page the offer is on.</param>
+/// <param name="Node">The index node of the page, or <see langword="null"/> when the index is not cached or does not list the page.</param>
 public sealed record CatalogOfferMatch(
     CatalogPageOffer Offer,
     CatalogPage Page,

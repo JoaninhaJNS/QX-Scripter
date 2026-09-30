@@ -2,10 +2,19 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the <c>PetInventory</c> message, received with one fragment of the user's pet inventory.</summary>
+/// <remarks>
+/// The server splits a large inventory into several fragments. The inventory is complete once every
+/// fragment from 0 to <see cref="Total"/> minus one has been received.
+/// </remarks>
 public sealed record PetInventory : IParserComposer<PetInventory>
 {
     private IReadOnlyList<InventoryPet> _pets = Array.Empty<InventoryPet>();
 
+    /// <summary>Initializes a new instance of the <see cref="PetInventory"/> class.</summary>
+    /// <param name="total">The total number of fragments.</param>
+    /// <param name="index">The zero based index of this fragment.</param>
+    /// <param name="pets">The pets in this fragment.</param>
     public PetInventory(int total, int index, IReadOnlyList<InventoryPet> pets)
     {
         Total = total;
@@ -13,16 +22,21 @@ public sealed record PetInventory : IParserComposer<PetInventory>
         Pets = pets;
     }
 
+    /// <summary>Gets the total number of fragments the inventory is split into.</summary>
     public int Total { get; init; }
 
+    /// <summary>Gets the zero based index of this fragment.</summary>
     public int Index { get; init; }
 
+    /// <summary>Gets the pets in this fragment.</summary>
     public IReadOnlyList<InventoryPet> Pets
     {
         get => _pets;
         init => _pets = InventoryWire.FreezeReferences(value, nameof(Pets));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PetInventory Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -43,6 +57,8 @@ public sealed record PetInventory : IParserComposer<PetInventory>
         return new PetInventory(total, index, pets);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -59,9 +75,14 @@ public sealed record PetInventory : IParserComposer<PetInventory>
     }
 }
 
+/// <summary>Represents the <c>PetAddedToInventory</c> message, received when a pet is added to the user's inventory.</summary>
+/// <param name="Pet">The added pet.</param>
+/// <param name="OpenInventory">Whether the client should open the inventory to show the pet.</param>
 public sealed record PetAddedToInventory(InventoryPet Pet, bool OpenInventory) :
     IParserComposer<PetAddedToInventory>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PetAddedToInventory Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -72,6 +93,8 @@ public sealed record PetAddedToInventory(InventoryPet Pet, bool OpenInventory) :
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -84,8 +107,12 @@ public sealed record PetAddedToInventory(InventoryPet Pet, bool OpenInventory) :
     }
 }
 
+/// <summary>Represents the <c>PetRemovedFromInventory</c> message, received when a pet is removed from the user's inventory.</summary>
+/// <param name="PetId">The ID of the removed pet.</param>
 public sealed record PetRemovedFromInventory(Id PetId) : IParserComposer<PetRemovedFromInventory>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PetRemovedFromInventory Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -96,6 +123,8 @@ public sealed record PetRemovedFromInventory(Id PetId) : IParserComposer<PetRemo
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

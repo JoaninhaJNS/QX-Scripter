@@ -3,38 +3,75 @@ using Qx.Model.Messages.Incoming;
 
 namespace Qx.Game;
 
+/// <summary>
+/// Specifies the outcome of a room entry attempt.
+/// </summary>
 public enum RoomEntryStatus
 {
+    /// <summary>An entry into a room that is ready.</summary>
     Success,
+    /// <summary>An entry the server denied access for.</summary>
     Denied,
+    /// <summary>An entry into a room the server could not find.</summary>
     NotFound,
+    /// <summary>An entry that ended because the room connection failed, the room was left or the hotel connection closed.</summary>
     ConnectionError
 }
 
+/// <summary>
+/// Represents the result of a room entry attempt.
+/// </summary>
+/// <param name="RoomId">The id of the room the entry was for.</param>
+/// <param name="Status">The outcome of the entry attempt.</param>
+/// <param name="Failure">The failure the server reported when it could not connect to the room, or <see langword="null"/>.</param>
+/// <param name="Exit">The exit that ended the entry attempt when the room was left before entry completed, or <see langword="null"/>.</param>
 public sealed record RoomEntryResult(
     Id RoomId,
     RoomEntryStatus Status,
     RoomConnectionFailure? Failure = null,
     RoomExitState? Exit = null)
 {
+    /// <summary>Gets whether the entry succeeded.</summary>
     public bool IsSuccess => Status is RoomEntryStatus.Success;
 }
 
+/// <summary>
+/// Thrown when a room entry does not complete within its timeout.
+/// </summary>
+/// <param name="room_id">The id of the room the entry was for.</param>
+/// <param name="timeout_ms">The timeout that elapsed, in milliseconds.</param>
 public sealed class RoomEntryTimeoutException(Id room_id, int timeout_ms)
     : TimeoutException($"Room entry for '{room_id}' timed out after {timeout_ms} ms.")
 {
+    /// <summary>Gets the id of the room the entry was for.</summary>
     public Id RoomId { get; } = room_id;
+    /// <summary>Gets the timeout that elapsed, in milliseconds.</summary>
     public int TimeoutMs { get; } = timeout_ms;
 }
 
+/// <summary>
+/// Thrown when a room entry is replaced by a newer entry request.
+/// </summary>
+/// <param name="room_id">The id of the room the replaced entry was for.</param>
+/// <param name="replacement_room_id">The id of the room the newer entry is for.</param>
 public sealed class RoomEntryReplacedException(Id room_id, Id replacement_room_id)
     : InvalidOperationException(
         $"Room entry for '{room_id}' was replaced by a request for '{replacement_room_id}'.")
 {
+    /// <summary>Gets the id of the room the replaced entry was for.</summary>
     public Id RoomId { get; } = room_id;
+    /// <summary>Gets the id of the room the newer entry is for.</summary>
     public Id ReplacementRoomId { get; } = replacement_room_id;
 }
 
+/// <summary>
+/// Provides room entry requests that wait for the entry result.
+/// </summary>
+/// <remarks>
+/// Only one entry attempt is active at a time. The result is taken from the room manager's ready,
+/// entered, access state, connection failure and exit events, and from the hotel connection closing.
+/// All members are safe to call from any thread.
+/// </remarks>
 public sealed class RoomEntryCoordinator : IDisposable
 {
     private readonly RoomManager _room;
@@ -67,6 +104,22 @@ public sealed class RoomEntryCoordinator : IDisposable
         }
     }
 
+    /// <summary>Sends a room entry request and waits for the entry result.</summary>
+    /// <param name="room_id">The id of the room to enter.</param>
+    /// <param name="send">The action that sends the entry request, called once while the attempt is registered.</param>
+    /// <param name="timeout_ms">The time to wait for the result, in milliseconds.</param>
+    /// <param name="cancellation_token">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the entry result.</returns>
+    /// <remarks>
+    /// A pending attempt started earlier fails with <see cref="RoomEntryReplacedException"/>. The
+    /// attempt succeeds once the room with <paramref name="room_id"/> is entered and ready.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="send"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="room_id"/> or <paramref name="timeout_ms"/> is zero or negative.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the coordinator is disposed.</exception>
+    /// <exception cref="RoomEntryTimeoutException">Thrown when no result arrives within the timeout.</exception>
+    /// <exception cref="RoomEntryReplacedException">Thrown when a newer entry request replaces the attempt.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellation_token"/> is canceled.</exception>
     public Task<RoomEntryResult> EnsureAsync(
         Id room_id,
         Action send,
@@ -229,6 +282,7 @@ public sealed class RoomEntryCoordinator : IDisposable
         }
     }
 
+    /// <summary>Stops tracking room events and fails the pending entry attempt with <see cref="ObjectDisposedException"/>.</summary>
     public void Dispose()
     {
         lock (_sync)

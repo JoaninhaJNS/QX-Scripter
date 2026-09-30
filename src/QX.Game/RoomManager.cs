@@ -10,17 +10,20 @@ using System.Runtime.ExceptionServices;
 
 namespace Qx.Game;
 
+/// <summary>Specifies the state of the user's room session.</summary>
 public enum RoomSessionState
 {
+    /// <summary>No room session.</summary>
     Outside,
+    /// <summary>A room session that has begun and is still loading.</summary>
     Entering,
+    /// <summary>A room session that the user has entered and the server has reported ready.</summary>
     Ready,
+    /// <summary>A room session that is being ended.</summary>
     Leaving
 }
 
-/// <summary>
-/// Describes a forced removal of the local user from a room by the room owner or staff.
-/// </summary>
+/// <summary>Represents a kick of the user from a room by the room owner or staff.</summary>
 /// <param name="RoomId">The room the kick was received in, or 0 when no room was tracked.</param>
 /// <param name="ErrorCode">The generic error code that carried the kick.</param>
 /// <param name="WasEntered">Whether the room had been fully entered when the kick arrived.</param>
@@ -68,6 +71,22 @@ internal sealed record RoomPickupConfirmationCommit(
     string Title,
     string Body);
 
+/// <summary>Manages the state of the room the user is in.</summary>
+/// <remarks>
+/// <para>
+/// The manager follows room access, entry, furni, avatars, rights, settings and Fx bar values from
+/// the messages the hotel sends. The state is cleared when the user leaves the room and when the
+/// hotel connection closes.
+/// </para>
+/// <para>
+/// All members are safe to call from any thread. Use <see cref="Capture{TResult}"/> to read several
+/// members as one consistent view.
+/// </para>
+/// <para>
+/// Events are raised in order after a change has been applied and outside the state lock. Avatars,
+/// items, item data and room data passed to handlers are copies taken when the change was applied.
+/// </para>
+/// </remarks>
 public sealed class RoomManager : GameStateManager
 {
     private const int KickedByOwnerError = 4008;
@@ -93,17 +112,28 @@ public sealed class RoomManager : GameStateManager
     private CancellationTokenSource _session_end = new();
     private TaskCompletionSource _next_change = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    /// <summary>Gets whether the user has entered the current room.</summary>
+    /// <remarks>Set when the server confirms the entry, before the room has finished loading.</remarks>
     public bool IsInRoom { get; private set; }
+    /// <summary>Gets whether the room session is <see cref="RoomSessionState.Ready"/>.</summary>
     public bool IsReady => State is RoomSessionState.Ready;
+    /// <summary>Gets the state of the room session.</summary>
     public RoomSessionState State { get; private set; }
+    /// <summary>Gets the number of the current room session, which increases each time a room session begins or ends.</summary>
     public long Generation { get; private set; }
+    /// <summary>Gets the revision of the room state, which increases with every change the manager applies.</summary>
+    /// <remarks>
+    /// Movements and Fx bar values record the revision they were applied at, so a revision read
+    /// before sending a command tells the changes it caused from older ones.
+    /// </remarks>
     public long Revision => Interlocked.Read(ref _revision);
 
-    /// <summary>
-    /// Cancelled when the current room session ends: on leaving the room, and on entering another
-    /// or the same room again. Capture it together with <see cref="Generation"/> through
-    /// <see cref="Capture{TResult}"/> to bind work to one session.
-    /// </summary>
+    /// <summary>Gets a token that is canceled when the current room session ends.</summary>
+    /// <remarks>
+    /// The token is canceled on leaving the room and on entering another or the same room again.
+    /// Capture it together with <see cref="Generation"/> through <see cref="Capture{TResult}"/> to
+    /// bind work to one session.
+    /// </remarks>
     public CancellationToken SessionToken
     {
         get
@@ -113,84 +143,132 @@ public sealed class RoomManager : GameStateManager
         }
     }
 
-    /// <summary>
-    /// Completes after the next change to the room state has been applied and its events have
-    /// run. Awaiting it again waits for the change after that.
-    /// </summary>
+    /// <summary>Gets a task that completes after the next change to the room state has been applied and its events have run.</summary>
+    /// <remarks>
+    /// Every message the manager handles counts as a change, even one that leaves the state as it
+    /// was. Reading the property again after the task completes returns the task for the change after that.
+    /// </remarks>
     public Task NextChange => Volatile.Read(ref _next_change).Task;
 
-    /// <summary>The local user's own avatar, or <see langword="null"/> while it is not in the room.</summary>
+    /// <summary>Gets the user's own avatar, or <see langword="null"/> while it is not in the room.</summary>
     public Avatar? Self => OwnUserId?.Invoke() is { } id
         ? _avatars.Values.FirstOrDefault(avatar => avatar is User && avatar.Id == id)
         : null;
+    /// <summary>Gets the id of the current room, or 0 when there is no room session.</summary>
     public long RoomId { get; private set; }
+    /// <summary>Gets the state of the user's attempt to enter a room.</summary>
     public RoomAccessState AccessState { get; private set; }
+    /// <summary>Gets the id of the room that <see cref="AccessState"/> refers to, or <see langword="null"/> when it refers to none.</summary>
     public Id? AccessRoomId { get; private set; }
+    /// <summary>Gets the latest queue status of the room being entered, or <see langword="null"/> when there is none.</summary>
+    /// <remarks>Cleared whenever an access state other than <see cref="RoomAccessState.Queued"/> is recorded.</remarks>
     public RoomQueueStatus? QueueStatus { get; private set; }
+    /// <summary>Gets the user's position in the active room queue, or <see langword="null"/> when the user is not queued.</summary>
     public int? QueuePosition => QueueStatus?.Position;
+    /// <summary>Gets whether the user is waiting at the doorbell of the room being entered.</summary>
     public bool IsRingingDoorbell => AccessState is RoomAccessState.RingingDoorbell;
+    /// <summary>Gets whether the user is waiting in the queue of the room being entered.</summary>
     public bool IsInQueue => AccessState is RoomAccessState.Queued;
+    /// <summary>Gets the connection failure reported with the current access state, or <see langword="null"/> when the state is not a connection failure.</summary>
     public RoomConnectionFailure? ConnectionFailure { get; private set; }
+    /// <summary>Gets how the last room session ended, or <see langword="null"/> when no room session has ended.</summary>
     public RoomExitState? LastExit { get; private set; }
-    /// <summary>
-    /// The most recent kick observed in the current or a previous room session.
-    /// Cleared when a new room session begins.
-    /// </summary>
+    /// <summary>Gets the most recent kick of the user in the current or a previous room session, or <see langword="null"/> when there was none.</summary>
+    /// <remarks>Cleared when a new room session begins.</remarks>
     public RoomKick? LastKick { get; private set; }
-    /// <summary>
-    /// The kick that caused <see cref="LastExit"/>, or <see langword="null"/> when the
-    /// last room exit was not caused by a kick.
-    /// </summary>
+    /// <summary>Gets the kick that caused <see cref="LastExit"/>, or <see langword="null"/> when the last room exit was not caused by a kick.</summary>
     public RoomKick? LastExitKick => LastExit?.Kick;
-    /// <summary>
-    /// Whether the last room exit was caused by the local user being kicked.
-    /// </summary>
+    /// <summary>Gets whether the last room exit was caused by the user being kicked.</summary>
     public bool WasKicked => LastExit?.WasKicked ?? false;
+    /// <summary>Gets the room type sent with the room ready message, or an empty string before it arrives.</summary>
     public string RoomType { get; private set; } = "";
+    /// <summary>Gets whether the user owns the current room.</summary>
     public bool IsOwner { get; private set; }
+    /// <summary>Gets the user's rights level in the current room, or <see langword="null"/> when the server has not sent it.</summary>
+    /// <remarks>A revoke of the user's rights sets the level to 0.</remarks>
     public int? RightsLevel { get; private set; }
+    /// <summary>Gets whether the user's rights in the current room are known.</summary>
+    /// <remarks>They are known when the user owns the room or once a rights level has arrived.</remarks>
     public bool RightsAreKnown => IsOwner || RightsLevel.HasValue;
+    /// <summary>Gets whether the user owns the current room or has a rights level above 0.</summary>
     public bool HasRights => IsOwner || RightsLevel is > 0;
+    /// <summary>Gets whether the user is spectating the current room, or <see langword="null"/> when the server has not said.</summary>
     public bool? IsSpectating { get; private set; }
+    /// <summary>Gets the data of the current room, or <see langword="null"/> while it has not arrived.</summary>
     public RoomData? Data { get; private set; }
+    /// <summary>Gets the details of the current room, or <see langword="null"/> while they have not arrived.</summary>
     public RoomResultDetails? Details { get; private set; }
+    /// <summary>Gets the entry tile of the current room, or <see langword="null"/> while it has not arrived.</summary>
     public RoomEntryTile? EntryTile { get; private set; }
+    /// <summary>Gets the visualization settings of the current room, or <see langword="null"/> while they have not arrived.</summary>
     public RoomVisualizationSettings? VisualizationSettings { get; private set; }
+    /// <summary>Gets the chat settings of the current room, or <see langword="null"/> while they have not arrived.</summary>
+    /// <remarks>Set from the room details and from the chat settings message, whichever arrives last.</remarks>
     public RoomChatSettings? ChatSettings { get; private set; }
+    /// <summary>Gets or sets the game data used to fill in the identifier and size of room furni.</summary>
+    /// <remarks>Call <see cref="EnrichFurni"/> after setting it to apply it to the furni already in the room.</remarks>
     public GameData? GameData { get; set; }
     internal Func<Id?>? OwnUserId { get; set; }
+    /// <summary>Gets whether the data of the current room has been received.</summary>
     public bool DataIsLoaded { get; private set; }
+    /// <summary>Gets whether the details of the current room have been received.</summary>
     public bool DetailsAreLoaded { get; private set; }
+    /// <summary>Gets whether the entry tile of the current room has been received.</summary>
     public bool EntryTileIsLoaded { get; private set; }
+    /// <summary>Gets whether at least one room property has been received.</summary>
     public bool PropertiesHaveBeenReceived { get; private set; }
+    /// <summary>Gets whether the visualization settings of the current room have been received.</summary>
     public bool VisualizationSettingsAreLoaded { get; private set; }
+    /// <summary>Gets whether the chat settings of the current room have been received.</summary>
     public bool ChatSettingsAreLoaded { get; private set; }
+    /// <summary>Gets whether at least one batch of avatars has been received.</summary>
     public bool AvatarsAreLoaded { get; private set; }
+    /// <summary>Gets whether at least one batch of floor items has been received.</summary>
     public bool FloorItemsAreLoaded { get; private set; }
+    /// <summary>Gets whether at least one batch of wall items has been received.</summary>
     public bool WallItemsAreLoaded { get; private set; }
+    /// <summary>Gets whether the list of users with rights in the current room has been received.</summary>
     public bool ControllersAreLoaded { get; private set; }
+    /// <summary>Gets whether the floor plan of the current room has been received.</summary>
     public bool FloorPlanIsLoaded { get; private set; }
+    /// <summary>Gets whether the heightmap of the current room has been received.</summary>
     public bool HeightmapIsLoaded { get; private set; }
 
+    /// <summary>Gets the name of the current room, or an empty string while the room data has not arrived.</summary>
     public string Name => Data?.Name ?? "";
+    /// <summary>Gets the name of the owner of the current room, or an empty string while the room data has not arrived.</summary>
     public string OwnerName => Data?.OwnerName ?? "";
+    /// <summary>Gets the description of the current room, or an empty string while the room data has not arrived.</summary>
     public string Description => Data?.Description ?? "";
+    /// <summary>Gets the score of the current room, or 0 while the room data has not arrived.</summary>
     public int Score => Data?.Score ?? 0;
+    /// <summary>Gets the id of the group of the current room, or 0 when the room has no group.</summary>
     public Id GroupId => Data is { HasGroup: true } data ? data.GroupId : 0;
+    /// <summary>Gets the name of the group of the current room, or an empty string while the room data has not arrived.</summary>
     public string GroupName => Data?.GroupName ?? "";
+    /// <summary>Gets whether an event is running in the current room.</summary>
     public bool HasEvent => Data?.HasEvent ?? false;
+    /// <summary>Gets the name of the event in the current room, or an empty string while the room data has not arrived.</summary>
     public string EventName => Data?.EventName ?? "";
+    /// <summary>Gets the description of the event in the current room, or an empty string while the room data has not arrived.</summary>
     public string EventDescription => Data?.EventDescription ?? "";
+    /// <summary>Gets the tags of the current room, or an empty list while the room data has not arrived.</summary>
     public IReadOnlyList<string> Tags => Data?.Tags ?? [];
+    /// <summary>Gets the users with rights in the current room, as last listed by the server.</summary>
     public IReadOnlyList<IdName> Controllers { get; private set; } = [];
+    /// <summary>Gets the floor plan of the current room, or <see langword="null"/> while it has not arrived.</summary>
     public FloorPlan? FloorPlan { get; private set; }
+    /// <summary>Gets the heightmap of the current room, or <see langword="null"/> while it has not arrived.</summary>
+    /// <remarks>Height updates from the server are applied to the same instance.</remarks>
     public Heightmap? Heightmap { get; private set; }
+    /// <summary>Gets the user's ownership, rights and spectator state in the current room as one value.</summary>
     public RoomAuthorityState Authority => new(
         IsOwner,
         RightsLevel,
         RightsAreKnown,
         HasRights,
         IsSpectating);
+    /// <summary>Gets a copy of the properties of the current room, such as <c>floor</c>, <c>wallpaper</c> and <c>landscape</c>, keyed by name.</summary>
     public IReadOnlyDictionary<string, string> Properties
     {
         get
@@ -199,16 +277,35 @@ public sealed class RoomManager : GameStateManager
                 return new Dictionary<string, string>(_properties, StringComparer.Ordinal);
         }
     }
+    /// <summary>Gets the <c>floor</c> property of the current room, or <see langword="null"/> while it has not arrived.</summary>
     public string? FloorProperty => Property("floor");
+    /// <summary>Gets the <c>wallpaper</c> property of the current room, or <see langword="null"/> while it has not arrived.</summary>
     public string? WallpaperProperty => Property("wallpaper");
+    /// <summary>Gets the <c>landscape</c> property of the current room, or <see langword="null"/> while it has not arrived.</summary>
     public string? LandscapeProperty => Property("landscape");
+    /// <summary>Gets the <c>landscapeanim</c> property of the current room, or <see langword="null"/> while it has not arrived.</summary>
     public string? AnimatedLandscapeProperty => Property("landscapeanim");
 
+    /// <summary>Gets the floor items in the current room.</summary>
+    /// <remarks>
+    /// The collection is a copy, but the items in it are the instances the manager keeps updating.
+    /// An item's <see cref="Qx.Model.Furni.IsRemoved"/> becomes <see langword="true"/> once it leaves the room or is replaced.
+    /// </remarks>
     public IReadOnlyCollection<FloorItem> FloorItems => _floorItems.Values.ToArray();
+    /// <summary>Gets the wall items in the current room.</summary>
+    /// <remarks>
+    /// The collection is a copy, but the items in it are the instances the manager keeps updating.
+    /// An item's <see cref="Qx.Model.Furni.IsRemoved"/> becomes <see langword="true"/> once it leaves the room or is replaced.
+    /// </remarks>
     public IReadOnlyCollection<WallItem> WallItems => _wallItems.Values.ToArray();
+    /// <summary>Gets the avatars in the current room, which are users, pets and bots.</summary>
+    /// <remarks>
+    /// The collection is a copy, but the avatars in it are the instances the manager keeps updating.
+    /// An avatar's <see cref="Avatar.IsRemoved"/> becomes <see langword="true"/> once it leaves the room or is replaced.
+    /// </remarks>
     public IReadOnlyCollection<Avatar> Avatars => _avatars.Values.ToArray();
 
-    /// <summary>The Fx bar configurations of the room, for avatars and for furni.</summary>
+    /// <summary>Gets the Fx bar configurations of the current room, for avatars and for furni.</summary>
     public IReadOnlyList<VariableFxConfigEntry> VariableFxConfigs
     {
         get
@@ -218,7 +315,7 @@ public sealed class RoomManager : GameStateManager
         }
     }
 
-    /// <summary>Every Fx bar value in the room, bound to its current configuration.</summary>
+    /// <summary>Gets every Fx bar value in the current room, bound to its current configuration.</summary>
     public IReadOnlyList<VariableFxValue> VariableFxValues
     {
         get
@@ -228,69 +325,126 @@ public sealed class RoomManager : GameStateManager
         }
     }
 
+    /// <summary>Occurs when a new room session begins, with the id of the room being entered.</summary>
     public event Action<Id>? Entering;
+    /// <summary>Occurs when the server confirms that the user has entered the room.</summary>
     public event Action? Entered;
+    /// <summary>Occurs when the server sends the room ready message for the room being entered.</summary>
     public event Action? Ready;
+    /// <summary>Occurs when the current room session starts to end.</summary>
+    /// <remarks>The room state has already been cleared when handlers run.</remarks>
     public event Action? Leaving;
+    /// <summary>Occurs when the current room session has ended.</summary>
+    /// <remarks>Raised after <see cref="Exited"/>.</remarks>
     public event Action? Left;
+    /// <summary>Occurs when the current room session has ended, with how it ended.</summary>
     public event Action<RoomExitState>? Exited;
-    /// <summary>
-    /// Raised as soon as the server signals that the local user was kicked, which is
-    /// before the room exit itself arrives.
-    /// </summary>
+    /// <summary>Occurs when the server reports that the user was kicked from the room.</summary>
+    /// <remarks>Raised as soon as the kick is reported, which is before the room exit itself arrives.</remarks>
     public event Action<RoomKick>? Kicked;
+    /// <summary>Occurs when the data of the current room arrives or changes.</summary>
     public event Action<RoomData>? RoomDataUpdated;
+    /// <summary>Occurs when a batch of floor items has been added to the room.</summary>
+    /// <remarks>The hotel sends further batches after entry, for example for temporary furni.</remarks>
     public event Action? FloorItemsLoaded;
+    /// <summary>Occurs when a batch of wall items has been added to the room.</summary>
     public event Action? WallItemsLoaded;
+    /// <summary>Occurs when avatars are added to the room, with the added avatars.</summary>
+    /// <remarks>Raised for the avatars already in the room on entry and for every later arrival.</remarks>
     public event Action<IReadOnlyList<Avatar>>? AvatarsAdded;
+    /// <summary>Occurs when a floor item is placed in the room.</summary>
     public event Action<FloorItem>? FloorItemAdded;
+    /// <summary>Occurs when a floor item is removed from the room, with the id of the item.</summary>
     public event Action<Id>? FloorItemRemoved;
+    /// <summary>Occurs when a floor item is removed from the room, with the item as it was.</summary>
     public event Action<FloorItem>? FloorItemRemovedDetailed;
+    /// <summary>Occurs when a wall item is placed in the room.</summary>
     public event Action<WallItem>? WallItemAdded;
+    /// <summary>Occurs when a wall item is removed from the room, with the id of the item.</summary>
     public event Action<Id>? WallItemRemoved;
+    /// <summary>Occurs when a wall item is removed from the room, with the item as it was.</summary>
     public event Action<WallItem>? WallItemRemovedDetailed;
+    /// <summary>Occurs when an avatar leaves the room.</summary>
+    /// <remarks>Also raised when a user reappears at a new room index and the entry at the old index is dropped.</remarks>
     public event Action<Avatar>? AvatarRemoved;
+    /// <summary>Occurs when any tracked state of an avatar is updated, such as its position, dance or figure.</summary>
     public event Action<Avatar>? AvatarUpdated;
+    /// <summary>Occurs when a floor item is updated, moved or its data changes.</summary>
     public event Action<FloorItem>? FloorItemUpdated;
+    /// <summary>Occurs when a wall item is updated, moved or its data changes.</summary>
     public event Action<WallItem>? WallItemUpdated;
+    /// <summary>Occurs when an avatar performs an expression, such as a wave, with the expression id.</summary>
     public event Action<Avatar, int>? AvatarActioned;
+    /// <summary>Occurs when an avatar moves to a different tile, with the previous and the current tile.</summary>
     public event Action<Avatar, Tile, Tile>? AvatarMoved;
+    /// <summary>Occurs for every walk update, roller slide and wired move of an avatar, with the movement.</summary>
+    /// <remarks>Unlike <see cref="AvatarMoved"/>, it is raised even when the avatar stays on the same tile.</remarks>
     public event Action<Avatar, AvatarMovement>? AvatarMovementReceived;
+    /// <summary>Occurs for every roller slide, wired move, move and rotation of a floor item, with the movement.</summary>
+    /// <remarks>Unlike <see cref="FloorItemMoved"/>, roller and wired moves are reported even when the item stays on the same tile.</remarks>
     public event Action<FloorItem, FloorItemMovement>? FloorItemMovementReceived;
+    /// <summary>Occurs when an Fx bar value arrives or the configuration it is drawn with changes, with the current and the previous value.</summary>
+    /// <remarks>The previous value is <see langword="null"/> when the value is new.</remarks>
     public event Action<VariableFxValue, VariableFxValue?>? VariableFxChanged;
+    /// <summary>Occurs when an Fx bar value is removed, including when its avatar or furni leaves the room.</summary>
     public event Action<VariableFxValue>? VariableFxRemoved;
+    /// <summary>Occurs when an avatar's dance changes, with the previous and the current dance.</summary>
     public event Action<Avatar, int, int>? AvatarDanceChanged;
+    /// <summary>Occurs when an avatar's effect changes, with the previous and the current effect.</summary>
     public event Action<Avatar, int, int>? AvatarEffectChanged;
+    /// <summary>Occurs when an avatar's hand item changes, with the previous and the current hand item.</summary>
     public event Action<Avatar, int, int>? AvatarHandItemChanged;
+    /// <summary>Occurs when an avatar falls asleep or wakes up, with the previous and the current idle state.</summary>
     public event Action<Avatar, bool, bool>? AvatarIdleChanged;
+    /// <summary>Occurs when an avatar starts or stops typing, with the previous and the current typing state.</summary>
     public event Action<Avatar, bool, bool>? AvatarTypingChanged;
+    /// <summary>Occurs when an avatar's figure or motto changes, with the previous figure, the current figure, the previous motto and the current motto.</summary>
+    /// <remarks>Also raised when a pet's figure changes, with its motto passed twice.</remarks>
     public event Action<Avatar, string, string, string, string>? AvatarIdentityChanged;
+    /// <summary>Occurs when a floor item moves to a different tile, with the previous and the current tile.</summary>
     public event Action<FloorItem, Tile, Tile>? FloorItemMoved;
+    /// <summary>Occurs when a wall item moves, with the previous and the current location.</summary>
     public event Action<WallItem, WallLocation, WallLocation>? WallItemMoved;
+    /// <summary>Occurs when a floor item's data changes, with the previous and the current data.</summary>
     public event Action<FloorItem, ItemData, ItemData>? FloorItemDataChanged;
-    /// <summary>
-    /// Raised when a wall item's data - and with it its <see cref="WallItem.State"/> - changes,
-    /// carrying the previous and the current data string.
-    /// </summary>
+    /// <summary>Occurs when a wall item's data changes, with the previous and the current data string.</summary>
+    /// <remarks>The item's <see cref="Qx.Model.WallItem.State"/> changes with its data.</remarks>
     public event Action<WallItem, string, string>? WallItemDataChanged;
-    /// <summary>
-    /// Raised when a user standing in the room is renamed, carrying the previous and the new name.
-    /// </summary>
+    /// <summary>Occurs when a user in the room is renamed, with the previous and the new name.</summary>
     public event Action<Avatar, string, string>? AvatarNameChanged;
+    /// <summary>Occurs when an avatar talks, shouts or whispers in the room.</summary>
     public event Action<AvatarChat>? Chat;
+    /// <summary>Occurs when the user's room access state changes.</summary>
     public event Action<RoomAccessTransition>? AccessStateChanged;
+    /// <summary>Occurs when a queue status for the room being entered arrives.</summary>
     public event Action<RoomQueueStatus>? QueueUpdated;
+    /// <summary>Occurs when the server refuses a room connection.</summary>
     public event Action<CanNotConnect>? ConnectionFailed;
+    /// <summary>Occurs when a doorbell message arrives.</summary>
+    /// <remarks>
+    /// A message with a user name reports someone ringing at the current room. A message with an
+    /// empty user name reports that the user is waiting at the doorbell.
+    /// </remarks>
     public event Action<Doorbell>? DoorbellRang;
+    /// <summary>Occurs when the server grants room access, to the user or to someone at the doorbell.</summary>
     public event Action<FlatAccessible>? AccessGranted;
+    /// <summary>Occurs when the server denies room access, to the user or to someone at the doorbell.</summary>
     public event Action<FlatAccessDenied>? AccessDenied;
+    /// <summary>Occurs when the details of the current room arrive.</summary>
     public event Action<RoomResultDetails>? DetailsUpdated;
+    /// <summary>Occurs when the entry tile of the current room arrives.</summary>
     public event Action<RoomEntryTile>? EntryTileUpdated;
+    /// <summary>Occurs when a property of the current room, such as the floor or wallpaper, arrives.</summary>
     public event Action<FlatProperty>? PropertyUpdated;
+    /// <summary>Occurs when the visualization settings of the current room arrive.</summary>
     public event Action<RoomVisualizationSettings>? VisualizationSettingsUpdated;
+    /// <summary>Occurs when the chat settings of the current room arrive.</summary>
     public event Action<RoomChatSettings>? ChatSettingsUpdated;
+    /// <summary>Occurs when the user's ownership, rights or spectator state in the current room changes.</summary>
     public event Action<RoomAuthorityState>? AuthorityChanged;
+    /// <summary>Occurs when the user's rights level in the current room changes, with the previous and the current level.</summary>
     public event Action<int?, int?>? RightsLevelChanged;
+    /// <summary>Occurs when the user's spectator state in the current room changes, with the previous and the current state.</summary>
     public event Action<bool?, bool?>? SpectatingChanged;
     internal event Action<RoomPlacementStateCommit>? PlacementStateCommitted;
     internal event Action<RoomPickupConfirmationCommit>? PickupConfirmationReceived;
@@ -697,6 +851,11 @@ public sealed class RoomManager : GameStateManager
         where T : IParserComposer<T> =>
         OnOutgoing(contract, message => Mutate(() => handler(message)));
 
+    /// <summary>Reads the room state through a projection while holding the state lock, so every member it reads belongs to the same state.</summary>
+    /// <remarks>Changes wait until the projection returns, so it should be short and must not wait for room events.</remarks>
+    /// <typeparam name="TResult">The type of the value the projection returns.</typeparam>
+    /// <param name="projection">The function that reads the manager and returns a value.</param>
+    /// <returns>The value returned by <paramref name="projection"/>.</returns>
     public TResult Capture<TResult>(Func<RoomManager, TResult> projection)
     {
         ArgumentNullException.ThrowIfNull(projection);
@@ -1120,6 +1279,8 @@ public sealed class RoomManager : GameStateManager
         }
     }
 
+    /// <summary>Fills in the identifier and size of every furni in the room from <see cref="GameData"/>.</summary>
+    /// <remarks>An identifier the server already sent is kept. Sizes are set on floor items only.</remarks>
     public void EnrichFurni()
     {
         Mutate(() =>
@@ -1131,7 +1292,10 @@ public sealed class RoomManager : GameStateManager
         });
     }
 
-    /// <summary>The Fx bar values of one avatar, by room index, or of one furni, by item id.</summary>
+    /// <summary>Gets the Fx bar values of one avatar, by room index, or of one furni, by item id.</summary>
+    /// <param name="is_user"><see langword="true"/> to read the values of an avatar; <see langword="false"/> to read the values of a furni.</param>
+    /// <param name="entity_id">The avatar's room index, or the furni's item id.</param>
+    /// <returns>The values bound to their current configuration, or an empty list when there are none.</returns>
     public IReadOnlyList<VariableFxValue> VariableFxOf(bool is_user, long entity_id)
     {
         lock (_state_sync)
@@ -1142,13 +1306,25 @@ public sealed class RoomManager : GameStateManager
         }
     }
 
+    /// <summary>Gets the floor item with the specified id, or <see langword="null"/> when it is not in the room.</summary>
+    /// <param name="id">The id of the floor item.</param>
     public FloorItem? FloorItem(Id id) => _floorItems.GetValueOrDefault(id);
+    /// <summary>Gets the wall item with the specified id, or <see langword="null"/> when it is not in the room.</summary>
+    /// <param name="id">The id of the wall item.</param>
     public WallItem? WallItem(Id id) => _wallItems.GetValueOrDefault(id);
+    /// <summary>Gets the avatar at the specified room index, or <see langword="null"/> when there is none.</summary>
+    /// <param name="index">The room index of the avatar.</param>
     public Avatar? AvatarByIndex(int index) => _avatars.GetValueOrDefault(index);
+    /// <summary>Gets the first avatar with the specified id, or <see langword="null"/> when there is none.</summary>
+    /// <remarks>Users, pets and bots are all searched, so the match can be of any kind. Use <see cref="AvatarByIndex"/> to read one specific avatar.</remarks>
+    /// <param name="id">The id of the avatar.</param>
     public Avatar? AvatarById(Id id) => _avatars.Values.FirstOrDefault(a => a.Id == id);
+    /// <summary>Gets the user with the specified name, ignoring case, or <see langword="null"/> when there is none.</summary>
+    /// <param name="name">The name of the user.</param>
     public User? UserByName(string name) =>
         _avatars.Values.OfType<User>().FirstOrDefault(u => string.Equals(u.Name, name, StringComparison.OrdinalIgnoreCase));
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         if (CurrentSession is { } active_session)
@@ -1824,6 +2000,7 @@ public sealed class RoomManager : GameStateManager
             Publish(Chat, message with { Type = ChatType.Whisper }));
     }
 
+    /// <inheritdoc/>
     protected override void Reset()
     {
         Mutate(() =>

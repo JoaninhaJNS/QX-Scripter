@@ -2,32 +2,53 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
+/// <summary>Represents a furni standing on the room floor.</summary>
 public sealed class FloorItem : Furni, IParserComposer<FloorItem>
 {
+    /// <summary>Gets the item type, which is always <see cref="ItemType.Floor"/>.</summary>
     public override ItemType Type => ItemType.Floor;
 
+    /// <summary>Gets or sets the tile the item's anchor sits on, including its stack height.</summary>
     public Tile Location { get; set; }
+    /// <summary>Gets or sets the direction the item faces, from 0 (north) to 7, clockwise.</summary>
     public int Direction { get; set; }
+    /// <summary>Gets or sets the item's own height in tile units, as sent with the item.</summary>
     public float Height { get; set; }
+    /// <summary>Gets or sets the extra value the hotel sends with the item.</summary>
     public long Extra { get; set; }
+    /// <summary>Gets or sets the item's payload, which holds its state and any game data.</summary>
     public ItemData Data { get; set; } = new EmptyItemData();
 
+    /// <summary>Gets the x coordinate of <see cref="Location"/>.</summary>
     public int X => Location.X;
+    /// <summary>Gets the y coordinate of <see cref="Location"/>.</summary>
     public int Y => Location.Y;
+    /// <summary>Gets the stack height of <see cref="Location"/> in tile units.</summary>
     public float Z => Location.Z;
 
+    /// <summary>Gets or sets the item's width along x in tiles before rotation.</summary>
+    /// <remarks>Filled from the furni definitions when they are loaded; defaults to 1.</remarks>
     public int SizeX { get; set; } = 1;
+    /// <summary>Gets or sets the item's length along y in tiles before rotation.</summary>
+    /// <remarks>Filled from the furni definitions when they are loaded; defaults to 1.</remarks>
     public int SizeZ { get; set; } = 1;
 
+    /// <summary>Gets the tiles the item covers, rotated for its direction.</summary>
+    /// <remarks>The result of <see cref="AreaFor"/> with <see cref="SizeX"/> and <see cref="SizeZ"/>.</remarks>
     public Area Area => AreaFor(SizeX, SizeZ);
 
-    /// <summary>The tile directly in front of the item, the way its rotation faces.</summary>
+    /// <summary>Gets the tile directly in front of the item, in the direction it faces.</summary>
     public Point Front => Location.XY.Step(Direction);
 
+    /// <summary>Gets the item's state, taken from <see cref="ItemData.State"/> of <see cref="Data"/>.</summary>
     public override int State => Data.State;
 
+    /// <summary>Initializes a new instance of the <see cref="FloorItem"/> class.</summary>
     public FloorItem() { }
 
+    /// <summary>Reads a floor item from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
     public static FloorItem Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -61,6 +82,14 @@ public sealed class FloorItem : Furni, IParserComposer<FloorItem>
         return item;
     }
 
+    /// <summary>Gets the tiles an item of the given size covers at this item's location and direction.</summary>
+    /// <remarks>
+    /// Width and length are swapped when the direction, taken modulo 4, is 2, so an item facing
+    /// east or west is rotated.
+    /// </remarks>
+    /// <param name="width">The width along x in tiles before rotation.</param>
+    /// <param name="length">The length along y in tiles before rotation.</param>
+    /// <returns>The covered area, anchored at <see cref="Location"/>.</returns>
     public Area AreaFor(int width, int length)
     {
         int direction = ((Direction % 4) + 4) % 4;
@@ -69,6 +98,9 @@ public sealed class FloorItem : Furni, IParserComposer<FloorItem>
             : new Area(Location, width, length);
     }
 
+    /// <summary>Writes the floor item to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -93,5 +125,7 @@ public sealed class FloorItem : Furni, IParserComposer<FloorItem>
             p.WriteString(Identifier ?? "");
     }
 
+    /// <summary>Returns the item's identifier and kind.</summary>
+    /// <returns>A string in the form <c>FloorItem#Id/Kind</c>.</returns>
     public override string ToString() => $"{nameof(FloorItem)}#{Id}/{Kind}";
 }

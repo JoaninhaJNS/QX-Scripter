@@ -3,13 +3,28 @@ using Qx;
 
 namespace Qx.Protocol;
 
+/// <summary>Provides parsing of the <c>messages.ini</c> message registry.</summary>
+/// <remarks>
+/// The text has <c>[Incoming]</c> and <c>[Outgoing]</c> sections. Each row declares one message with an
+/// optional stable key as <c>k:key</c> and one or more Flash names as <c>f:Name</c>, separated by spaces or
+/// tabs. <c>f:-</c> is skipped and text after <c>;</c> is a comment. A row without a key gets a generated
+/// <c>legacy.in.</c> or <c>legacy.out.</c> key derived from a SHA-256 hash of its names.
+/// </remarks>
 public static class MessagesIniParser
 {
     private const string ResourceName = "Qx.Protocol.messages.ini";
 
+    /// <summary>Parses the embedded <c>messages.ini</c> resource into a message map.</summary>
+    /// <returns>The message map.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the embedded resource is missing.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the resource is malformed.</exception>
     public static MessageMap ParseEmbedded()
         => new(ParseEmbeddedRegistry());
 
+    /// <summary>Parses the embedded <c>messages.ini</c> resource into a message registry.</summary>
+    /// <returns>The message registry.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the embedded resource is missing.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the resource is malformed.</exception>
     public static MessageRegistry ParseEmbeddedRegistry()
     {
         Assembly assembly = typeof(MessagesIniParser).Assembly;
@@ -19,8 +34,22 @@ public static class MessagesIniParser
         return ParseRegistry(reader.ReadToEnd());
     }
 
+    /// <summary>Parses <c>messages.ini</c> text into a message map.</summary>
+    /// <param name="text">The text to parse.</param>
+    /// <returns>The message map.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidDataException">Thrown when <paramref name="text"/> is malformed.</exception>
     public static MessageMap Parse(string text) => new(ParseRegistry(text));
 
+    /// <summary>Parses <c>messages.ini</c> text into a message registry.</summary>
+    /// <param name="text">The text to parse.</param>
+    /// <returns>The message registry, with descriptors in file order.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when <paramref name="text"/> has an unknown section, a row before any section, a malformed field,
+    /// a client prefix other than <c>k</c> or <c>f</c>, an invalid or repeated key, a key without names, or a
+    /// name or key declared twice.
+    /// </exception>
     public static MessageRegistry ParseRegistry(string text)
     {
         ArgumentNullException.ThrowIfNull(text);

@@ -5,7 +5,7 @@ using Qx.Model;
 namespace Qx.Game.Snapshots;
 
 /// <summary>
-/// The load state that accompanies every snapshot, describing how complete and how
+/// Represents the load state that accompanies every snapshot, describing how complete and how
 /// trustworthy the payload next to it is.
 /// </summary>
 /// <remarks>
@@ -60,7 +60,7 @@ public sealed record QueryMetadataSnapshot(
 /// <param name="Message">The exception message, for diagnostics only.</param>
 /// <param name="OutgoingName">
 /// The name of the request message that was sent, when the failure was a timeout or a
-/// disconnect while awaiting a reply; otherwise <see langword="null"/>.
+/// disconnect while awaiting a reply; otherwise, <see langword="null"/>.
 /// </param>
 /// <param name="IncomingName">
 /// The name of the reply message that was awaited or that failed to parse; otherwise
@@ -68,7 +68,7 @@ public sealed record QueryMetadataSnapshot(
 /// </param>
 /// <param name="ResponseType">
 /// The CLR type the reply was being parsed or matched into, for parse and correlation
-/// failures; otherwise <see langword="null"/>.
+/// failures; otherwise, <see langword="null"/>.
 /// </param>
 /// <param name="TimeoutMs">
 /// The timeout in milliseconds that elapsed, present only when <paramref name="Code"/> is
@@ -99,15 +99,16 @@ public sealed record QueryErrorSnapshot(
     long? ActiveRequestEpoch);
 
 /// <summary>
-/// The wrapper every read query returns: the payload plus its load state, or an error.
+/// Represents the wrapper every read query returns: the payload plus its load state, or an error.
 /// </summary>
 /// <remarks>
 /// On success <paramref name="Error"/> is <see langword="null"/>; on failure
 /// <paramref name="Data"/> is <see langword="default"/> and every metadata flag is
 /// <see langword="false"/>. A <see langword="null"/> <paramref name="Data"/> is not by
 /// itself a failure: queries whose payload is nullable (profile, heightmap) return
-/// <see langword="null"/> with no error when the value simply does not exist yet.
+/// <see langword="null"/> with no error when the value does not exist yet.
 /// </remarks>
+/// <typeparam name="T">The type of the projected payload.</typeparam>
 /// <param name="Query">The query name, for example <c>room</c>, <c>furni</c> or <c>inventory</c>.</param>
 /// <param name="Metadata">How complete and how current <paramref name="Data"/> is.</param>
 /// <param name="Data">The projected state, or <see langword="default"/> when the query failed.</param>
@@ -118,6 +119,24 @@ public sealed record QueryEnvelope<T>(
     T? Data,
     QueryErrorSnapshot? Error);
 
+/// <summary>Represents the state of the interceptor link, the hotel session and the analysis of the connected client build.</summary>
+/// <param name="InterceptorConnected">Whether the packet interceptor is attached.</param>
+/// <param name="HotelConnected">Whether a hotel session is open.</param>
+/// <param name="MessageCatalogLoaded">Whether the message name catalog is available.</param>
+/// <param name="WireProfileAnalyzed">Whether the connected client build has been analyzed.</param>
+/// <param name="WireProfileExact">Whether the analysis matched this build exactly rather than falling back.</param>
+/// <param name="MissingWireCapabilities">The wire capabilities the connected build lacks; empty when it lacks none.</param>
+/// <param name="Client">
+/// The client type of the session, for example <c>Flash</c>, or <see langword="null"/> when no
+/// session is open.
+/// </param>
+/// <param name="Host">The hotel server host name, or <see langword="null"/> when no session is open.</param>
+/// <param name="Port">The hotel server port, or <see langword="null"/> when no session is open.</param>
+/// <param name="HotelVersion">The hotel client version string, or <see langword="null"/> when no session is open.</param>
+/// <param name="ClientIdentifier">
+/// The client identifier reported by the interceptor, or <see langword="null"/> when no
+/// session is open.
+/// </param>
 public sealed record ConnectionSnapshot(
     bool InterceptorConnected,
     bool HotelConnected,
@@ -131,7 +150,7 @@ public sealed record ConnectionSnapshot(
     string? HotelVersion,
     string? ClientIdentifier);
 
-/// <summary>A point in room space.</summary>
+/// <summary>Represents a point in room space.</summary>
 /// <param name="X">The tile column.</param>
 /// <param name="Y">The tile row.</param>
 /// <param name="Z">
@@ -140,14 +159,14 @@ public sealed record ConnectionSnapshot(
 /// </param>
 public sealed record PositionSnapshot(int X, int Y, float Z);
 
-/// <summary>The rectangle of tiles an object occupies.</summary>
+/// <summary>Represents the rectangle of tiles an object occupies.</summary>
 /// <param name="Origin">The anchor tile, which is the object's own position.</param>
 /// <param name="Width">The extent along X in tiles, already rotated for the object's direction.</param>
 /// <param name="Length">The extent along Y in tiles, already rotated for the object's direction.</param>
 public sealed record AreaSnapshot(PositionSnapshot Origin, int Width, int Length);
 
 /// <summary>
-/// The navigator record of a room: everything shown in a room listing or on the room's
+/// Represents the navigator record of a room: everything shown in a room listing or on the room's
 /// info card.
 /// </summary>
 /// <param name="Id">The room identifier.</param>
@@ -214,7 +233,7 @@ public sealed record RoomDataSnapshot(
     bool DisplayRoomEntryAd);
 
 /// <summary>
-/// One rectangular hole cut into the floor by an area-hider furni, as fed to the client's
+/// Represents one rectangular hole cut into the floor by an area-hider furni, as fed to the client's
 /// floor-hole update.
 /// </summary>
 /// <param name="FurniId">The identifier of the furni that owns the hole.</param>
@@ -236,6 +255,25 @@ public sealed record HiddenAreaSnapshot(
     int Length,
     bool Invert);
 
+/// <summary>Represents the static floor plan of the current room as the hotel sends it.</summary>
+/// <param name="UseLegacyScale">Whether the room is drawn at the legacy 32 pixel tile scale instead of 64.</param>
+/// <param name="WallHeight">The fixed wall height the hotel sends with the floor plan.</param>
+/// <param name="Map">
+/// The raw height map text, one line per row, where <c>x</c> marks a void tile and
+/// <c>0</c> to <c>9</c> then <c>a</c> to <c>z</c> give tile heights 0 to 35.
+/// </param>
+/// <param name="Width">The column count, the length of the longest map line.</param>
+/// <param name="Length">The row count, the number of map lines.</param>
+/// <param name="Scale">The tile scale in pixels: 32 when <paramref name="UseLegacyScale"/> is set, otherwise 64.</param>
+/// <param name="Tiles">
+/// The tile heights in row-major order, <paramref name="Width"/> times <paramref name="Length"/>
+/// entries, with -1 for void tiles and for positions past the end of a short line.
+/// </param>
+/// <param name="HiddenAreas">The floor areas hidden by area-hider furni.</param>
+/// <param name="HasCameraData">Whether the floor plan carried camera coordinates.</param>
+/// <param name="CameraX">The camera X coordinate, or <see langword="null"/> when <paramref name="HasCameraData"/> is <see langword="false"/>.</param>
+/// <param name="CameraY">The camera Y coordinate, or <see langword="null"/> when <paramref name="HasCameraData"/> is <see langword="false"/>.</param>
+/// <param name="CameraZ">The camera Z coordinate, or <see langword="null"/> when <paramref name="HasCameraData"/> is <see langword="false"/>.</param>
 public sealed record FloorPlanSnapshot(
     bool UseLegacyScale,
     int WallHeight,
@@ -251,7 +289,7 @@ public sealed record FloorPlanSnapshot(
     float? CameraZ);
 
 /// <summary>
-/// Aggregate counts over the live heightmap, so walkability can be judged without shipping
+/// Represents aggregate counts over the live heightmap, so walkability can be judged without shipping
 /// every tile.
 /// </summary>
 /// <param name="Width">The heightmap's column count.</param>
@@ -270,11 +308,11 @@ public sealed record HeightmapSummarySnapshot(
     int BlockedTileCount,
     int NonFloorTileCount);
 
-/// <summary>
-/// Which pieces of the current room session have arrived. Each flag is the per-piece
-/// counterpart of the envelope's <c>Loaded</c> flag: a value of <see langword="false"/>
-/// means "not received yet", never "empty".
-/// </summary>
+/// <summary>Represents which pieces of the current room session have arrived.</summary>
+/// <remarks>
+/// Each flag is the per-piece counterpart of the envelope's <c>Loaded</c> flag: a value of
+/// <see langword="false"/> means "not received yet", never "empty".
+/// </remarks>
 /// <param name="DataLoaded">The navigator record for the room has arrived.</param>
 /// <param name="DetailsLoaded">The guest-room result detail block has arrived.</param>
 /// <param name="EntryTileLoaded">The door tile and its direction are known.</param>
@@ -313,13 +351,13 @@ public sealed record RoomContentStateSnapshot(
     bool HeightmapLoaded,
     bool DefinitionsLoaded);
 
-/// <summary>The tile an avatar is placed on when entering the room.</summary>
+/// <summary>Represents the tile an avatar is placed on when entering the room.</summary>
 /// <param name="X">The door tile's column.</param>
 /// <param name="Y">The door tile's row.</param>
 /// <param name="Direction">The facing the avatar is given on arrival, 0-7 clockwise from north.</param>
 public sealed record RoomEntryTileSnapshot(int X, int Y, int Direction);
 
-/// <summary>How the room's walls and floor are drawn.</summary>
+/// <summary>Represents the settings that decide how the room's walls and floor are drawn.</summary>
 /// <param name="WallsHidden">Whether the room is rendered without walls.</param>
 /// <param name="WallThickness">
 /// The numeric value of <see cref="RoomThickness"/>: -2 thinnest, -1 thin, 0 normal, 1 thick.
@@ -342,7 +380,7 @@ public sealed record RoomVisualizationSettingsSnapshot(
     float WallThicknessMultiplier,
     float FloorThicknessMultiplier);
 
-/// <summary>The room's chat configuration.</summary>
+/// <summary>Represents the room's chat configuration.</summary>
 /// <remarks>
 /// On the compact Flash guest-room layout the hotel only sends the flood setting; the other
 /// four fields then carry their defaults rather than server values.
@@ -369,19 +407,35 @@ public sealed record RoomChatSettingsSnapshot(
     int TalkHearingDistance,
     int FloodProtection);
 
-/// <summary>
-/// Who is allowed to moderate in the room. Each field is the numeric value of
-/// <see cref="RoomModerationPermission"/>: 0 owner only, 1 rights holders, 2 everyone
-/// (offered for kick only), 4 group admins and 5 group admins plus rights holders in a
-/// group room.
-/// </summary>
+/// <summary>Represents who is allowed to moderate in the room.</summary>
+/// <remarks>
+/// Each field is the numeric value of <see cref="RoomModerationPermission"/>: 0 owner only,
+/// 1 rights holders, 2 everyone (offered for kick only), 4 group admins and 5 group admins
+/// plus rights holders in a group room.
+/// </remarks>
 /// <param name="Mute">Who may mute other users; the hotel only offers 0 and 1 outside group rooms.</param>
 /// <param name="Kick">Who may kick other users; the only permission that can be 2.</param>
 /// <param name="Ban">Who may ban other users; the hotel only offers 0 and 1 outside group rooms.</param>
 public sealed record RoomModerationSettingsSnapshot(int Mute, int Kick, int Ban);
 
+/// <summary>Represents a room's navigator thumbnail.</summary>
+/// <param name="RoomId">The room the thumbnail belongs to.</param>
+/// <param name="Reference">The thumbnail reference as sent by the hotel.</param>
+/// <param name="ImageUrl">The URL of the thumbnail image.</param>
 public sealed record RoomThumbnailSnapshot(Id RoomId, string Reference, string ImageUrl);
 
+/// <summary>Represents the detail block the hotel sends with a guest room result.</summary>
+/// <param name="Forward">Whether the result was sent as a room forward, echoing the request's room-forward flag.</param>
+/// <param name="IsStaffPick">Whether the room is a staff pick.</param>
+/// <param name="IsGroupMember">Whether the local user is a member of the room's group.</param>
+/// <param name="IsRoomMuted">Whether the room is muted for everyone.</param>
+/// <param name="Moderation">The room's mute, kick and ban permissions.</param>
+/// <param name="CanMute">Whether the local user may mute others in the room.</param>
+/// <param name="Chat">The room's chat configuration.</param>
+/// <param name="OpeningConnection">
+/// The trailing opening-connection flag, which only the compact and the extended full Flash
+/// layouts carry; <see langword="null"/> on the layout without it.
+/// </param>
 public sealed record RoomResultDetailsSnapshot(
     bool Forward,
     bool IsStaffPick,
@@ -392,10 +446,11 @@ public sealed record RoomResultDetailsSnapshot(
     RoomChatSettingsSnapshot Chat,
     bool? OpeningConnection);
 
-/// <summary>
-/// The decoration and layout of the room the session is inside. Every member is
-/// <see langword="null"/> until the corresponding packet has arrived.
-/// </summary>
+/// <summary>Represents the decoration and layout of the room the session is inside.</summary>
+/// <remarks>
+/// Every member is <see langword="null"/>, and the property map empty, until the corresponding
+/// packet has arrived.
+/// </remarks>
 /// <param name="EntryTile">The door tile, or <see langword="null"/> before it is received.</param>
 /// <param name="Properties">
 /// Every room property keyed exactly as the hotel sends it, for example <c>floor</c>,
@@ -417,7 +472,7 @@ public sealed record RoomEnvironmentSnapshot(
     RoomVisualizationSettingsSnapshot? Visualization,
     RoomChatSettingsSnapshot? Chat);
 
-/// <summary>What the local user is permitted to do in the current room.</summary>
+/// <summary>Represents what the local user is permitted to do in the current room.</summary>
 /// <param name="IsOwner">Whether the local user owns the room.</param>
 /// <param name="RightsLevel">
 /// The controller level granted to the local user, or <see langword="null"/> while it is
@@ -455,7 +510,7 @@ public sealed record RoomAuthoritySnapshot(
     bool? CanMute,
     RoomModerationSettingsSnapshot? Moderation);
 
-/// <summary>One line of a door queue.</summary>
+/// <summary>Represents one line of a door queue.</summary>
 /// <param name="Type">The queue's identifier as sent by the hotel, for example <c>visitors</c>.</param>
 /// <param name="Size">
 /// The local user's zero-based place in this queue, or a negative value when the hotel
@@ -463,7 +518,7 @@ public sealed record RoomAuthoritySnapshot(
 /// </param>
 public sealed record RoomQueueEntrySnapshot(string Type, int Size);
 
-/// <summary>A group of door queues sharing one entry target.</summary>
+/// <summary>Represents a group of door queues sharing one entry target.</summary>
 /// <param name="Name">The set's name as sent by the hotel.</param>
 /// <param name="Target">
 /// What entering this set grants, as the numeric value of <c>RoomQueueTarget</c>:
@@ -484,7 +539,7 @@ public sealed record RoomQueueSetSnapshot(
     int? Position,
     IReadOnlyList<RoomQueueEntrySnapshot> Queues);
 
-/// <summary>The door-queue status for a room the local user is waiting to enter.</summary>
+/// <summary>Represents the door-queue status for a room the local user is waiting to enter.</summary>
 /// <param name="RoomId">The room being queued for.</param>
 /// <param name="ActiveTarget">
 /// The target of the set currently being waited in, as the numeric value of
@@ -501,7 +556,7 @@ public sealed record RoomQueueSnapshot(
     int? Position,
     IReadOnlyList<RoomQueueSetSnapshot> Sets);
 
-/// <summary>Why a room could not be entered.</summary>
+/// <summary>Represents the reason a room could not be entered.</summary>
 /// <param name="Kind">
 /// The classified reason: <c>Full</c>, <c>QueueError</c>, <c>Banned</c>, <c>Blocked</c>
 /// or <c>Unknown</c>.
@@ -518,7 +573,7 @@ public sealed record RoomConnectionFailureSnapshot(
     int ReasonCode,
     string Parameter);
 
-/// <summary>A kick of the local user out of a room.</summary>
+/// <summary>Represents a kick of the local user out of a room.</summary>
 /// <param name="RoomId">The room the local user was removed from.</param>
 /// <param name="ErrorCode">
 /// The generic error code that announced the kick; 4008 is the client's
@@ -530,7 +585,7 @@ public sealed record RoomKickSnapshot(
     int ErrorCode,
     bool WasEntered);
 
-/// <summary>How the previous room session ended.</summary>
+/// <summary>Represents how the previous room session ended.</summary>
 /// <param name="RoomId">The room that was left.</param>
 /// <param name="WasEntered">Whether the room had been fully entered before the exit.</param>
 /// <param name="Source">
@@ -558,7 +613,7 @@ public sealed record RoomExitSnapshot(
     RoomKickSnapshot? Kick);
 
 /// <summary>
-/// The entry side of the room session: getting in, waiting at the door, and how the last
+/// Represents the entry side of the room session: getting in, waiting at the door, and how the last
 /// attempt or the last session ended.
 /// </summary>
 /// <param name="State">
@@ -590,7 +645,7 @@ public sealed record RoomAccessSnapshot(
     bool WasKicked);
 
 /// <summary>
-/// The whole room session in one object: where the session stands, who the local user is
+/// Represents the whole room session in one object: where the session stands, who the local user is
 /// in it, and how much of the room's content has arrived.
 /// </summary>
 /// <remarks>
@@ -646,6 +701,31 @@ public sealed record RoomSnapshot(
     FloorPlanSnapshot? FloorPlan,
     HeightmapSummarySnapshot? Heightmap);
 
+/// <summary>Represents the decoded last status update of an avatar.</summary>
+/// <param name="StatusId">
+/// The extra integer of the status entry: <see cref="TargetId"/> when that is not 0, otherwise
+/// <see cref="JumpingPower"/>.
+/// </param>
+/// <param name="Position">The tile the status places the avatar on, including its height.</param>
+/// <param name="Direction">The body facing, 0-7 clockwise from north.</param>
+/// <param name="HeadDirection">The head facing, 0-7 clockwise from north.</param>
+/// <param name="Raw">
+/// The fragment string recompiled in the client's own <c>/name args/name args/</c> form.
+/// </param>
+/// <param name="Stance">The posture derived from the fragments: <c>Sit</c>, <c>Lay</c> or <c>Stand</c>.</param>
+/// <param name="IsController">Whether the status carries the <c>flatctrl</c> fragment.</param>
+/// <param name="RightsLevel">The level from the <c>flatctrl</c> fragment, or 0 when the fragment is absent or not a number.</param>
+/// <param name="IsTrading">Whether the status carries the <c>trd</c> fragment.</param>
+/// <param name="SittingOnFloor">Whether the <c>sit</c> fragment's second argument is <c>1</c>, which marks sitting on the floor.</param>
+/// <param name="Sign">The sign from the <c>sign</c> fragment, or 0 when the fragment is absent or not a number.</param>
+/// <param name="MovingTo">
+/// The tile from the <c>mv</c> fragment the avatar is stepping onto, or <see langword="null"/>
+/// when it is not walking.
+/// </param>
+/// <param name="Fragments">
+/// Every fragment keyed case-insensitively by its name, with its space-separated arguments, so
+/// fragments that are not modeled here are still reachable.
+/// </param>
 public sealed record AvatarStatusSnapshot(
     int StatusId,
     PositionSnapshot Position,
@@ -661,17 +741,51 @@ public sealed record AvatarStatusSnapshot(
     PositionSnapshot? MovingTo,
     IReadOnlyDictionary<string, IReadOnlyList<string>> Fragments)
 {
+    /// <summary>Gets the integer the status entry carries after the facings, read as the jumping power.</summary>
     public int JumpingPower { get; init; }
 
+    /// <summary>Gets the target identifier of the status, or 0 when none is set.</summary>
+    /// <remarks>
+    /// Status updates read from the wire leave this at 0; when it is set it takes precedence
+    /// over <see cref="JumpingPower"/> in <see cref="StatusId"/>.
+    /// </remarks>
     public int TargetId { get; init; }
 
-    /// <summary>
-    /// The height offset carried by the <c>sit</c> or <c>lay</c> fragment, in tile units.
+    /// <summary>Gets the height offset carried by the <c>sit</c> or <c>lay</c> fragment, in tile units.</summary>
+    /// <remarks>
     /// <see langword="null"/> when standing or when the fragment carries no usable number.
-    /// </summary>
+    /// </remarks>
     public double? ActionHeight { get; init; }
 }
 
+/// <summary>Represents the fields that only a user avatar has.</summary>
+/// <param name="Gender">
+/// The user's gender: <c>Male</c>, <c>Female</c>, <c>Unisex</c>, or <c>None</c> when the hotel
+/// sent an unrecognized value.
+/// </param>
+/// <param name="GroupId">The identifier of the user's favorite group, or -1 when the user displays none.</param>
+/// <param name="GroupStatus">The favorite group membership status as sent with the room user.</param>
+/// <param name="GroupName">The name of the user's favorite group, empty when the user displays none.</param>
+/// <param name="FigureExtra">The secondary figure string the hotel sends with the room user, empty when none.</param>
+/// <param name="AchievementScore">The user's achievement score.</param>
+/// <param name="IsModerator">Whether the hotel flags the user as staff.</param>
+/// <param name="BadgeCode">
+/// The user's badge code; the room user packets do not carry it, so it is normally empty.
+/// </param>
+/// <param name="GroupBadge">
+/// The favorite group's badge code; the room user packets do not carry it, so it is normally
+/// empty.
+/// </param>
+/// <param name="GroupPayload">
+/// The favorite group's badge parts as a flat list of integers; the room user packets do not
+/// carry it, so it is normally empty.
+/// </param>
+/// <param name="BadgeRank">The badge rank the hotel sends with the user, or -1 when none was sent.</param>
+/// <param name="RightsLevel">
+/// The controller level from the user's last status update, or 0 when no status has been
+/// received or it carries no <c>flatctrl</c> fragment.
+/// </param>
+/// <param name="HasRights">Whether <paramref name="RightsLevel"/> is above 0.</param>
 public sealed record UserAvatarSnapshot(
     string Gender,
     Id GroupId,
@@ -687,7 +801,20 @@ public sealed record UserAvatarSnapshot(
     int RightsLevel,
     bool HasRights)
 {
-    /// <summary>Compatibility overload that accepts the group identifier as a plain <see cref="long"/>.</summary>
+    /// <summary>Initializes a new instance for compatibility, taking the group identifier as a plain <see cref="long"/>.</summary>
+    /// <param name="Gender">The user's gender.</param>
+    /// <param name="GroupId">The identifier of the user's favorite group, or -1 when the user displays none.</param>
+    /// <param name="GroupStatus">The favorite group membership status.</param>
+    /// <param name="GroupName">The name of the user's favorite group.</param>
+    /// <param name="FigureExtra">The secondary figure string.</param>
+    /// <param name="AchievementScore">The user's achievement score.</param>
+    /// <param name="IsModerator">Whether the hotel flags the user as staff.</param>
+    /// <param name="BadgeCode">The user's badge code.</param>
+    /// <param name="GroupBadge">The favorite group's badge code.</param>
+    /// <param name="GroupPayload">The favorite group's badge parts as a flat list of integers.</param>
+    /// <param name="BadgeRank">The badge rank, or -1 when none was sent.</param>
+    /// <param name="RightsLevel">The controller level from the user's last status update.</param>
+    /// <param name="HasRights">Whether the user holds a controller level above 0.</param>
     public UserAvatarSnapshot(
         string Gender,
         long GroupId,
@@ -719,7 +846,20 @@ public sealed record UserAvatarSnapshot(
     {
     }
 
-    /// <summary>Compatibility deconstruction that yields the group identifier as a plain <see cref="long"/>.</summary>
+    /// <summary>Deconstructs the instance for compatibility, yielding the group identifier as a plain <see cref="long"/>.</summary>
+    /// <param name="Gender">The user's gender.</param>
+    /// <param name="GroupId">The identifier of the user's favorite group as a plain <see cref="long"/>.</param>
+    /// <param name="GroupStatus">The favorite group membership status.</param>
+    /// <param name="GroupName">The name of the user's favorite group.</param>
+    /// <param name="FigureExtra">The secondary figure string.</param>
+    /// <param name="AchievementScore">The user's achievement score.</param>
+    /// <param name="IsModerator">Whether the hotel flags the user as staff.</param>
+    /// <param name="BadgeCode">The user's badge code.</param>
+    /// <param name="GroupBadge">The favorite group's badge code.</param>
+    /// <param name="GroupPayload">The favorite group's badge parts.</param>
+    /// <param name="BadgeRank">The badge rank.</param>
+    /// <param name="RightsLevel">The controller level from the user's last status update.</param>
+    /// <param name="HasRights">Whether the user holds a controller level above 0.</param>
     public void Deconstruct(
         out string Gender,
         out long GroupId,
@@ -751,13 +891,13 @@ public sealed record UserAvatarSnapshot(
     }
 }
 
-/// <summary>The fields that only a pet avatar has.</summary>
+/// <summary>Represents the fields that only a pet avatar has.</summary>
 /// <remarks>
 /// The pet's breed variant is not on the room entity; it only comes from a pet info
 /// request. <see cref="PetType"/> plus that breed together resolve the displayed breed.
 /// </remarks>
 /// <param name="Breed">
-/// The pet type identifier, serialised as <see cref="PetType"/>. This is what kind of animal
+/// The pet type identifier, serialized as <see cref="PetType"/>. This is what kind of animal
 /// it is (16 is the monsterplant), not the breed variant within that kind.
 /// </param>
 /// <param name="OwnerId">The owning user's identifier, or -1 when the hotel sent none.</param>
@@ -785,13 +925,23 @@ public sealed record PetAvatarSnapshot(
     int Level,
     string Posture)
 {
-    /// <summary>
-    /// The pet type identifier, the serialised name of <see cref="Breed"/>. Identifies the
-    /// kind of animal, not the breed variant.
-    /// </summary>
+    /// <summary>Gets the pet type identifier, the serialized name of <see cref="Breed"/>.</summary>
+    /// <remarks>Identifies the kind of animal, not the breed variant.</remarks>
     public int PetType => Breed;
 
-    /// <summary>Compatibility overload that accepts the owner identifier as a plain <see cref="long"/>.</summary>
+    /// <summary>Initializes a new instance for compatibility, taking the owner identifier as a plain <see cref="long"/>.</summary>
+    /// <param name="Breed">The pet type identifier, which is what kind of animal it is.</param>
+    /// <param name="OwnerId">The owning user's identifier, or -1 when the hotel sent none.</param>
+    /// <param name="OwnerName">The owning user's name.</param>
+    /// <param name="RarityLevel">The pet's rarity tier.</param>
+    /// <param name="HasSaddle">Whether the pet is wearing a saddle.</param>
+    /// <param name="IsRiding">Whether a user is currently riding the pet.</param>
+    /// <param name="CanBreed">Whether the pet may be bred right now.</param>
+    /// <param name="CanHarvest">Whether the pet may be harvested right now.</param>
+    /// <param name="CanRevive">Whether the pet is dead and may be revived.</param>
+    /// <param name="HasBreedingPermission">Whether the local user may breed this pet.</param>
+    /// <param name="Level">The pet's level.</param>
+    /// <param name="Posture">The pet's current posture string.</param>
     public PetAvatarSnapshot(
         int Breed,
         long OwnerId,
@@ -821,7 +971,19 @@ public sealed record PetAvatarSnapshot(
     {
     }
 
-    /// <summary>Compatibility deconstruction that yields the owner identifier as a plain <see cref="long"/>.</summary>
+    /// <summary>Deconstructs the instance for compatibility, yielding the owner identifier as a plain <see cref="long"/>.</summary>
+    /// <param name="Breed">The pet type identifier.</param>
+    /// <param name="OwnerId">The owning user's identifier as a plain <see cref="long"/>.</param>
+    /// <param name="OwnerName">The owning user's name.</param>
+    /// <param name="RarityLevel">The pet's rarity tier.</param>
+    /// <param name="HasSaddle">Whether the pet is wearing a saddle.</param>
+    /// <param name="IsRiding">Whether a user is currently riding the pet.</param>
+    /// <param name="CanBreed">Whether the pet may be bred right now.</param>
+    /// <param name="CanHarvest">Whether the pet may be harvested right now.</param>
+    /// <param name="CanRevive">Whether the pet is dead and may be revived.</param>
+    /// <param name="HasBreedingPermission">Whether the local user may breed this pet.</param>
+    /// <param name="Level">The pet's level.</param>
+    /// <param name="Posture">The pet's current posture string.</param>
     public void Deconstruct(
         out int Breed,
         out long OwnerId,
@@ -851,14 +1013,17 @@ public sealed record PetAvatarSnapshot(
     }
 }
 
-/// <summary>The fields that only a bot avatar has.</summary>
+/// <summary>Represents the fields that only a bot avatar has.</summary>
 /// <remarks>
 /// Public bots carry no owner or skills: the hotel only sends those for private (rentable)
 /// bots, so on a public bot the owner is -1, the name empty and the skill list empty.
 /// </remarks>
 /// <param name="IsPublic">Whether this is a hotel-owned public bot.</param>
 /// <param name="IsPrivate">Whether this is a user-owned rentable bot.</param>
-/// <param name="Gender">The bot's gender: <c>Male</c>, <c>Female</c> or <c>Unisex</c>.</param>
+/// <param name="Gender">
+/// The bot's gender: <c>Male</c>, <c>Female</c>, <c>Unisex</c>, or <c>None</c> when the hotel
+/// sent an unrecognized value.
+/// </param>
 /// <param name="OwnerId">The owning user's identifier, or -1 for a public bot.</param>
 /// <param name="OwnerName">The owning user's name; empty for a public bot.</param>
 /// <param name="Skills">The bot's enabled skill identifiers as sent by the hotel; empty for a public bot.</param>
@@ -870,7 +1035,13 @@ public sealed record BotAvatarSnapshot(
     string OwnerName,
     IReadOnlyList<short> Skills)
 {
-    /// <summary>Compatibility overload that accepts the owner identifier as a plain <see cref="long"/>.</summary>
+    /// <summary>Initializes a new instance for compatibility, taking the owner identifier as a plain <see cref="long"/>.</summary>
+    /// <param name="IsPublic">Whether this is a hotel-owned public bot.</param>
+    /// <param name="IsPrivate">Whether this is a user-owned rentable bot.</param>
+    /// <param name="Gender">The bot's gender.</param>
+    /// <param name="OwnerId">The owning user's identifier, or -1 for a public bot.</param>
+    /// <param name="OwnerName">The owning user's name; empty for a public bot.</param>
+    /// <param name="Skills">The bot's enabled skill identifiers; empty for a public bot.</param>
     public BotAvatarSnapshot(
         bool IsPublic,
         bool IsPrivate,
@@ -882,7 +1053,13 @@ public sealed record BotAvatarSnapshot(
     {
     }
 
-    /// <summary>Compatibility deconstruction that yields the owner identifier as a plain <see cref="long"/>.</summary>
+    /// <summary>Deconstructs the instance for compatibility, yielding the owner identifier as a plain <see cref="long"/>.</summary>
+    /// <param name="IsPublic">Whether this is a hotel-owned public bot.</param>
+    /// <param name="IsPrivate">Whether this is a user-owned rentable bot.</param>
+    /// <param name="Gender">The bot's gender.</param>
+    /// <param name="OwnerId">The owning user's identifier as a plain <see cref="long"/>.</param>
+    /// <param name="OwnerName">The owning user's name.</param>
+    /// <param name="Skills">The bot's enabled skill identifiers.</param>
     public void Deconstruct(
         out bool IsPublic,
         out bool IsPrivate,
@@ -900,11 +1077,11 @@ public sealed record BotAvatarSnapshot(
     }
 }
 
-/// <summary>
-/// One entity standing in the room: a user, a pet or a bot. Exactly one of
-/// <paramref name="User"/>, <paramref name="Pet"/> and <paramref name="Bot"/> is populated,
-/// matching <paramref name="Type"/>.
-/// </summary>
+/// <summary>Represents one entity standing in the room: a user, a pet or a bot.</summary>
+/// <remarks>
+/// Exactly one of <paramref name="User"/>, <paramref name="Pet"/> and <paramref name="Bot"/> is
+/// populated, matching <paramref name="Type"/>.
+/// </remarks>
 /// <param name="Type">The entity kind: <c>User</c>, <c>Pet</c>, <c>PublicBot</c> or <c>PrivateBot</c>.</param>
 /// <param name="IsRemoved">
 /// Whether this snapshot describes an avatar that has already left. Set on the copy handed
@@ -960,9 +1137,28 @@ public sealed record AvatarSnapshot(
     BotAvatarSnapshot? Bot)
 {
     /// <summary>
-    /// Compatibility overload that accepts the identifier as a plain <see cref="long"/> and
-    /// fixes <see cref="IsRemoved"/> to <see langword="false"/>.
+    /// Initializes a new instance for compatibility, taking the identifier as a plain <see cref="long"/> and
+    /// fixing <see cref="IsRemoved"/> to <see langword="false"/>.
     /// </summary>
+    /// <param name="Type">The entity kind: <c>User</c>, <c>Pet</c>, <c>PublicBot</c> or <c>PrivateBot</c>.</param>
+    /// <param name="Id">The entity's own identifier as a plain <see cref="long"/>.</param>
+    /// <param name="Index">The room-local index that room packets use to address the avatar.</param>
+    /// <param name="Name">The displayed name.</param>
+    /// <param name="Motto">The displayed motto.</param>
+    /// <param name="Figure">The figure string.</param>
+    /// <param name="Position">The tile the avatar stands on, including its height.</param>
+    /// <param name="Area">The avatar's footprint.</param>
+    /// <param name="Direction">The body facing, 0-7 clockwise from north.</param>
+    /// <param name="HeadDirection">The head facing, 0-7 clockwise from north.</param>
+    /// <param name="Dance">The dance identifier; 0 when not dancing.</param>
+    /// <param name="Effect">The avatar effect identifier; 0 when none.</param>
+    /// <param name="HandItem">The carry-item identifier; 0 when empty-handed.</param>
+    /// <param name="IsIdle">Whether the hotel has flagged the avatar as idle.</param>
+    /// <param name="IsTyping">Whether the avatar is showing the typing indicator.</param>
+    /// <param name="CurrentStatus">The decoded last status update, or <see langword="null"/> when none has been received.</param>
+    /// <param name="User">The user-only fields, or <see langword="null"/> when this is not a user.</param>
+    /// <param name="Pet">The pet-only fields, or <see langword="null"/> when this is not a pet.</param>
+    /// <param name="Bot">The bot-only fields, or <see langword="null"/> when this is not a bot.</param>
     public AvatarSnapshot(
         string Type,
         long Id,
@@ -1008,9 +1204,28 @@ public sealed record AvatarSnapshot(
     }
 
     /// <summary>
-    /// Compatibility deconstruction that yields the identifier as a plain <see cref="long"/>
-    /// and omits <see cref="IsRemoved"/>.
+    /// Deconstructs the instance for compatibility, yielding the identifier as a plain <see cref="long"/>
+    /// and omitting <see cref="IsRemoved"/>.
     /// </summary>
+    /// <param name="Type">The entity kind.</param>
+    /// <param name="Id">The entity's own identifier as a plain <see cref="long"/>.</param>
+    /// <param name="Index">The room-local index.</param>
+    /// <param name="Name">The displayed name.</param>
+    /// <param name="Motto">The displayed motto.</param>
+    /// <param name="Figure">The figure string.</param>
+    /// <param name="Position">The tile the avatar stands on.</param>
+    /// <param name="Area">The avatar's footprint.</param>
+    /// <param name="Direction">The body facing.</param>
+    /// <param name="HeadDirection">The head facing.</param>
+    /// <param name="Dance">The dance identifier.</param>
+    /// <param name="Effect">The avatar effect identifier.</param>
+    /// <param name="HandItem">The carry-item identifier.</param>
+    /// <param name="IsIdle">Whether the hotel has flagged the avatar as idle.</param>
+    /// <param name="IsTyping">Whether the avatar is showing the typing indicator.</param>
+    /// <param name="CurrentStatus">The decoded last status update, or <see langword="null"/>.</param>
+    /// <param name="User">The user-only fields, or <see langword="null"/>.</param>
+    /// <param name="Pet">The pet-only fields, or <see langword="null"/>.</param>
+    /// <param name="Bot">The bot-only fields, or <see langword="null"/>.</param>
     public void Deconstruct(
         out string Type,
         out long Id,
@@ -1054,7 +1269,7 @@ public sealed record AvatarSnapshot(
     }
 }
 
-/// <summary>Every avatar currently tracked in the room, ordered by room index.</summary>
+/// <summary>Represents every avatar currently tracked in the room, ordered by room index.</summary>
 /// <param name="RoomId">The room the avatars belong to, or <see langword="null"/> when not in a room.</param>
 /// <param name="Generation">
 /// The room session counter the projection was taken under. Compare it against a later
@@ -1068,13 +1283,17 @@ public sealed record AvatarCollectionSnapshot(
     int Total,
     IReadOnlyList<AvatarSnapshot> Avatars)
 {
-    /// <summary>Compatibility overload for callers that have no room context.</summary>
+    /// <summary>Initializes a new instance for compatibility with callers that have no room context.</summary>
+    /// <param name="Total">The number of entries in <paramref name="Avatars"/>.</param>
+    /// <param name="Avatars">The avatars, ordered ascending by their room index.</param>
     public AvatarCollectionSnapshot(int Total, IReadOnlyList<AvatarSnapshot> Avatars)
         : this(null, 0, Total, Avatars)
     {
     }
 
-    /// <summary>Compatibility deconstruction that omits the room context.</summary>
+    /// <summary>Deconstructs the instance for compatibility, omitting the room context.</summary>
+    /// <param name="Total">The number of avatars.</param>
+    /// <param name="Avatars">The avatars, ordered ascending by their room index.</param>
     public void Deconstruct(out int Total, out IReadOnlyList<AvatarSnapshot> Avatars)
     {
         Total = this.Total;
@@ -1083,13 +1302,16 @@ public sealed record AvatarCollectionSnapshot(
 }
 
 /// <summary>
-/// A user's profile card as returned by a profile request, which is more than the room
+/// Represents a user's profile card as returned by a profile request, which is more than the room
 /// avatar carries.
 /// </summary>
 /// <param name="Id">The user identifier.</param>
 /// <param name="Name">The user name.</param>
 /// <param name="Figure">The figure string.</param>
-/// <param name="Gender">The gender: <c>Male</c>, <c>Female</c> or <c>Unisex</c>.</param>
+/// <param name="Gender">
+/// The gender: <c>Male</c>, <c>Female</c>, <c>Unisex</c>, or <c>None</c> when the hotel sent an
+/// unrecognized value.
+/// </param>
 /// <param name="Motto">The motto.</param>
 /// <param name="RealName">The real name, empty unless the hotel discloses it.</param>
 /// <param name="DirectMail">Whether the user opted into direct mail.</param>
@@ -1103,8 +1325,8 @@ public sealed record AvatarCollectionSnapshot(
 /// </param>
 /// <param name="IsNameChangeable">Whether the user may still change their name.</param>
 /// <param name="IsSafetyLocked">Whether the account is under a safety lock.</param>
-/// <param name="IsTradeLocked">Whether the account is barred from trading. Sent only by newer hotels; otherwise <see langword="false"/>.</param>
-/// <param name="NameColor">The name colour the hotel assigns. Sent only by newer hotels; otherwise empty.</param>
+/// <param name="IsTradeLocked">Whether the account is barred from trading. Sent only by newer hotels; otherwise, <see langword="false"/>.</param>
+/// <param name="NameColor">The name color the hotel assigns. Sent only by newer hotels; otherwise empty.</param>
 /// <param name="RespectReplenishesLeft">How many daily respect replenishments remain. Sent only by newer hotels; otherwise 0.</param>
 /// <param name="MaxRespectPerDay">The daily respect allowance. Sent only by newer hotels; otherwise 0.</param>
 public sealed record ProfileSnapshot(
@@ -1127,7 +1349,25 @@ public sealed record ProfileSnapshot(
     int RespectReplenishesLeft,
     int MaxRespectPerDay)
 {
-    /// <summary>Compatibility overload that accepts the identifier as a plain <see cref="long"/>.</summary>
+    /// <summary>Initializes a new instance for compatibility, taking the identifier as a plain <see cref="long"/>.</summary>
+    /// <param name="Id">The user identifier.</param>
+    /// <param name="Name">The user name.</param>
+    /// <param name="Figure">The figure string.</param>
+    /// <param name="Gender">The gender.</param>
+    /// <param name="Motto">The motto.</param>
+    /// <param name="RealName">The real name, empty unless the hotel discloses it.</param>
+    /// <param name="DirectMail">Whether the user opted into direct mail.</param>
+    /// <param name="RespectTotal">The total respect the user has received.</param>
+    /// <param name="RespectLeft">The respects the user may still give out today.</param>
+    /// <param name="PetRespectLeft">The pet scratches the user may still give out today.</param>
+    /// <param name="StreamPublishingAllowed">Whether the user may publish streams.</param>
+    /// <param name="LastAccessDate">The last login timestamp exactly as the hotel formats it.</param>
+    /// <param name="IsNameChangeable">Whether the user may still change their name.</param>
+    /// <param name="IsSafetyLocked">Whether the account is under a safety lock.</param>
+    /// <param name="IsTradeLocked">Whether the account is barred from trading.</param>
+    /// <param name="NameColor">The name color the hotel assigns.</param>
+    /// <param name="RespectReplenishesLeft">The daily respect replenishments that remain.</param>
+    /// <param name="MaxRespectPerDay">The daily respect allowance.</param>
     public ProfileSnapshot(
         long Id,
         string Name,
@@ -1169,7 +1409,25 @@ public sealed record ProfileSnapshot(
     {
     }
 
-    /// <summary>Compatibility deconstruction that yields the identifier as a plain <see cref="long"/>.</summary>
+    /// <summary>Deconstructs the instance for compatibility, yielding the identifier as a plain <see cref="long"/>.</summary>
+    /// <param name="Id">The user identifier as a plain <see cref="long"/>.</param>
+    /// <param name="Name">The user name.</param>
+    /// <param name="Figure">The figure string.</param>
+    /// <param name="Gender">The gender.</param>
+    /// <param name="Motto">The motto.</param>
+    /// <param name="RealName">The real name.</param>
+    /// <param name="DirectMail">Whether the user opted into direct mail.</param>
+    /// <param name="RespectTotal">The total respect the user has received.</param>
+    /// <param name="RespectLeft">The respects the user may still give out today.</param>
+    /// <param name="PetRespectLeft">The pet scratches the user may still give out today.</param>
+    /// <param name="StreamPublishingAllowed">Whether the user may publish streams.</param>
+    /// <param name="LastAccessDate">The last login timestamp exactly as the hotel formats it.</param>
+    /// <param name="IsNameChangeable">Whether the user may still change their name.</param>
+    /// <param name="IsSafetyLocked">Whether the account is under a safety lock.</param>
+    /// <param name="IsTradeLocked">Whether the account is barred from trading.</param>
+    /// <param name="NameColor">The name color the hotel assigns.</param>
+    /// <param name="RespectReplenishesLeft">The daily respect replenishments that remain.</param>
+    /// <param name="MaxRespectPerDay">The daily respect allowance.</param>
     public void Deconstruct(
         out long Id,
         out string Name,
@@ -1211,6 +1469,28 @@ public sealed record ProfileSnapshot(
     }
 }
 
+/// <summary>Represents one entry of the messenger friend list.</summary>
+/// <param name="Id">The friend's user identifier.</param>
+/// <param name="Name">The friend's user name.</param>
+/// <param name="Figure">The friend's figure string.</param>
+/// <param name="Gender">
+/// The friend's gender: <c>Female</c> (0), <c>Male</c> (1), <c>Unisex</c> (2) or <c>None</c> (-1);
+/// any other wire value appears as its number.
+/// </param>
+/// <param name="Motto">The friend's motto.</param>
+/// <param name="RealName">The friend's real name, empty unless the hotel discloses it.</param>
+/// <param name="IsOnline">Whether the friend is online right now.</param>
+/// <param name="CanFollow">Whether the local user may follow the friend into their room.</param>
+/// <param name="CategoryId">The friend-list category the friend is filed under, matching <see cref="FriendCategorySnapshot.Id"/>.</param>
+/// <param name="FacebookId">The Facebook identifier the hotel sends, empty when none.</param>
+/// <param name="IsAcceptingOfflineMessages">Whether the friend accepts messages while offline.</param>
+/// <param name="IsVipMember">Whether the friend is a club member.</param>
+/// <param name="IsPocketHabboUser">Whether the friend uses the Pocket Habbo client.</param>
+/// <param name="Relation">The relationship status the local user set: <c>None</c>, <c>Heart</c>, <c>Smile</c> or <c>Skull</c>.</param>
+/// <param name="LastOnline">
+/// The last-online value, serialized exactly rather than as a JSON number. The Flash friend
+/// packet does not carry it, so it is normally 0.
+/// </param>
 public sealed record FriendSnapshot(
     Id Id,
     string Name,
@@ -1229,6 +1509,21 @@ public sealed record FriendSnapshot(
     [property: JsonConverter(typeof(ExactInt64JsonConverter))]
     long LastOnline)
 {
+    /// <summary>Initializes a new instance for compatibility, taking the original friend fields and the identifier as a plain <see cref="long"/>.</summary>
+    /// <remarks>
+    /// The fields it does not take are set to their defaults: the category is 0, the Facebook
+    /// identifier is empty, the three flags are <see langword="false"/> and the last-online
+    /// value is 0.
+    /// </remarks>
+    /// <param name="Id">The friend's user identifier.</param>
+    /// <param name="Name">The friend's user name.</param>
+    /// <param name="Figure">The friend's figure string.</param>
+    /// <param name="Gender">The friend's gender.</param>
+    /// <param name="Motto">The friend's motto.</param>
+    /// <param name="RealName">The friend's real name.</param>
+    /// <param name="IsOnline">Whether the friend is online right now.</param>
+    /// <param name="CanFollow">Whether the local user may follow the friend into their room.</param>
+    /// <param name="Relation">The relationship status the local user set.</param>
     public FriendSnapshot(
     long Id,
     string Name,
@@ -1258,7 +1553,16 @@ public sealed record FriendSnapshot(
     {
     }
 
-    /// <summary>Compatibility deconstruction for the original friend snapshot fields.</summary>
+    /// <summary>Deconstructs the instance for compatibility into the original friend snapshot fields.</summary>
+    /// <param name="Id">The friend's user identifier as a plain <see cref="long"/>.</param>
+    /// <param name="Name">The friend's user name.</param>
+    /// <param name="Figure">The friend's figure string.</param>
+    /// <param name="Gender">The friend's gender.</param>
+    /// <param name="Motto">The friend's motto.</param>
+    /// <param name="RealName">The friend's real name.</param>
+    /// <param name="IsOnline">Whether the friend is online right now.</param>
+    /// <param name="CanFollow">Whether the local user may follow the friend into their room.</param>
+    /// <param name="Relation">The relationship status the local user set.</param>
     public void Deconstruct(
         out long Id,
         out string Name,
@@ -1282,12 +1586,12 @@ public sealed record FriendSnapshot(
     }
 }
 
-/// <summary>A user-defined friend-list category.</summary>
+/// <summary>Represents a user-defined friend-list category.</summary>
 /// <param name="Id">The category identifier, matched by <see cref="FriendSnapshot.CategoryId"/>.</param>
 /// <param name="Name">The category name the user chose.</param>
 public sealed record FriendCategorySnapshot(Id Id, string Name);
 
-/// <summary>The messenger friend list with its capacity limits.</summary>
+/// <summary>Represents the messenger friend list with its capacity limits.</summary>
 /// <param name="Total">The number of entries in <paramref name="Friends"/>. This projection is not capped.</param>
 /// <param name="Online">How many of those friends are online right now.</param>
 /// <param name="UserLimit">The friend slots this account actually has; 0 when the hotel has not reported it.</param>
@@ -1304,7 +1608,10 @@ public sealed record FriendCollectionSnapshot(
     IReadOnlyList<FriendCategorySnapshot> Categories,
     IReadOnlyList<FriendSnapshot> Friends)
 {
-    /// <summary>Compatibility overload without categories or capacity limits.</summary>
+    /// <summary>Initializes a new instance for compatibility, without categories or capacity limits.</summary>
+    /// <param name="Total">The number of entries in <paramref name="Friends"/>.</param>
+    /// <param name="Online">The number of those friends that are online.</param>
+    /// <param name="Friends">The friends.</param>
     public FriendCollectionSnapshot(
         int Total,
         int Online,
@@ -1313,7 +1620,10 @@ public sealed record FriendCollectionSnapshot(
     {
     }
 
-    /// <summary>Compatibility deconstruction that omits categories and capacity limits.</summary>
+    /// <summary>Deconstructs the instance for compatibility, omitting categories and capacity limits.</summary>
+    /// <param name="Total">The number of friends.</param>
+    /// <param name="Online">The number of friends that are online.</param>
+    /// <param name="Friends">The friends, online first, then by name case-insensitively.</param>
     public void Deconstruct(
         out int Total,
         out int Online,
@@ -1325,10 +1635,11 @@ public sealed record FriendCollectionSnapshot(
     }
 }
 
-/// <summary>
-/// The local user's balances. Each amount is <see langword="null"/> until the hotel has sent
-/// the matching packet, which is what the two loaded flags distinguish from a real zero.
-/// </summary>
+/// <summary>Represents the local user's balances.</summary>
+/// <remarks>
+/// Each amount is <see langword="null"/> until the hotel has sent the matching packet, which is
+/// what the two loaded flags distinguish from a real zero.
+/// </remarks>
 /// <param name="CreditsLoaded">Whether a credit balance has been received.</param>
 /// <param name="Credits">The credit balance, or <see langword="null"/> while <paramref name="CreditsLoaded"/> is <see langword="false"/>.</param>
 /// <param name="PointsLoaded">Whether the activity-point packet has been received.</param>
@@ -1347,7 +1658,12 @@ public sealed record CurrencySnapshot(
     int? Duckets,
     IReadOnlyDictionary<int, int> ActivityPoints)
 {
-    /// <summary>Compatibility overload that reports no activity-point map.</summary>
+    /// <summary>Initializes a new instance for compatibility, reporting no activity-point map.</summary>
+    /// <param name="CreditsLoaded">Whether a credit balance has been received.</param>
+    /// <param name="Credits">The credit balance, or <see langword="null"/> while it is unloaded.</param>
+    /// <param name="PointsLoaded">Whether the activity-point packet has been received.</param>
+    /// <param name="Diamonds">The diamond balance, or <see langword="null"/> while points are unloaded.</param>
+    /// <param name="Duckets">The ducket balance, or <see langword="null"/> while points are unloaded.</param>
     public CurrencySnapshot(
         bool CreditsLoaded,
         int? Credits,
@@ -1364,7 +1680,12 @@ public sealed record CurrencySnapshot(
     {
     }
 
-    /// <summary>Compatibility deconstruction that omits the activity-point map.</summary>
+    /// <summary>Deconstructs the instance for compatibility, omitting the activity-point map.</summary>
+    /// <param name="CreditsLoaded">Whether a credit balance has been received.</param>
+    /// <param name="Credits">The credit balance, or <see langword="null"/> while it is unloaded.</param>
+    /// <param name="PointsLoaded">Whether the activity-point packet has been received.</param>
+    /// <param name="Diamonds">The diamond balance, or <see langword="null"/> while points are unloaded.</param>
+    /// <param name="Duckets">The ducket balance, or <see langword="null"/> while points are unloaded.</param>
     public void Deconstruct(
         out bool CreditsLoaded,
         out int? Credits,
@@ -1380,12 +1701,12 @@ public sealed record CurrencySnapshot(
     }
 }
 
-/// <summary>A user who holds rights in the room.</summary>
+/// <summary>Represents a user who holds rights in the room.</summary>
 /// <param name="Id">The user identifier.</param>
 /// <param name="Name">The user name.</param>
 public sealed record ControllerSnapshot(Id Id, string Name);
 
-/// <summary>The room's rights list.</summary>
+/// <summary>Represents the room's rights list.</summary>
 /// <remarks>
 /// The hotel only sends this list to the room owner, so on a room the local user does not
 /// own it stays empty and the room content state reports controllers as not loaded.
@@ -1403,17 +1724,21 @@ public sealed record ControllerCollectionSnapshot(
     IReadOnlyList<ControllerSnapshot> Controllers);
 
 /// <summary>
-/// The catalog definition behind a furni kind, loaded from the hotel's furni data rather
-/// than from the room packets. Present on an item snapshot only once definitions are loaded.
+/// Represents the catalog definition behind a furni kind, loaded from the hotel's furni data
+/// rather than from the room packets.
 /// </summary>
+/// <remarks>Present on an item snapshot only once definitions are loaded.</remarks>
 /// <param name="Type">Whether the definition describes a <c>Floor</c> or a <c>Wall</c> item.</param>
 /// <param name="Kind">The furni kind identifier, which is what room and inventory packets carry.</param>
-/// <param name="Identifier">The furni's class name, the stable textual identity of the kind.</param>
-/// <param name="Name">The localised display name.</param>
-/// <param name="Width">The footprint along X in tiles at direction 0.</param>
-/// <param name="Length">The footprint along Y in tiles at direction 0.</param>
-/// <param name="Category">The catalog category string the hotel files this kind under.</param>
-/// <param name="Line">The furni line (collection) this kind belongs to.</param>
+/// <param name="Identifier">
+/// The full class name from the furni data, including a <c>*</c> color suffix such as
+/// <c>rare_dragonlamp*4</c> when the kind has one; empty when the entry has none.
+/// </param>
+/// <param name="Name">The localized display name, empty when the entry has none.</param>
+/// <param name="Width">The footprint along X in tiles at direction 0, at least 1.</param>
+/// <param name="Length">The footprint along Y in tiles at direction 0, at least 1.</param>
+/// <param name="Category">The category string from the furni data, empty when the entry has none.</param>
+/// <param name="Line">The furni line (collection) this kind belongs to, empty when the entry has none.</param>
 public sealed record FurniDefinitionSnapshot(
     string Type,
     int Kind,
@@ -1424,101 +1749,143 @@ public sealed record FurniDefinitionSnapshot(
     string Category,
     string Line)
 {
-    /// <summary>The furni class name; the same value as <see cref="Identifier"/>.</summary>
+    /// <summary>Gets the class name without the <c>*</c> color suffix of <see cref="Identifier"/>.</summary>
     public string ClassName { get; init; } = Identifier;
 
-    /// <summary>The asset revision the client downloads for this kind.</summary>
+    /// <summary>Gets the asset revision the client downloads for this kind.</summary>
     public int Revision { get; init; }
 
-    /// <summary>The direction the kind is placed at by default, 0-7 clockwise from north.</summary>
+    /// <summary>Gets the direction the kind is placed at by default, 0-7 clockwise from north.</summary>
     public int DefaultDirection { get; init; }
 
-    /// <summary>The colourway names this kind offers, empty when it has none.</summary>
+    /// <summary>Gets the part colors from the furni data, empty when the kind lists none.</summary>
     public IReadOnlyList<string> PartColors { get; init; } = [];
 
-    /// <summary>The localised catalog description.</summary>
+    /// <summary>Gets the localized catalog description, empty when the entry has none.</summary>
     public string Description { get; init; } = "";
 
-    /// <summary>The advertisement URL attached to the kind, empty when none.</summary>
+    /// <summary>Gets the advertisement URL attached to the kind, empty when none.</summary>
     public string AdUrl { get; init; } = "";
 
-    /// <summary>The catalog offer this kind is sold under; 0 when it is not sold.</summary>
+    /// <summary>Gets the catalog offer identifier from the furni data.</summary>
     public int OfferId { get; init; }
 
-    /// <summary>Whether the offer may be bought outright.</summary>
+    /// <summary>Gets the furni data's <c>buyout</c> flag for the catalog offer.</summary>
     public bool BuyOut { get; init; }
 
-    /// <summary>The catalog offer this kind is rented under; 0 when it is not rentable.</summary>
+    /// <summary>Gets the rental offer identifier from the furni data.</summary>
     public int RentOfferId { get; init; }
 
-    /// <summary>Whether the rental offer may be bought outright.</summary>
+    /// <summary>Gets the furni data's <c>rentbuyout</c> flag for the rental offer.</summary>
     public bool RentBuyOut { get; init; }
 
-    /// <summary>Whether this kind is a Builders Club item.</summary>
+    /// <summary>Gets whether this kind is a Builders Club item.</summary>
     public bool IsBuildersClub { get; init; }
 
-    /// <summary>The Builders Club offer identifier; 0 when there is none.</summary>
+    /// <summary>Gets the Builders Club offer identifier from the furni data.</summary>
     public int BuildersClubOfferId { get; init; }
 
-    /// <summary>Whether the kind is excluded from dynamic catalog listings.</summary>
+    /// <summary>Gets the furni data's <c>excludeddynamic</c> flag.</summary>
     public bool ExcludedDynamic { get; init; }
 
-    /// <summary>The free-form parameter string the hotel attaches to the kind, empty when none.</summary>
+    /// <summary>Gets the free-form parameter string the hotel attaches to the kind, empty when none.</summary>
     public string CustomParams { get; init; } = "";
 
-    /// <summary>
-    /// The special behaviour of this kind, as <see cref="FurniCategory"/>. This is the
-    /// value that identifies presents, trophies, pet products, seeds and chests.
-    /// </summary>
+    /// <summary>Gets the special behavior of this kind, as <see cref="FurniCategory"/>.</summary>
+    /// <remarks>
+    /// This is the furni data's <c>specialtype</c> field, the value that identifies presents,
+    /// trophies, pet products, seeds and chests.
+    /// </remarks>
     public FurniCategory SpecialType { get; init; }
 
-    /// <summary>Whether avatars may stand on this kind.</summary>
+    /// <summary>Gets whether avatars may stand on this kind.</summary>
     public bool CanStandOn { get; init; }
 
-    /// <summary>Whether avatars may sit on this kind.</summary>
+    /// <summary>Gets whether avatars may sit on this kind.</summary>
     public bool CanSitOn { get; init; }
 
-    /// <summary>Whether avatars may lie on this kind.</summary>
+    /// <summary>Gets whether avatars may lie on this kind.</summary>
     public bool CanLayOn { get; init; }
 
-    /// <summary>Whether other furni may be stacked on this kind.</summary>
+    /// <summary>Gets whether other furni may be stacked on this kind.</summary>
     public bool CanPutStuffOn { get; init; }
 
-    /// <summary>The kind's own height in tile units, which is what stacking adds on top of.</summary>
+    /// <summary>Gets the kind's own height in tile units, which is what stacking adds on top of.</summary>
     public double Height { get; init; }
 
-    /// <summary>The environment tag the hotel gives the kind, empty when none.</summary>
+    /// <summary>Gets the environment tag the hotel gives the kind, empty when none.</summary>
     public string Environment { get; init; } = "";
 
-    /// <summary>Whether the hotel marks this kind as rare.</summary>
+    /// <summary>Gets whether the hotel marks this kind as rare.</summary>
     public bool IsRare { get; init; }
 
-    /// <summary>Whether items of this kind may be traded.</summary>
+    /// <summary>Gets whether items of this kind may be traded.</summary>
     public bool Tradeable { get; init; }
 
-    /// <summary>Whether items of this kind may be recycled.</summary>
+    /// <summary>Gets whether items of this kind may be recycled.</summary>
     public bool Recyclable { get; init; }
 
-    /// <summary>Whether the kind renders with an indexed colour rather than its own palette.</summary>
+    /// <summary>Gets whether <see cref="Identifier"/> carries a numeric <c>*</c> color suffix.</summary>
     public bool HasIndexedColor { get; init; }
 
-    /// <summary>The colour index used when <see cref="HasIndexedColor"/> is set.</summary>
+    /// <summary>
+    /// Gets the numeric color suffix of <see cref="Identifier"/>, or 0 when
+    /// <see cref="HasIndexedColor"/> is <see langword="false"/>.
+    /// </summary>
     public int ColorIndex { get; init; }
 
-    /// <summary>Whether an avatar can occupy the tile at all, that is stand, sit or lie on it.</summary>
+    /// <summary>Gets whether an avatar can occupy the tile at all, that is stand, sit or lie on it.</summary>
     public bool IsWalkable { get; init; }
 
-    /// <summary>The negation of <see cref="IsWalkable"/>.</summary>
+    /// <summary>Gets the negation of <see cref="IsWalkable"/>.</summary>
     public bool IsUnwalkable { get; init; }
 }
 
-/// <summary>One row of a game furni's high-score table.</summary>
+/// <summary>Represents one row of a game furni's high-score table.</summary>
 /// <param name="Score">The score achieved.</param>
 /// <param name="Names">The names of the users who achieved it, since a score can be shared by a team.</param>
 public sealed record HighScoreSnapshot(
     int Score,
     IReadOnlyList<string> Names);
 
+/// <summary>Represents a furni payload, flattened into one record whose shape-specific members are set only where they apply.</summary>
+/// <remarks>
+/// The map, string list, integer list, vote, high-score and crackable members are
+/// <see langword="null"/> unless the payload is of the matching type, and are then omitted
+/// from JSON.
+/// </remarks>
+/// <param name="Type">
+/// The payload shape: <c>Legacy</c>, <c>Map</c>, <c>StringArray</c>, <c>VoteResult</c>,
+/// <c>Empty</c>, <c>IntArray</c>, <c>HighScore</c> or <c>CrackableFurni</c>.
+/// </param>
+/// <param name="Flags">
+/// The modifier bits from the payload header, as the numeric value of <c>ItemDataFlags</c>;
+/// the flag value 1 marks a limited rare.
+/// </param>
+/// <param name="Value">
+/// The payload's string value, which is the furni state for most items. Empty for the map,
+/// string list, integer list and empty shapes.
+/// </param>
+/// <param name="State">
+/// <paramref name="Value"/> read as a state: 0 for <c>C</c>, <c>FALSE</c> or <c>OFF</c>, 1 for
+/// <c>O</c>, <c>TRUE</c> or <c>ON</c>, any other integer as sent, and -1 when it is not a number.
+/// </param>
+/// <param name="IsLimitedRare">Whether the item belongs to a numbered limited series.</param>
+/// <param name="UniqueSerialNumber">The item's number within its limited series, or 0 when it is not a limited rare.</param>
+/// <param name="UniqueSeriesSize">The size of the item's limited series, or 0 when it is not a limited rare.</param>
+/// <param name="UniqueLimitedData">
+/// Additional limited-edition text; the payload parser does not fill it, so it is normally
+/// empty.
+/// </param>
+/// <param name="MapEntries">The key and value pairs of a <c>Map</c> payload; otherwise, <see langword="null"/>.</param>
+/// <param name="StringValues">The strings of a <c>StringArray</c> payload; otherwise, <see langword="null"/>.</param>
+/// <param name="IntValues">The integers of an <c>IntArray</c> payload; otherwise, <see langword="null"/>.</param>
+/// <param name="VoteResult">The vote tally of a <c>VoteResult</c> payload; otherwise, <see langword="null"/>.</param>
+/// <param name="ScoreType">The scoring mode of a <c>HighScore</c> payload; otherwise, <see langword="null"/>.</param>
+/// <param name="ClearType">The clearing mode of a <c>HighScore</c> payload; otherwise, <see langword="null"/>.</param>
+/// <param name="HighScores">The score table of a <c>HighScore</c> payload; otherwise, <see langword="null"/>.</param>
+/// <param name="Hits">The hit count of a <c>CrackableFurni</c> payload; otherwise, <see langword="null"/>.</param>
+/// <param name="Target">The hits a <c>CrackableFurni</c> payload needs in total; otherwise, <see langword="null"/>.</param>
 public sealed record ItemDataSnapshot(
     string Type,
     int Flags,
@@ -1547,7 +1914,7 @@ public sealed record ItemDataSnapshot(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     int? Target);
 
-/// <summary>A furni standing on the room floor.</summary>
+/// <summary>Represents a furni standing on the room floor.</summary>
 /// <param name="Id">The item identifier, unique within the hotel.</param>
 /// <param name="IsRemoved">
 /// Whether this snapshot describes an item that has already been picked up. Set on the copy
@@ -1570,7 +1937,7 @@ public sealed record ItemDataSnapshot(
 /// <param name="Height">The item's own height in tile units, as sent with the item.</param>
 /// <param name="Extra">
 /// The extra identifier the hotel attaches, most often the linked item for stacked or paired
-/// furni. Serialised exactly rather than as a JSON number so no precision is lost.
+/// furni. Serialized exactly rather than as a JSON number so no precision is lost.
 /// </param>
 /// <param name="Data">The item's payload, which is where furni state and game data live.</param>
 /// <param name="State">
@@ -1604,9 +1971,25 @@ public sealed record FloorItemSnapshot(
     bool IsHidden)
 {
     /// <summary>
-    /// Compatibility overload that accepts identifiers as plain <see cref="long"/> values and
-    /// fixes <see cref="IsRemoved"/> to <see langword="false"/>.
+    /// Initializes a new instance for compatibility, taking identifiers as plain <see cref="long"/> values and
+    /// fixing <see cref="IsRemoved"/> to <see langword="false"/>.
     /// </summary>
+    /// <param name="Id">The item identifier.</param>
+    /// <param name="Kind">The furni kind identifier.</param>
+    /// <param name="Identifier">The furni class name, or <see langword="null"/> when unknown.</param>
+    /// <param name="Definition">The catalog definition, or <see langword="null"/> when definitions are not loaded.</param>
+    /// <param name="OwnerId">The owning user's identifier.</param>
+    /// <param name="OwnerName">The owning user's name.</param>
+    /// <param name="Position">The tile the item's anchor sits on, including its stack height.</param>
+    /// <param name="Area">The tiles the item covers, already rotated for its direction.</param>
+    /// <param name="Direction">The item's facing, 0-7 clockwise from north.</param>
+    /// <param name="Height">The item's own height in tile units.</param>
+    /// <param name="Extra">The extra identifier the hotel attaches.</param>
+    /// <param name="Data">The item's payload.</param>
+    /// <param name="State">The item's state derived from <paramref name="Data"/>, or -1 when the payload is not a state.</param>
+    /// <param name="SecondsToExpiration">The seconds until a rented item expires; -1 when it does not expire.</param>
+    /// <param name="Usage">Who may use the item: <c>None</c>, <c>Rights</c> or <c>Anyone</c>.</param>
+    /// <param name="IsHidden">Whether the client hides the item from view.</param>
     public FloorItemSnapshot(
         long Id,
         int Kind,
@@ -1646,9 +2029,25 @@ public sealed record FloorItemSnapshot(
     }
 
     /// <summary>
-    /// Compatibility deconstruction that yields identifiers as plain <see cref="long"/>
-    /// values and omits <see cref="IsRemoved"/>.
+    /// Deconstructs the instance for compatibility, yielding identifiers as plain <see cref="long"/>
+    /// values and omitting <see cref="IsRemoved"/>.
     /// </summary>
+    /// <param name="Id">The item identifier as a plain <see cref="long"/>.</param>
+    /// <param name="Kind">The furni kind identifier.</param>
+    /// <param name="Identifier">The furni class name, or <see langword="null"/> when unknown.</param>
+    /// <param name="Definition">The catalog definition, or <see langword="null"/>.</param>
+    /// <param name="OwnerId">The owning user's identifier as a plain <see cref="long"/>.</param>
+    /// <param name="OwnerName">The owning user's name.</param>
+    /// <param name="Position">The tile the item's anchor sits on.</param>
+    /// <param name="Area">The tiles the item covers.</param>
+    /// <param name="Direction">The item's facing.</param>
+    /// <param name="Height">The item's own height in tile units.</param>
+    /// <param name="Extra">The extra identifier the hotel attaches.</param>
+    /// <param name="Data">The item's payload.</param>
+    /// <param name="State">The item's state.</param>
+    /// <param name="SecondsToExpiration">The seconds until a rented item expires; -1 when it does not expire.</param>
+    /// <param name="Usage">Who may use the item.</param>
+    /// <param name="IsHidden">Whether the client hides the item from view.</param>
     public void Deconstruct(
         out long Id,
         out int Kind,
@@ -1686,7 +2085,7 @@ public sealed record FloorItemSnapshot(
     }
 }
 
-/// <summary>Where a wall item hangs.</summary>
+/// <summary>Represents the position of a wall item on the wall.</summary>
 /// <param name="WallX">The wall segment's column.</param>
 /// <param name="WallY">The wall segment's row.</param>
 /// <param name="OffsetX">The horizontal offset within that segment, in wall pixels.</param>
@@ -1704,7 +2103,7 @@ public sealed record WallLocationSnapshot(
     string Orientation,
     string Raw);
 
-/// <summary>A furni hanging on a room wall.</summary>
+/// <summary>Represents a furni hanging on a room wall.</summary>
 /// <param name="Id">The item identifier, unique within the hotel.</param>
 /// <param name="IsRemoved">
 /// Whether this snapshot describes an item that has already been picked up. Set on the copy
@@ -1749,9 +2148,21 @@ public sealed record WallItemSnapshot(
     bool IsHidden)
 {
     /// <summary>
-    /// Compatibility overload that accepts identifiers as plain <see cref="long"/> values and
-    /// fixes <see cref="IsRemoved"/> to <see langword="false"/>.
+    /// Initializes a new instance for compatibility, taking identifiers as plain <see cref="long"/> values and
+    /// fixing <see cref="IsRemoved"/> to <see langword="false"/>.
     /// </summary>
+    /// <param name="Id">The item identifier.</param>
+    /// <param name="Kind">The furni kind identifier.</param>
+    /// <param name="Identifier">The furni class name, or <see langword="null"/> when definitions are not loaded.</param>
+    /// <param name="Definition">The catalog definition, or <see langword="null"/> when definitions are not loaded.</param>
+    /// <param name="OwnerId">The owning user's identifier.</param>
+    /// <param name="OwnerName">The owning user's name.</param>
+    /// <param name="Location">Where on the wall the item hangs.</param>
+    /// <param name="Data">The item's payload as a plain string.</param>
+    /// <param name="State"><paramref name="Data"/> parsed as an integer, or -1 when it does not parse.</param>
+    /// <param name="SecondsToExpiration">The seconds until a rented item expires; -1 when it does not expire.</param>
+    /// <param name="Usage">Who may use the item: <c>None</c>, <c>Rights</c> or <c>Anyone</c>.</param>
+    /// <param name="IsHidden">Whether the client hides the item from view.</param>
     public WallItemSnapshot(
         long Id,
         int Kind,
@@ -1783,9 +2194,21 @@ public sealed record WallItemSnapshot(
     }
 
     /// <summary>
-    /// Compatibility deconstruction that yields identifiers as plain <see cref="long"/>
-    /// values and omits <see cref="IsRemoved"/>.
+    /// Deconstructs the instance for compatibility, yielding identifiers as plain <see cref="long"/>
+    /// values and omitting <see cref="IsRemoved"/>.
     /// </summary>
+    /// <param name="Id">The item identifier as a plain <see cref="long"/>.</param>
+    /// <param name="Kind">The furni kind identifier.</param>
+    /// <param name="Identifier">The furni class name, or <see langword="null"/>.</param>
+    /// <param name="Definition">The catalog definition, or <see langword="null"/>.</param>
+    /// <param name="OwnerId">The owning user's identifier as a plain <see cref="long"/>.</param>
+    /// <param name="OwnerName">The owning user's name.</param>
+    /// <param name="Location">Where on the wall the item hangs.</param>
+    /// <param name="Data">The item's payload as a plain string.</param>
+    /// <param name="State">The item's state.</param>
+    /// <param name="SecondsToExpiration">The seconds until a rented item expires; -1 when it does not expire.</param>
+    /// <param name="Usage">Who may use the item.</param>
+    /// <param name="IsHidden">Whether the client hides the item from view.</param>
     public void Deconstruct(
         out long Id,
         out int Kind,
@@ -1816,7 +2239,7 @@ public sealed record WallItemSnapshot(
 }
 
 /// <summary>
-/// The furni in the current room, floor and wall items projected separately and each capped
+/// Represents the furni in the current room, floor and wall items projected separately and each capped
 /// on its own.
 /// </summary>
 /// <remarks>
@@ -1836,8 +2259,8 @@ public sealed record WallItemSnapshot(
 /// <param name="ReturnedFloorItemCount">How many floor items are in <paramref name="FloorItems"/>.</param>
 /// <param name="ReturnedWallItemCount">How many wall items are in <paramref name="WallItems"/>.</param>
 /// <param name="MaxItemsPerType">The cap applied to each list separately.</param>
-/// <param name="FloorItemsTruncated">Whether floor items were dropped to honour the cap.</param>
-/// <param name="WallItemsTruncated">Whether wall items were dropped to honour the cap.</param>
+/// <param name="FloorItemsTruncated">Whether floor items were dropped to honor the cap.</param>
+/// <param name="WallItemsTruncated">Whether wall items were dropped to honor the cap.</param>
 /// <param name="FloorItems">The floor items, ordered ascending by identifier.</param>
 /// <param name="WallItems">The wall items, ordered ascending by identifier.</param>
 public sealed record FurniCollectionSnapshot(
@@ -1854,7 +2277,16 @@ public sealed record FurniCollectionSnapshot(
     IReadOnlyList<FloorItemSnapshot> FloorItems,
     IReadOnlyList<WallItemSnapshot> WallItems)
 {
-    /// <summary>Compatibility overload without room context or definition state.</summary>
+    /// <summary>Initializes a new instance for compatibility, without room context or definition state.</summary>
+    /// <param name="FloorItemCount">The number of floor items the room actually has.</param>
+    /// <param name="WallItemCount">The number of wall items the room actually has.</param>
+    /// <param name="ReturnedFloorItemCount">The number of floor items in <paramref name="FloorItems"/>.</param>
+    /// <param name="ReturnedWallItemCount">The number of wall items in <paramref name="WallItems"/>.</param>
+    /// <param name="MaxItemsPerType">The cap applied to each list separately.</param>
+    /// <param name="FloorItemsTruncated">Whether floor items were dropped to honor the cap.</param>
+    /// <param name="WallItemsTruncated">Whether wall items were dropped to honor the cap.</param>
+    /// <param name="FloorItems">The floor items, ordered ascending by identifier.</param>
+    /// <param name="WallItems">The wall items, ordered ascending by identifier.</param>
     public FurniCollectionSnapshot(
         int FloorItemCount,
         int WallItemCount,
@@ -1881,7 +2313,16 @@ public sealed record FurniCollectionSnapshot(
     {
     }
 
-    /// <summary>Compatibility deconstruction that omits room context and definition state.</summary>
+    /// <summary>Deconstructs the instance for compatibility, omitting room context and definition state.</summary>
+    /// <param name="FloorItemCount">The number of floor items the room actually has.</param>
+    /// <param name="WallItemCount">The number of wall items the room actually has.</param>
+    /// <param name="ReturnedFloorItemCount">The number of floor items returned.</param>
+    /// <param name="ReturnedWallItemCount">The number of wall items returned.</param>
+    /// <param name="MaxItemsPerType">The cap applied to each list separately.</param>
+    /// <param name="FloorItemsTruncated">Whether floor items were dropped to honor the cap.</param>
+    /// <param name="WallItemsTruncated">Whether wall items were dropped to honor the cap.</param>
+    /// <param name="FloorItems">The floor items, ordered ascending by identifier.</param>
+    /// <param name="WallItems">The wall items, ordered ascending by identifier.</param>
     public void Deconstruct(
         out int FloorItemCount,
         out int WallItemCount,
@@ -1905,6 +2346,29 @@ public sealed record FurniCollectionSnapshot(
     }
 }
 
+/// <summary>Represents one item in the local user's hand.</summary>
+/// <param name="ItemId">
+/// The inventory item identifier, which inventory requests such as placement address and which
+/// the inventory snapshot orders by.
+/// </param>
+/// <param name="Type">Whether the item is a <c>Floor</c> or a <c>Wall</c> item.</param>
+/// <param name="Id">The furni identifier the hotel sends alongside the inventory item identifier.</param>
+/// <param name="Kind">The furni kind identifier.</param>
+/// <param name="Definition">The catalog definition, or <see langword="null"/> when definitions are not loaded or the kind is unknown.</param>
+/// <param name="Category">The category the item is filed under, as the numeric value of <see cref="FurniCategory"/>.</param>
+/// <param name="Data">The item's payload.</param>
+/// <param name="IsRecyclable">Whether the item may be recycled.</param>
+/// <param name="IsTradeable">Whether the item may be traded.</param>
+/// <param name="IsGroupable">Whether the item may be grouped with identical items in the inventory.</param>
+/// <param name="IsSellable">Whether the item may be sold on the marketplace.</param>
+/// <param name="SecondsToExpiration">The seconds until a rented item expires; -1 when it does not expire.</param>
+/// <param name="HasRentPeriodStarted">Whether the rental period of a rented item has started.</param>
+/// <param name="RoomId">The room identifier the hotel sends with the item.</param>
+/// <param name="SlotId">The slot identifier the hotel sends with a floor item; empty for a wall item.</param>
+/// <param name="Extra">
+/// The extra value the hotel sends with a floor item, serialized exactly rather than as a JSON
+/// number; 0 for a wall item.
+/// </param>
 public sealed record InventoryItemSnapshot(
     Id ItemId,
     string Type,
@@ -1925,7 +2389,7 @@ public sealed record InventoryItemSnapshot(
     long Extra);
 
 /// <summary>
-/// The local user's hand, together with the fragmented-load bookkeeping that says whether it
+/// Represents the local user's hand, together with the fragmented-load bookkeeping that says whether it
 /// can be trusted yet.
 /// </summary>
 /// <remarks>
@@ -1953,7 +2417,7 @@ public sealed record InventoryItemSnapshot(
 /// <param name="Total">How many items the hand actually holds.</param>
 /// <param name="Returned">How many items are in <paramref name="Items"/>.</param>
 /// <param name="MaxItems">The cap applied to the projection.</param>
-/// <param name="Truncated">Whether items were dropped to honour the cap.</param>
+/// <param name="Truncated">Whether items were dropped to honor the cap.</param>
 /// <param name="Items">
 /// The items, ordered ascending by inventory slot identifier. When truncated these are the
 /// lowest identifiers, so paging by identifier is meaningful.
@@ -1971,7 +2435,7 @@ public sealed record InventorySnapshot(
     bool Truncated,
     IReadOnlyList<InventoryItemSnapshot> Items);
 
-/// <summary>One tile of the live heightmap, which is what walkability must be judged from.</summary>
+/// <summary>Represents one tile of the live heightmap, which is what walkability must be judged from.</summary>
 /// <param name="X">The tile column.</param>
 /// <param name="Y">The tile row.</param>
 /// <param name="Value">
@@ -1992,7 +2456,7 @@ public sealed record HeightmapTileSnapshot(
     double Height);
 
 /// <summary>
-/// The live heightmap of the current room, with per-tile detail and aggregate counts.
+/// Represents the live heightmap of the current room, with per-tile detail and aggregate counts.
 /// </summary>
 /// <remarks>
 /// Truncation here keeps the first tiles in the heightmap's own row-major order and drops the
@@ -2006,7 +2470,7 @@ public sealed record HeightmapTileSnapshot(
 /// <param name="TileCount">How many tiles the heightmap actually has.</param>
 /// <param name="ReturnedTileCount">How many tiles are in <paramref name="Tiles"/>.</param>
 /// <param name="MaxTiles">The cap applied to the projection.</param>
-/// <param name="Truncated">Whether tiles were dropped to honour the cap.</param>
+/// <param name="Truncated">Whether tiles were dropped to honor the cap.</param>
 /// <param name="FloorTileCount">Tiles that are floor at all, blocked or not.</param>
 /// <param name="WalkableTileCount">Floor tiles that are currently free to step on.</param>
 /// <param name="BlockedTileCount">Floor tiles currently blocked.</param>
@@ -2028,7 +2492,7 @@ public sealed record HeightmapSnapshot(
     IReadOnlyList<HeightmapTileSnapshot> Tiles);
 
 /// <summary>
-/// The detailed statistics of one pet, as returned by a pet info request.
+/// Represents the detailed statistics of one pet, as returned by a pet info request.
 /// </summary>
 /// <remarks>
 /// The request does not carry the pet type, only the breed variant. What kind of animal it
@@ -2099,15 +2563,44 @@ public sealed record PetInfoSnapshot(
     bool HasBreedingPermission)
 {
     /// <summary>
-    /// What kind of animal this is, supplied from the room entity because the pet info
-    /// message does not carry it. <see langword="null"/>, and omitted from JSON, when the
-    /// pet is not in the room. Together with <see cref="BreedId"/> this resolves the
-    /// displayed breed.
+    /// Gets what kind of animal this is, supplied from the room entity because the pet info
+    /// message does not carry it.
     /// </summary>
+    /// <remarks>
+    /// <see langword="null"/>, and omitted from JSON, when the pet is not in the room. Together
+    /// with <see cref="BreedId"/> this resolves the displayed breed.
+    /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? PetType { get; init; }
 
-    /// <summary>Compatibility overload that accepts identifiers as plain <see cref="long"/> values.</summary>
+    /// <summary>Initializes a new instance for compatibility, taking identifiers as plain <see cref="long"/> values.</summary>
+    /// <param name="Id">The pet identifier.</param>
+    /// <param name="Name">The pet's name.</param>
+    /// <param name="Level">The pet's current level.</param>
+    /// <param name="MaxLevel">The highest level this pet can reach.</param>
+    /// <param name="Experience">The experience accumulated towards the next level.</param>
+    /// <param name="MaxExperience">The experience needed for the next level.</param>
+    /// <param name="Energy">The current energy.</param>
+    /// <param name="MaxEnergy">The energy cap.</param>
+    /// <param name="Happiness">The current nutrition.</param>
+    /// <param name="MaxHappiness">The nutrition cap.</param>
+    /// <param name="Scratches">The respect received.</param>
+    /// <param name="OwnerId">The owning user's identifier.</param>
+    /// <param name="Age">The pet's age in days.</param>
+    /// <param name="OwnerName">The owning user's name.</param>
+    /// <param name="BreedId">The breed variant within the pet type.</param>
+    /// <param name="HasFreeSaddle">Whether the pet's saddle is unlocked without a purchase.</param>
+    /// <param name="IsRiding">Whether a user is currently riding the pet.</param>
+    /// <param name="SkillThresholds">The experience thresholds at which the pet unlocks its skills.</param>
+    /// <param name="AccessRights">The hotel's access-rights code controlling who may command the pet.</param>
+    /// <param name="CanBreed">Whether the pet may be bred right now.</param>
+    /// <param name="CanHarvest">Whether the pet may be harvested right now.</param>
+    /// <param name="CanRevive">Whether the pet is dead and may be revived.</param>
+    /// <param name="RarityLevel">The pet's rarity tier.</param>
+    /// <param name="MaxWellbeingSeconds">The full duration of the wellbeing timer, in seconds.</param>
+    /// <param name="RemainingWellbeingSeconds">The seconds of wellbeing left.</param>
+    /// <param name="RemainingGrowingSeconds">The seconds left in the current growth stage.</param>
+    /// <param name="HasBreedingPermission">Whether the local user may breed this pet.</param>
     public PetInfoSnapshot(
         long Id,
         string Name,
@@ -2167,7 +2660,34 @@ public sealed record PetInfoSnapshot(
     {
     }
 
-    /// <summary>Compatibility deconstruction that yields identifiers as plain <see cref="long"/> values.</summary>
+    /// <summary>Deconstructs the instance for compatibility, yielding identifiers as plain <see cref="long"/> values.</summary>
+    /// <param name="Id">The pet identifier as a plain <see cref="long"/>.</param>
+    /// <param name="Name">The pet's name.</param>
+    /// <param name="Level">The pet's current level.</param>
+    /// <param name="MaxLevel">The highest level this pet can reach.</param>
+    /// <param name="Experience">The experience accumulated towards the next level.</param>
+    /// <param name="MaxExperience">The experience needed for the next level.</param>
+    /// <param name="Energy">The current energy.</param>
+    /// <param name="MaxEnergy">The energy cap.</param>
+    /// <param name="Happiness">The current nutrition.</param>
+    /// <param name="MaxHappiness">The nutrition cap.</param>
+    /// <param name="Scratches">The respect received.</param>
+    /// <param name="OwnerId">The owning user's identifier as a plain <see cref="long"/>.</param>
+    /// <param name="Age">The pet's age in days.</param>
+    /// <param name="OwnerName">The owning user's name.</param>
+    /// <param name="BreedId">The breed variant within the pet type.</param>
+    /// <param name="HasFreeSaddle">Whether the pet's saddle is unlocked without a purchase.</param>
+    /// <param name="IsRiding">Whether a user is currently riding the pet.</param>
+    /// <param name="SkillThresholds">The experience thresholds at which the pet unlocks its skills.</param>
+    /// <param name="AccessRights">The hotel's access-rights code controlling who may command the pet.</param>
+    /// <param name="CanBreed">Whether the pet may be bred right now.</param>
+    /// <param name="CanHarvest">Whether the pet may be harvested right now.</param>
+    /// <param name="CanRevive">Whether the pet is dead and may be revived.</param>
+    /// <param name="RarityLevel">The pet's rarity tier.</param>
+    /// <param name="MaxWellbeingSeconds">The full duration of the wellbeing timer, in seconds.</param>
+    /// <param name="RemainingWellbeingSeconds">The seconds of wellbeing left.</param>
+    /// <param name="RemainingGrowingSeconds">The seconds left in the current growth stage.</param>
+    /// <param name="HasBreedingPermission">Whether the local user may breed this pet.</param>
     public void Deconstruct(
         out long Id,
         out string Name,

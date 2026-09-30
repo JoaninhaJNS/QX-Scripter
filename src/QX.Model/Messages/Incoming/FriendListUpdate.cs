@@ -2,26 +2,50 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Specifies the kind of change in a friend list update.</summary>
 public enum FriendUpdateKind
 {
+    /// <summary>A friend removed from the friend list.</summary>
     Removed = -1,
+    /// <summary>A friend whose details changed.</summary>
     Updated = 0,
+    /// <summary>A friend added to the friend list.</summary>
     Added = 1
 }
 
+/// <summary>Represents a single change in a friend list update.</summary>
+/// <param name="Kind">The kind of change.</param>
+/// <param name="RemovedId">
+/// The identifier of the removed friend when <paramref name="Kind"/> is <see cref="FriendUpdateKind.Removed"/>,
+/// otherwise -1.
+/// </param>
+/// <param name="Friend">
+/// The added or updated friend, or <see langword="null"/> when <paramref name="Kind"/> is
+/// <see cref="FriendUpdateKind.Removed"/>.
+/// </param>
 public sealed record FriendUpdateEntry(FriendUpdateKind Kind, Id RemovedId, Friend? Friend);
 
+/// <summary>
+/// Represents the <c>FriendListUpdate</c> message, received when friends are added, updated or removed.
+/// </summary>
+/// <param name="Categories">The friend categories, which replace the current categories.</param>
+/// <param name="Updates">The changes to the friend list, in the order they were sent.</param>
 public sealed record FriendListUpdate(
     IReadOnlyList<FriendCategory> Categories,
     IReadOnlyList<FriendUpdateEntry> Updates) : IParserComposer<FriendListUpdate>
 {
+    /// <summary>Gets the friends that were added.</summary>
     public IEnumerable<Friend> Added => Entries(FriendUpdateKind.Added);
+    /// <summary>Gets the friends that were updated.</summary>
     public IEnumerable<Friend> Updated => Entries(FriendUpdateKind.Updated);
+    /// <summary>Gets the identifiers of the friends that were removed.</summary>
     public IEnumerable<long> Removed => Updates.Where(u => u.Kind == FriendUpdateKind.Removed).Select(u => (long)u.RemovedId);
 
     private IEnumerable<Friend> Entries(FriendUpdateKind kind) =>
         Updates.Where(u => u.Kind == kind && u.Friend is not null).Select(u => u.Friend!);
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FriendListUpdate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -50,6 +74,12 @@ public sealed record FriendListUpdate(
         return new FriendListUpdate(categories, updates);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when an entry has an unknown kind, a removed entry carries a friend, or an added or updated entry has no
+    /// friend.
+    /// </exception>
     public void Compose(in PacketWriter p)
     {
         foreach (FriendUpdateEntry entry in Updates)

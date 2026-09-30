@@ -54,6 +54,20 @@ internal sealed record GiftStateUpdate(
     long PublicationEpoch,
     bool PublishLegacyReset);
 
+/// <summary>
+/// Manages gift wrapping, opened presents, club gifts and new user gifts.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The state is kept as immutable snapshots. Events are raised after the state is updated and are
+/// skipped when the hotel session changes before they are delivered. Requests need the application
+/// runtime and throw <see cref="InvalidOperationException"/> until it is active.
+/// </para>
+/// <para>
+/// All members are safe to call from any thread. The state is cleared when the hotel connection
+/// closes and when a new connection starts.
+/// </para>
+/// </remarks>
 public sealed class GiftManager : GameStateManager
 {
     private const int offer_giftability_limit = 500;
@@ -70,14 +84,29 @@ public sealed class GiftManager : GameStateManager
     private bool delivering;
     private int delivery_thread_id;
 
+    /// <summary>Gets the gift wrapping configuration, or <see langword="null"/> if it has not been received.</summary>
     public GiftWrappingConfiguration? WrappingConfiguration => State.Wrapping;
+    /// <summary>Gets the club gift information, or <see langword="null"/> if it has not been received.</summary>
     public ClubGiftInfo? ClubGifts => State.ClubInfo;
+    /// <summary>Gets the last club gift selection the hotel confirmed, or <see langword="null"/> if there is none.</summary>
     public ClubGiftSelected? LastClubGift => State.ClubSelected;
+    /// <summary>Gets the contents of the last present the user opened, or <see langword="null"/> if there is none.</summary>
     public PresentOpened? LastOpenedPresent => State.PresentOpened;
+    /// <summary>Gets the last club gift notification, or <see langword="null"/> if there is none.</summary>
+    /// <remarks>Only the Flash client receives this notification.</remarks>
     public ClubGiftNotification? LatestNotification => State.ClubNotification;
+    /// <summary>Gets the new user gift offer, or <see langword="null"/> if it has not been received.</summary>
+    /// <remarks>Only the Flash client receives this offer.</remarks>
     public NuxGiftOffer? NewUserOffer => State.NewUserOffer;
+    /// <summary>Gets whether the hotel reported that the new user flow is incomplete.</summary>
     public bool NewUserFlowIsIncomplete => State.NewUserFlowIncomplete;
 
+    /// <summary>Gets whether each catalog offer can be sent as a gift, keyed by offer id.</summary>
+    /// <remarks>
+    /// Holds the answers to <see cref="RequestOfferGiftability(int)"/> for up to 500 offers. The
+    /// oldest answer is dropped when a new offer would exceed the limit. Only the Flash client
+    /// receives these answers. Each read returns a new copy.
+    /// </remarks>
     public IReadOnlyDictionary<int, bool> OfferGiftability
     {
         get
@@ -91,19 +120,34 @@ public sealed class GiftManager : GameStateManager
 
     internal GiftState State => Volatile.Read(ref state);
 
+    /// <summary>Occurs when the gift wrapping configuration arrives; the argument is the configuration.</summary>
     public event Action<GiftWrappingConfiguration>? WrappingConfigurationChanged;
+    /// <summary>Occurs when club gift information arrives; the argument is the information.</summary>
     public event Action<ClubGiftInfo>? ClubGiftsChanged;
+    /// <summary>Occurs when the hotel confirms a club gift selection; the argument is the selection.</summary>
     public event Action<ClubGiftSelected>? ClubGiftSelectedReceived;
+    /// <summary>Occurs when the hotel reports the contents of an opened present; the argument is the contents.</summary>
     public event Action<PresentOpened>? PresentOpenedReceived;
+    /// <summary>Occurs when the hotel reports that the receiver of a gift does not exist.</summary>
+    /// <remarks>Only the Flash client receives this message.</remarks>
     public event Action? GiftReceiverNotFound;
+    /// <summary>Occurs when a club gift notification arrives; the argument is the notification.</summary>
+    /// <remarks>Only the Flash client receives this notification.</remarks>
     public event Action<ClubGiftNotification>? ClubGiftNotificationReceived;
+    /// <summary>Occurs when the hotel answers whether an offer can be gifted; the argument is the answer.</summary>
+    /// <remarks>Only the Flash client receives this answer.</remarks>
     public event Action<IsOfferGiftable>? OfferGiftabilityChanged;
+    /// <summary>Occurs when the new user gift offer arrives; the argument is the offer.</summary>
+    /// <remarks>Only the Flash client receives this offer.</remarks>
     public event Action<NuxGiftOffer>? NewUserOfferChanged;
+    /// <summary>Occurs when the hotel reports that the new user flow is incomplete.</summary>
     public event Action? NewUserFlowIncomplete;
+    /// <summary>Occurs after the gift state has been cleared because the hotel connection closed.</summary>
     public event Action? ResetCompleted;
     internal event Action<GiftStateUpdate>? StateCommitted;
     internal event Action<GiftStateUpdate>? StateChanged;
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         CommitReset(CurrentSession, false);
@@ -131,34 +175,63 @@ public sealed class GiftManager : GameStateManager
         OnIncoming(MessageContracts.Gifts.NewUserIncomplete, ApplyNewUserIncomplete);
     }
 
+    /// <summary>Requests the gift wrapping configuration from the server.</summary>
+    /// <remarks>
+    /// The answer updates <see cref="WrappingConfiguration"/> and raises <see cref="WrappingConfigurationChanged"/>.
+    /// </remarks>
     public void RequestWrappingConfiguration() =>
         Operations().RequestWrappingConfiguration();
 
+    /// <summary>Opens a present placed in the current room.</summary>
+    /// <param name="furni_id">The room id of the present.</param>
+    /// <remarks>
+    /// The user must be in a room that has finished loading. The contents are reported through
+    /// <see cref="PresentOpenedReceived"/>.
+    /// </remarks>
     public void OpenPresent(Id furni_id) => Operations().OpenPresent(furni_id);
 
+    /// <summary>Purchases a catalog offer as a gift for another user.</summary>
+    /// <param name="request">The purchase, with the receiver, the gift message and the wrapping.</param>
+    /// <remarks>
+    /// The catalog state must belong to the same hotel session as the gift state.
+    /// </remarks>
     public void Purchase(PurchaseFromCatalogAsGift request)
     {
         ArgumentNullException.ThrowIfNull(request);
         Operations().Purchase(request);
     }
 
+    /// <summary>Requests the club gift information from the server.</summary>
+    /// <remarks>
+    /// The answer updates <see cref="ClubGifts"/> and raises <see cref="ClubGiftsChanged"/>.
+    /// </remarks>
     public void RequestClubGifts() => Operations().RequestClubGifts();
 
+    /// <summary>Selects a club gift.</summary>
+    /// <param name="product_code">The product code of the club gift.</param>
     public void SelectClubGift(string product_code)
     {
         ArgumentNullException.ThrowIfNull(product_code);
         Operations().SelectClubGift(product_code);
     }
 
+    /// <summary>Requests whether a catalog offer can be sent as a gift.</summary>
+    /// <param name="offer_id">The id of the catalog offer.</param>
+    /// <remarks>
+    /// The answer updates <see cref="OfferGiftability"/> and raises <see cref="OfferGiftabilityChanged"/>.
+    /// </remarks>
     public void RequestOfferGiftability(int offer_id) =>
         Operations().RequestOfferGiftability(offer_id);
 
+    /// <summary>Selects gifts from the new user gift offer.</summary>
+    /// <param name="selections">The chosen gift for each day and step.</param>
     public void SelectNewUserGifts(IReadOnlyList<NuxGiftSelection> selections)
     {
         ArgumentNullException.ThrowIfNull(selections);
         Operations().SelectNewUserGifts(selections);
     }
 
+    /// <summary>Advances the new user flow to its next step.</summary>
     public void AdvanceNewUserFlow() => Operations().AdvanceNewUserFlow();
 
     internal void BindOperations(IGiftOperations value)
@@ -181,6 +254,7 @@ public sealed class GiftManager : GameStateManager
         }
     }
 
+    /// <inheritdoc/>
     protected override void Reset() => CommitReset(CurrentSession, true);
 
     private void BindSession(Session session) => CommitReset(session, false);

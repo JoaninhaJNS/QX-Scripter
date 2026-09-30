@@ -257,10 +257,10 @@ internal sealed partial class GiftApplication
                 request.ExtraData,
                 request.ReceiverName,
                 request.GiftMessage,
+                request.SpriteId,
                 request.BoxType,
                 request.RibbonType,
-                request.Color,
-                !request.IsIncognito);
+                request.ShowPurchaserName);
             message_dispatcher.Dispatch(
                 MessageContracts.Gifts.Purchase,
                 wire_request,

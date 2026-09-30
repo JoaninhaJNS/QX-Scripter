@@ -2,14 +2,12 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
-/// <summary>
-/// A room avatar's favourite-group badge changed.
-/// </summary>
+/// <summary>Represents the <c>FavouriteMembershipUpdate</c> message, received when a room avatar's favorite group badge changes.</summary>
 /// <remarks>
 /// The avatar is named by its room index rather than its user id, so it resolves through the room's
 /// avatar list rather than the friend list.
 /// </remarks>
-/// <param name="RoomIndex">Which avatar in the room.</param>
+/// <param name="RoomIndex">The room index of the avatar.</param>
 /// <param name="GroupId">
 /// The group now shown, or zero when the badge was cleared. Flash transmits this as a fixed signed
 /// 32 bit value.
@@ -22,12 +20,16 @@ public sealed record FavouriteMembershipUpdate(
     int Status,
     string GroupName) : IParserComposer<FavouriteMembershipUpdate>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FavouriteMembershipUpdate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static FavouriteMembershipUpdate ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt(), p.ReadInt(), p.ReadString());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -45,20 +47,22 @@ public sealed record FavouriteMembershipUpdate(
     }
 }
 
-/// <summary>
-/// A special Flash room-chat signal associated with an avatar.
-/// </summary>
-/// <param name="UserIndex">Which avatar in the room.</param>
-/// <param name="SpecialSystemType">Which special chat signal the hotel sent.</param>
+/// <summary>Represents the <c>SpecialSystemChat</c> message, received with a special room chat signal for an avatar.</summary>
+/// <param name="UserIndex">The room index of the avatar.</param>
+/// <param name="SpecialSystemType">The type of special chat signal the hotel sent.</param>
 public sealed record SpecialSystemChat(int UserIndex, int SpecialSystemType)
     : IParserComposer<SpecialSystemChat>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SpecialSystemChat Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static SpecialSystemChat ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -69,13 +73,13 @@ public sealed record SpecialSystemChat(int UserIndex, int SpecialSystemType)
     }
 }
 
-/// <summary>
-/// The Flash hotel's messages of the day, delivered on connect.
-/// </summary>
-/// <param name="Messages">The notices, each already localised by the hotel.</param>
+/// <summary>Represents the <c>MOTDNotification</c> message, received with the hotel's messages of the day when the user connects.</summary>
+/// <param name="Messages">The notices, each already localized by the hotel.</param>
 public sealed record MOTDNotification(IReadOnlyList<string> Messages)
     : IParserComposer<MOTDNotification>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static MOTDNotification Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -93,6 +97,8 @@ public sealed record MOTDNotification(IReadOnlyList<string> Messages)
         return new MOTDNotification(messages);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

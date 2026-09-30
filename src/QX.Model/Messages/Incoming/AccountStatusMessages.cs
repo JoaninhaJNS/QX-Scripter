@@ -2,14 +2,23 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>
+/// Represents the <c>BlockUserUpdate</c> message, received with the result of blocking or unblocking a user.
+/// </summary>
+/// <param name="Result">The result code sent by the server.</param>
+/// <param name="UserId">The identifier of the user the result refers to.</param>
 public sealed record BlockUserUpdate(int Result, Id UserId) : IParserComposer<BlockUserUpdate>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BlockUserUpdate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static BlockUserUpdate ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -21,24 +30,32 @@ public sealed record BlockUserUpdate(int Result, Id UserId) : IParserComposer<Bl
     }
 }
 
+/// <summary>Represents the <c>BlockList</c> message, received with the users the local user has blocked.</summary>
 public sealed record BlockList : IParserComposer<BlockList>
 {
     private IReadOnlyList<Id> _user_ids = Array.Empty<Id>();
 
+    /// <summary>Initializes a new instance of the <see cref="BlockList"/> record.</summary>
+    /// <param name="user_ids">The identifiers of the blocked users, copied into a read only list.</param>
     public BlockList(IReadOnlyList<Id> user_ids) => UserIds = user_ids;
 
+    /// <summary>Gets the identifiers of the blocked users, as a read only copy.</summary>
     public IReadOnlyList<Id> UserIds
     {
         get => _user_ids;
         init => _user_ids = AccountWire.FreezeValues(value, nameof(UserIds));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BlockList Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static BlockList ParseFlash(in PacketReader p) =>
         new(AccountWire.ReadFlashIds(in p, nameof(UserIds)));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -46,14 +63,23 @@ public sealed record BlockList : IParserComposer<BlockList>
         AccountWire.WriteFlashIds(in p, value.UserIds, nameof(UserIds));
 }
 
+/// <summary>
+/// Represents the <c>IgnoreResult</c> message, received with the result of ignoring or unignoring a user.
+/// </summary>
+/// <param name="Result">The result code sent by the server.</param>
+/// <param name="UserId">The identifier of the user the result refers to.</param>
 public sealed record IgnoreUserResult(int Result, Id UserId) : IParserComposer<IgnoreUserResult>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static IgnoreUserResult Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static IgnoreUserResult ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -65,24 +91,32 @@ public sealed record IgnoreUserResult(int Result, Id UserId) : IParserComposer<I
     }
 }
 
+/// <summary>Represents the <c>IgnoredUsers</c> message, received with the users the local user ignores.</summary>
 public sealed record RequestIgnoreList : IParserComposer<RequestIgnoreList>
 {
     private IReadOnlyList<Id> _user_ids = Array.Empty<Id>();
 
+    /// <summary>Initializes a new instance of the <see cref="RequestIgnoreList"/> record.</summary>
+    /// <param name="user_ids">The identifiers of the ignored users, copied into a read only list.</param>
     public RequestIgnoreList(IReadOnlyList<Id> user_ids) => UserIds = user_ids;
 
+    /// <summary>Gets the identifiers of the ignored users, as a read only copy.</summary>
     public IReadOnlyList<Id> UserIds
     {
         get => _user_ids;
         init => _user_ids = AccountWire.FreezeValues(value, nameof(UserIds));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static RequestIgnoreList Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static RequestIgnoreList ParseFlash(in PacketReader p) =>
         new(AccountWire.ReadFlashIds(in p, nameof(UserIds)));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -90,13 +124,21 @@ public sealed record RequestIgnoreList : IParserComposer<RequestIgnoreList>
         AccountWire.WriteFlashIds(in p, value.UserIds, nameof(UserIds));
 }
 
+/// <summary>
+/// Represents the <c>FigureSetIdAdded</c> message, received when the user gets a new wardrobe figure set.
+/// </summary>
+/// <param name="FigureSetId">The identifier of the added figure set.</param>
 public sealed record FigureSetIdAdded(int FigureSetId) : IParserComposer<FigureSetIdAdded>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FigureSetIdAdded Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static FigureSetIdAdded ParseFlash(in PacketReader p) => new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -104,13 +146,21 @@ public sealed record FigureSetIdAdded(int FigureSetId) : IParserComposer<FigureS
         p.WriteInt(value.FigureSetId);
 }
 
+/// <summary>
+/// Represents the <c>FigureSetIdRemoved</c> message, received when the user loses a wardrobe figure set.
+/// </summary>
+/// <param name="FigureSetId">The identifier of the removed figure set.</param>
 public sealed record FigureSetIdRemoved(int FigureSetId) : IParserComposer<FigureSetIdRemoved>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FigureSetIdRemoved Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static FigureSetIdRemoved ParseFlash(in PacketReader p) => new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -118,15 +168,26 @@ public sealed record FigureSetIdRemoved(int FigureSetId) : IParserComposer<Figur
         p.WriteInt(value.FigureSetId);
 }
 
+/// <summary>Represents a wardrobe figure set the user owns.</summary>
+/// <param name="FigureSetId">The identifier of the figure set.</param>
+/// <param name="Metadata">The metadata value of the figure set, always 0 on the Flash client.</param>
 public readonly record struct FigureSetEntry(int FigureSetId, int Metadata);
 
+/// <summary>Represents the <c>FigureSetIds</c> message, received with the wardrobe figure sets the user owns.</summary>
 public sealed record FigureSetIds : IParserComposer<FigureSetIds>
 {
     private IReadOnlyList<FigureSetEntry> _entries = Array.Empty<FigureSetEntry>();
     private IReadOnlyList<string> _bound_furniture_names = Array.Empty<string>();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FigureSetIds"/> record with no bound furniture names.
+    /// </summary>
+    /// <param name="entries">The owned figure sets, copied into a read only list.</param>
     public FigureSetIds(IReadOnlyList<FigureSetEntry> entries) : this(entries, []) { }
 
+    /// <summary>Initializes a new instance of the <see cref="FigureSetIds"/> record.</summary>
+    /// <param name="entries">The owned figure sets, copied into a read only list.</param>
+    /// <param name="bound_furniture_names">The bound furniture names, copied into a read only list.</param>
     public FigureSetIds(
         IReadOnlyList<FigureSetEntry> entries,
         IReadOnlyList<string> bound_furniture_names)
@@ -135,18 +196,24 @@ public sealed record FigureSetIds : IParserComposer<FigureSetIds>
         BoundFurnitureNames = bound_furniture_names;
     }
 
+    /// <summary>Gets the owned figure sets, as a read only copy.</summary>
     public IReadOnlyList<FigureSetEntry> Entries
     {
         get => _entries;
         init => _entries = AccountWire.FreezeValues(value, nameof(Entries));
     }
 
+    /// <summary>
+    /// Gets the bound furniture names sent after the figure sets, as a read only copy.
+    /// </summary>
     public IReadOnlyList<string> BoundFurnitureNames
     {
         get => _bound_furniture_names;
         init => _bound_furniture_names = AccountWire.FreezeStrings(value, nameof(BoundFurnitureNames));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FigureSetIds Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -161,6 +228,9 @@ public sealed record FigureSetIds : IParserComposer<FigureSetIds>
             AccountWire.ReadFlashStrings(in p, nameof(BoundFurnitureNames)));
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidDataException">Thrown when an entry has a metadata value other than 0.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -180,14 +250,22 @@ public sealed record FigureSetIds : IParserComposer<FigureSetIds>
     }
 }
 
+/// <summary>Represents the type of a sanction.</summary>
+/// <param name="Name">The name of the sanction type.</param>
+/// <param name="First">The first integer sent with the type.</param>
+/// <param name="Second">The second integer sent with the type.</param>
 public sealed record SanctionType(string Name, int First, int Second) : IParserComposer<SanctionType>
 {
+    /// <summary>Parses a sanction type from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SanctionType Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static SanctionType ParseFlash(in PacketReader p) =>
         new(p.ReadString(), p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the sanction type into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -200,6 +278,12 @@ public sealed record SanctionType(string Name, int First, int Second) : IParserC
     }
 }
 
+/// <summary>Represents a sanction recorded against the local user.</summary>
+/// <param name="Type">The type of the sanction.</param>
+/// <param name="Text">The text sent with the sanction.</param>
+/// <param name="Flag">The boolean flag sent with the sanction.</param>
+/// <param name="Value">The integer value sent with the sanction.</param>
+/// <param name="NextType">The type of the next sanction.</param>
 public sealed record Sanction(
     SanctionType Type,
     string Text,
@@ -207,6 +291,8 @@ public sealed record Sanction(
     int Value,
     SanctionType NextType) : IParserComposer<Sanction>
 {
+    /// <summary>Parses a sanction from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static Sanction Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -218,6 +304,8 @@ public sealed record Sanction(
             p.ReadInt(),
             p.Parse<SanctionType>());
 
+    /// <summary>Composes the sanction into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -241,20 +329,27 @@ public sealed record Sanction(
     }
 }
 
+/// <summary>Represents the sanctions recorded against the local user.</summary>
 public sealed record MySanctionStatus : IParserComposer<MySanctionStatus>
 {
     private IReadOnlyList<Sanction> _sanctions = Array.Empty<Sanction>();
 
+    /// <summary>Initializes a new instance of the <see cref="MySanctionStatus"/> record.</summary>
+    /// <param name="sanctions">The sanctions, copied into a read only list.</param>
     public MySanctionStatus(IReadOnlyList<Sanction> sanctions) => Sanctions = sanctions;
 
+    /// <summary>Gets the sanctions, as a read only copy.</summary>
     public IReadOnlyList<Sanction> Sanctions
     {
         get => _sanctions;
         init => _sanctions = AccountWire.FreezeReferences(value, nameof(Sanctions));
     }
 
+    /// <summary>Gets whether at least one sanction is recorded.</summary>
     public bool IsSanctioned => Sanctions.Count > 0;
 
+    /// <summary>Parses the sanction status from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static MySanctionStatus Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -272,6 +367,8 @@ public sealed record MySanctionStatus : IParserComposer<MySanctionStatus>
         return new MySanctionStatus(sanctions);
     }
 
+    /// <summary>Composes the sanction status into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -285,13 +382,23 @@ public sealed record MySanctionStatus : IParserComposer<MySanctionStatus>
     }
 }
 
+/// <summary>Specifies the layout of an account sanction status.</summary>
 public enum AccountSanctionStatusKind
 {
+    /// <summary>A list of sanctions, the layout the Flash client uses.</summary>
     Sanctions
 }
 
+/// <summary>
+/// Represents the <c>SanctionStatus</c> message, received with the sanctions recorded against the local user.
+/// </summary>
 public sealed record AccountSanctionStatus : IParserComposer<AccountSanctionStatus>
 {
+    /// <summary>Initializes a new instance of the <see cref="AccountSanctionStatus"/> record.</summary>
+    /// <param name="sanctions">The sanctions recorded against the local user.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="sanctions"/> is <see langword="null"/>.
+    /// </exception>
     public AccountSanctionStatus(MySanctionStatus sanctions)
     {
         ArgumentNullException.ThrowIfNull(sanctions);
@@ -299,15 +406,21 @@ public sealed record AccountSanctionStatus : IParserComposer<AccountSanctionStat
         Sanctions = sanctions;
     }
 
+    /// <summary>Gets the layout of the status, always <see cref="AccountSanctionStatusKind.Sanctions"/>.</summary>
     public AccountSanctionStatusKind Kind { get; }
+    /// <summary>Gets the sanctions recorded against the local user.</summary>
     public MySanctionStatus? Sanctions { get; }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static AccountSanctionStatus Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static AccountSanctionStatus ParseFlash(in PacketReader p) =>
         new(p.Parse<MySanctionStatus>());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -319,14 +432,21 @@ public sealed record AccountSanctionStatus : IParserComposer<AccountSanctionStat
     }
 }
 
+/// <summary>Represents the <c>FigureUpdate</c> message, received when the local user's figure changes.</summary>
+/// <param name="Figure">The new figure string.</param>
+/// <param name="Gender">The gender code sent with the figure.</param>
 public sealed record FigureUpdate(string Figure, string Gender) : IParserComposer<FigureUpdate>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FigureUpdate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static FigureUpdate ParseFlash(in PacketReader p) =>
         new(p.ReadString(), p.ReadString());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -344,10 +464,17 @@ public sealed record FigureUpdate(string Figure, string Gender) : IParserCompose
     }
 }
 
+/// <summary>
+/// Represents the <c>ChangeUserNameResult</c> message, received with the result of a request to change the user name.
+/// </summary>
 public sealed record ChangeUserNameResult : IParserComposer<ChangeUserNameResult>
 {
     private IReadOnlyList<string> _name_suggestions = Array.Empty<string>();
 
+    /// <summary>Initializes a new instance of the <see cref="ChangeUserNameResult"/> record.</summary>
+    /// <param name="result_code">The result code sent by the server.</param>
+    /// <param name="name">The name the result refers to.</param>
+    /// <param name="name_suggestions">The names suggested by the server, copied into a read only list.</param>
     public ChangeUserNameResult(
         int result_code,
         string name,
@@ -358,18 +485,25 @@ public sealed record ChangeUserNameResult : IParserComposer<ChangeUserNameResult
         NameSuggestions = name_suggestions;
     }
 
+    /// <summary>The result code of a successful name change.</summary>
     public const int SuccessCode = 0;
+    /// <summary>Gets the result code sent by the server.</summary>
     public int ResultCode { get; init; }
+    /// <summary>Gets the name the result refers to.</summary>
     public string Name { get; init; }
 
+    /// <summary>Gets the names suggested by the server, as a read only copy.</summary>
     public IReadOnlyList<string> NameSuggestions
     {
         get => _name_suggestions;
         init => _name_suggestions = AccountWire.FreezeStrings(value, nameof(NameSuggestions));
     }
 
+    /// <summary>Gets whether the result code is <see cref="SuccessCode"/>.</summary>
     public bool Success => ResultCode == SuccessCode;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ChangeUserNameResult Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -379,6 +513,8 @@ public sealed record ChangeUserNameResult : IParserComposer<ChangeUserNameResult
             p.ReadString(),
             AccountWire.ReadFlashStrings(in p, nameof(NameSuggestions)));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -397,17 +533,26 @@ public sealed record ChangeUserNameResult : IParserComposer<ChangeUserNameResult
     }
 }
 
+/// <summary>
+/// Represents the <c>AccountSafetyLockStatusChange</c> message, received when the account safety lock status changes.
+/// </summary>
+/// <param name="Status">The raw status value, where 0 means the account is locked.</param>
 public sealed record AccountSafetyLockStatusChange(int Status)
     : IParserComposer<AccountSafetyLockStatusChange>
 {
+    /// <summary>Gets whether the account safety lock is on, which is when <see cref="Status"/> is 0.</summary>
     public bool IsLocked => Status == 0;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static AccountSafetyLockStatusChange Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static AccountSafetyLockStatusChange ParseFlash(in PacketReader p) =>
         new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

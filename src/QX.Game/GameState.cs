@@ -4,6 +4,16 @@ using Qx.Model;
 
 namespace Qx.Game;
 
+/// <summary>
+/// Represents the mirrored state of the hotel session and holds every state manager that scripts read.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <see cref="Attach(IInterceptor)"/> connects every manager to the interceptor. On each hotel
+/// connection the game data for that hotel is loaded and <see cref="BootstrapTask"/> loads the
+/// user's profile and wallet.
+/// </para>
+/// </remarks>
 public sealed class GameState : IDisposable
 {
     private readonly CancellationTokenSource _lifetime = new();
@@ -38,51 +48,92 @@ public sealed class GameState : IDisposable
     private long _session_generation;
     private bool _disposed;
 
+    /// <summary>Gets the manager that mirrors the room the user is in.</summary>
     public RoomManager Room { get; } = new();
+    /// <summary>Gets the actions the user performs in rooms, such as walking, chatting and using furni.</summary>
     public RoomActions RoomActions { get; } = new();
     internal RoomBanManager RoomBans { get; } = new();
     internal RoomSettingsManager RoomSettings { get; } = new();
+    /// <summary>Gets the actions that target users, pets and bots in the current room.</summary>
     public RoomPeopleActions People { get; } = new();
 
     /// <summary>
-    /// Who has been in the room since it was opened.
+    /// Gets the log of users who have been in the current room since the user entered it.
     /// </summary>
     /// <remarks>
-    /// Not a manager, because it has no messages of its own. Nothing on the wire answers "who has
-    /// been in this room", so the only way to know is to watch the room and remember.
+    /// No hotel message reports past visitors, so the log is built by watching avatars arrive and
+    /// leave. It is cleared when the user leaves the room.
     /// </remarks>
     public RoomVisitorLog Visitors { get; } = new();
 
+    /// <summary>Gets the coordinator that enters rooms and waits for the entry to finish.</summary>
     public RoomEntryCoordinator RoomEntries { get; }
     internal ProfileManager Profile { get; } = new();
     internal InventoryManager Inventory { get; } = new();
+    /// <summary>Gets the manager for the user's owned badges and the badges users wear.</summary>
     public BadgeInventoryManager Badges { get; } = new();
+    /// <summary>Gets the manager for the user's friend list and private messages.</summary>
     public FriendManager Friends { get; } = new();
     internal TradeManager Trade { get; } = new();
     internal PollManager Polls { get; } = new();
+    /// <summary>Gets the broker that sends raw requests and waits for their responses.</summary>
     public RequestBroker Requests { get; } = new();
+    /// <summary>Gets the manager for marketplace offers, searches and configuration.</summary>
     public MarketplaceManager Marketplace { get; }
 
-    /// <summary>Copies what another avatar is doing onto your own.</summary>
+    /// <summary>Gets the service that copies what another avatar is doing onto the user's own avatar.</summary>
     public MimicService Mimic { get; }
     internal EconomyManager Economy { get; } = new();
+    /// <summary>Gets the manager for quests.</summary>
     public QuestManager Quests { get; } = new();
+    /// <summary>Gets the manager for crafting products, recipes and results.</summary>
     public CraftingManager Crafting { get; } = new();
+    /// <summary>Gets the manager for gift wrapping, presents, club gifts and new user gifts.</summary>
     public GiftManager Gifts { get; } = new();
+    /// <summary>Gets the manager for club subscription, kickback and Builders Club information.</summary>
     public SubscriptionManager Subscriptions { get; } = new();
+    /// <summary>Gets the manager for group forums, threads and messages.</summary>
     public ForumManager Forums { get; } = new();
+    /// <summary>Gets the manager for catalog pages and purchases.</summary>
     public CatalogManager Catalog { get; } = new();
+    /// <summary>Gets the manager for the wired state of the current room.</summary>
     public WiredManager Wired { get; } = new();
+    /// <summary>Gets the manager for daily tasks.</summary>
     public DailyTaskManager DailyTasks { get; } = new();
+    /// <summary>Gets the manager for habbicons.</summary>
     public HabbiconManager Habbicons { get; } = new();
+    /// <summary>Gets the manager for game leaderboards.</summary>
     public LeaderboardManager Leaderboards { get; } = new();
+    /// <summary>Gets the manager for navigator searches and rooms.</summary>
     public NavigatorManager Navigator { get; } = new();
+    /// <summary>Gets the manager for the user's earnings status and claims.</summary>
     public EarningsManager Earnings { get; } = new();
+    /// <summary>Gets the manager for the user's achievements and achievement score.</summary>
     public AchievementManager Achievements { get; } = new();
+    /// <summary>Gets the furni data, product data, external texts and external variables of the connected hotel.</summary>
+    /// <remarks>
+    /// The data is loaded again for the hotel of each new connection.
+    /// </remarks>
     public GameData GameData { get; } = new();
+    /// <summary>Gets the task that prepares the current hotel session.</summary>
+    /// <remarks>
+    /// <para>
+    /// A new task starts on each hotel connection. It waits for the interceptor's message catalog,
+    /// waits until the session is authenticated or <see cref="AuthenticationGrace"/> passes, and then
+    /// loads the user's profile and wallet with a timeout of 10000 milliseconds each.
+    /// </para>
+    /// <para>
+    /// The task does not fault. A failure is stored in <see cref="BootstrapError"/>.
+    /// </para>
+    /// </remarks>
     public Task BootstrapTask => Volatile.Read(ref _bootstrap_task);
+    /// <summary>Gets the error that stopped the bootstrap of the current hotel session, or <see langword="null"/> if there is none.</summary>
+    /// <remarks>
+    /// Cleared when a new hotel connection starts and when a bootstrap completes.
+    /// </remarks>
     public Exception? BootstrapError => Volatile.Read(ref _bootstrap_error);
 
+    /// <summary>Initializes a new instance of the <see cref="GameState"/> class.</summary>
     public GameState()
     {
         RoomEntries = new RoomEntryCoordinator(Room);
@@ -269,6 +320,14 @@ public sealed class GameState : IDisposable
         }
     }
 
+    /// <summary>Attaches every state manager to an interceptor and starts following its hotel connections.</summary>
+    /// <param name="interceptor">The interceptor that carries the hotel traffic.</param>
+    /// <remarks>
+    /// If the interceptor already has a session, that session is bootstrapped at once. If attaching
+    /// fails, the game state is disposed.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">Thrown when the game state has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the game state is already attached.</exception>
     public void Attach(IInterceptor interceptor)
     {
         ArgumentNullException.ThrowIfNull(interceptor);
@@ -402,6 +461,7 @@ public sealed class GameState : IDisposable
         }
     }
 
+    /// <summary>Detaches and disposes every state manager and cancels the running bootstrap.</summary>
     public void Dispose()
     {
         if (_disposed)
@@ -472,11 +532,13 @@ public sealed class GameState : IDisposable
     }
 
     /// <summary>
-    /// How long to wait for evidence that the hotel has authenticated the session before
-    /// pre-warming it anyway. Reaching this means the extension almost certainly attached to a
-    /// session that was already logged in, whose login packets it therefore never saw. It has to
-    /// outlast a slow login, because pre-warming during one drops the connection.
+    /// Gets or sets how long the bootstrap waits for the session to be authenticated before it loads the profile and wallet anyway.
     /// </summary>
+    /// <remarks>
+    /// The default is 20 seconds. Reaching it usually means the interceptor attached to a session
+    /// that was already logged in, so the login messages were never seen. It has to outlast a slow
+    /// login, because requests sent during a login make the hotel drop the connection.
+    /// </remarks>
     public TimeSpan AuthenticationGrace { get; set; } = TimeSpan.FromSeconds(20);
 
     private void ApplyRoomGameData()
@@ -537,13 +599,15 @@ public sealed class GameState : IDisposable
     }
 
     /// <summary>
-    /// Waits until the session looks authenticated. G-Earth reports a connection as soon as the
-    /// client's socket opens, which is before the hotel has logged it in; sending a request into
-    /// that window makes the server drop the connection and the client fails to connect. A normal
-    /// login fills the profile in on its own from the client's own traffic, so in the common case
-    /// nothing has to be sent at all.
+    /// Waits until the session looks authenticated or <see cref="AuthenticationGrace"/> passes.
     /// </summary>
-    /// <returns>Whether the session is still the one this bootstrap was started for.</returns>
+    /// <remarks>
+    /// G-Earth reports a connection as soon as the client's socket opens, which is before the hotel
+    /// has logged it in. A request sent in that window makes the server drop the connection. A normal
+    /// login fills in the profile from the client's own traffic, so usually nothing has to be sent.
+    /// </remarks>
+    /// <param name="generation">The session generation the bootstrap was started for.</param>
+    /// <returns>Whether the session is still the one the bootstrap was started for.</returns>
     private async Task<bool> WaitForAuthenticatedSessionAsync(long generation)
     {
         if (Profile.IsLoaded)

@@ -4,12 +4,20 @@ namespace Qx.Model.Wired;
 
 // Shared furni-type descriptor (§_-dR§/ChestItemType). Empty legacyPosterId is normalised
 // to null on read and back to "" on write, so storing the raw string round-trips byte-exact.
+/// <summary>Represents a furni type as the wired chest, transaction and trade messages describe it.</summary>
+/// <param name="IsWallItem">Whether the furni type is a wall item.</param>
+/// <param name="TypeId">The furni type id.</param>
+/// <param name="LegacyPosterId">The poster id of a legacy poster, or an empty string when there is none.</param>
 public sealed record ChestItemType(bool IsWallItem, int TypeId, string LegacyPosterId)
     : IParserComposer<ChestItemType>
 {
+    /// <summary>Parses the furni type from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ChestItemType Parse(in PacketReader p) =>
         new(p.ReadBool(), p.ReadInt(), p.ReadString());
 
+    /// <summary>Composes the furni type into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteBool(IsWallItem);
@@ -19,6 +27,15 @@ public sealed record ChestItemType(bool IsWallItem, int TypeId, string LegacyPos
 }
 
 // §_-dR§/ChestStorage — one furni slot inside a chest. `extra` is only on the wire for floor items.
+/// <summary>Represents one furni slot inside a wired chest.</summary>
+/// <param name="InventoryId">The inventory id of the stored item.</param>
+/// <param name="LockState">The lock state code of the item.</param>
+/// <param name="TransactionId">The transaction id the hotel sends with the item, as a 64 bit integer.</param>
+/// <param name="Type">The furni type of the item.</param>
+/// <param name="Groupable">Whether the item can be grouped with identical items.</param>
+/// <param name="SpecialType">The special type code of the item.</param>
+/// <param name="StuffData">The item data of the item.</param>
+/// <param name="Extra">The extra value of a floor item, or 0 for a wall item, which does not carry it on the wire.</param>
 public sealed record ChestStorage(
     int InventoryId,
     int LockState,
@@ -29,6 +46,8 @@ public sealed record ChestStorage(
     ItemData StuffData,
     int Extra) : IParserComposer<ChestStorage>
 {
+    /// <summary>Parses the storage entry from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ChestStorage Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -49,6 +68,8 @@ public sealed record ChestStorage(
         return new ChestStorage(inventoryId, lockState, transactionId, type, groupable, specialType, stuffData, extra);
     }
 
+    /// <summary>Composes the storage entry into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -72,13 +93,20 @@ public sealed record ChestStorage(
 }
 
 // id 1174
+/// <summary>Received when the hotel asks the client to open a wired chest.</summary>
+/// <remarks>Received as the Flash <c>OpenChest</c> message.</remarks>
+/// <param name="ChestId">The id of the chest.</param>
 public sealed record OpenChest(int ChestId) : IParserComposer<OpenChest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static OpenChest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static OpenChest ParseFlash(in PacketReader p) => new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -86,15 +114,24 @@ public sealed record OpenChest(int ChestId) : IParserComposer<OpenChest>
 }
 
 // id 1022
+/// <summary>Received with the coins in a wired chest.</summary>
+/// <remarks>Received as the Flash <c>CoinsChestContents</c> message.</remarks>
+/// <param name="ChestId">The id of the chest.</param>
+/// <param name="Coins">The number of coins in the chest.</param>
+/// <param name="IsUpdate">Whether the hotel marks the message as an update of contents sent before.</param>
 public sealed record CoinsChestContents(int ChestId, int Coins, bool IsUpdate)
     : IParserComposer<CoinsChestContents>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CoinsChestContents Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static CoinsChestContents ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt(), p.ReadBool());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -107,12 +144,20 @@ public sealed record CoinsChestContents(int ChestId, int Coins, bool IsUpdate)
 }
 
 // id 2323
+/// <summary>Received with one fragment of the items in a wired chest.</summary>
+/// <remarks>Received as the Flash <c>ItemsChestContentsChunk</c> message.</remarks>
+/// <param name="ChestId">The id of the chest.</param>
+/// <param name="TotalFragments">The number of fragments the item list is sent in.</param>
+/// <param name="FragmentNo">The number of this fragment.</param>
+/// <param name="StorageChunk">The items in this fragment.</param>
 public sealed record ItemsChestContentsChunk(
     int ChestId,
     int TotalFragments,
     int FragmentNo,
     IReadOnlyList<ChestStorage> StorageChunk) : IParserComposer<ItemsChestContentsChunk>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ItemsChestContentsChunk Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -129,6 +174,8 @@ public sealed record ItemsChestContentsChunk(
         return new ItemsChestContentsChunk(chestId, totalFragments, fragmentNo, chunk);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -145,11 +192,18 @@ public sealed record ItemsChestContentsChunk(
 }
 
 // id 2738
+/// <summary>Received when items are added to or removed from a wired chest.</summary>
+/// <remarks>Received as the Flash <c>ItemsChestContentsUpdated</c> message.</remarks>
+/// <param name="ChestId">The id of the chest.</param>
+/// <param name="RemovedIds">The inventory ids of the removed items.</param>
+/// <param name="AddedStorage">The added items.</param>
 public sealed record ItemsChestContentsUpdated(
     int ChestId,
     IReadOnlyList<int> RemovedIds,
     IReadOnlyList<ChestStorage> AddedStorage) : IParserComposer<ItemsChestContentsUpdated>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ItemsChestContentsUpdated Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -165,6 +219,8 @@ public sealed record ItemsChestContentsUpdated(
         return new ItemsChestContentsUpdated(chestId, removed, storage);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -181,15 +237,24 @@ public sealed record ItemsChestContentsUpdated(
 }
 
 // id 2721
+/// <summary>Received with the result of a wired chest capacity upgrade.</summary>
+/// <remarks>Received as the Flash <c>UpgradeChestResult</c> message. The hotel sends it in answer to <see cref="UpgradeChest"/>.</remarks>
+/// <param name="ChestId">The id of the chest.</param>
+/// <param name="ResultCode">The result code, where 0 means the upgrade succeeded.</param>
 public sealed record UpgradeChestResult(int ChestId, int ResultCode) : IParserComposer<UpgradeChestResult>
 {
+    /// <summary>The result code of a successful upgrade.</summary>
     public const int Success = 0;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static UpgradeChestResult Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static UpgradeChestResult ParseFlash(in PacketReader p) => new(p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -201,15 +266,23 @@ public sealed record UpgradeChestResult(int ChestId, int ResultCode) : IParserCo
 }
 
 // id 1957
+/// <summary>Received when the hotel confirms a wired chest preferences update.</summary>
+/// <remarks>Received as the Flash <c>ChestPreferencesUpdateSuccess</c> message.</remarks>
+/// <param name="ChestId">The id of the chest.</param>
+/// <param name="IsNotificationPreferences">Whether the confirmed update was of the notification preferences instead of the general preferences.</param>
 public sealed record ChestPreferencesUpdateSuccess(int ChestId, bool IsNotificationPreferences)
     : IParserComposer<ChestPreferencesUpdateSuccess>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ChestPreferencesUpdateSuccess Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static ChestPreferencesUpdateSuccess ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadBool());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -223,12 +296,21 @@ public sealed record ChestPreferencesUpdateSuccess(int ChestId, bool IsNotificat
 // TradeRequirement tree — shared by contracts, transactions and trades.
 
 // §_-o1t§/TradeRequirementNode — `type` is a single byte on the wire; itemType only for furni nodes.
+/// <summary>Represents one requirement of a wired trade rule, an amount of coins or of one furni type.</summary>
+/// <remarks>Composing throws <see cref="InvalidDataException"/> when <paramref name="ItemType"/> is set for a coin node or missing for a furni node.</remarks>
+/// <param name="Type">The node type, 0 for coins or 1 for furni, written as a single byte.</param>
+/// <param name="Amount">The number of coins or furni.</param>
+/// <param name="ItemType">The furni type of a furni node, or <see langword="null"/> for a coin node.</param>
 public sealed record TradeRequirementNode(int Type, int Amount, ChestItemType? ItemType)
     : IParserComposer<TradeRequirementNode>
 {
+    /// <summary>The node type of a coin requirement.</summary>
     public const int TypeCoin = 0;
+    /// <summary>The node type of a furni requirement.</summary>
     public const int TypeFurni = 1;
 
+    /// <summary>Parses the node from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeRequirementNode Parse(in PacketReader p)
     {
         int type = p.ReadByte();
@@ -237,6 +319,8 @@ public sealed record TradeRequirementNode(int Type, int Amount, ChestItemType? I
         return new TradeRequirementNode(type, amount, itemType);
     }
 
+    /// <summary>Composes the node into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         byte type = checked((byte)Type);
@@ -256,9 +340,13 @@ public sealed record TradeRequirementNode(int Type, int Amount, ChestItemType? I
     }
 }
 
+/// <summary>Represents one rule of a wired trade requirement as a list of nodes.</summary>
+/// <param name="Nodes">The requirement nodes of the rule.</param>
 public sealed record TradeRequirementRule(IReadOnlyList<TradeRequirementNode> Nodes)
     : IParserComposer<TradeRequirementRule>
 {
+    /// <summary>Parses the rule from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeRequirementRule Parse(in PacketReader p)
     {
         int n = p.ReadLength();
@@ -268,6 +356,8 @@ public sealed record TradeRequirementRule(IReadOnlyList<TradeRequirementNode> No
         return new TradeRequirementRule(nodes);
     }
 
+    /// <summary>Composes the rule into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         WiredChestWire.Validate(this, in p);
@@ -278,10 +368,16 @@ public sealed record TradeRequirementRule(IReadOnlyList<TradeRequirementNode> No
 }
 
 // null lists/rules encode the presence bool as false with no payload.
+/// <summary>Represents what the user gives and gets in a wired trade or contract.</summary>
+/// <remarks>Each part is preceded by a presence flag on the wire, and a part that was not sent is <see langword="null"/>.</remarks>
+/// <param name="YouGiveRule">The rules for what the user gives, or <see langword="null"/> when none were sent.</param>
+/// <param name="YouGetRule">The rule for what the user gets, or <see langword="null"/> when none was sent.</param>
 public sealed record TradeRequirementRulesDefinition(
     IReadOnlyList<TradeRequirementRule>? YouGiveRule,
     TradeRequirementRule? YouGetRule) : IParserComposer<TradeRequirementRulesDefinition>
 {
+    /// <summary>Parses the definition from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeRequirementRulesDefinition Parse(in PacketReader p)
     {
         TradeRequirementRule[]? give = null;
@@ -296,6 +392,8 @@ public sealed record TradeRequirementRulesDefinition(
         return new TradeRequirementRulesDefinition(give, get);
     }
 
+    /// <summary>Composes the definition into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         WiredChestWire.Validate(this, in p);
@@ -312,16 +410,26 @@ public sealed record TradeRequirementRulesDefinition(
 }
 
 // TradeRequirementRules — multiplier is only present for type 1, autoMultiplierMax only for type 2.
+/// <summary>Represents the rules of a wired trade requirement with their multiplier.</summary>
+/// <param name="Definition">What the user gives and gets.</param>
+/// <param name="Type">The multiplier type, 0 for none, 1 for a fixed multiplier or 2 for an automatic multiplier.</param>
+/// <param name="Multiplier">The fixed multiplier, on the wire only when <paramref name="Type"/> is 1, otherwise 1.</param>
+/// <param name="AutoMultiplierMax">The maximum automatic multiplier, on the wire only when <paramref name="Type"/> is 2, otherwise 1.</param>
 public sealed record TradeRequirementRules(
     TradeRequirementRulesDefinition Definition,
     int Type,
     int Multiplier,
     int AutoMultiplierMax) : IParserComposer<TradeRequirementRules>
 {
+    /// <summary>The multiplier type without a multiplier.</summary>
     public const int TypeNone = 0;
+    /// <summary>The multiplier type with a fixed multiplier.</summary>
     public const int TypeFixedMultiplier = 1;
+    /// <summary>The multiplier type with an automatic multiplier.</summary>
     public const int TypeAutoMultiplier = 2;
 
+    /// <summary>Parses the rules from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeRequirementRules Parse(in PacketReader p)
     {
         TradeRequirementRulesDefinition definition = TradeRequirementRulesDefinition.Parse(p);
@@ -335,6 +443,8 @@ public sealed record TradeRequirementRules(
         return new TradeRequirementRules(definition, type, multiplier, autoMultiplierMax);
     }
 
+    /// <summary>Composes the rules into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         WiredChestWire.Validate(this, in p);
@@ -347,14 +457,23 @@ public sealed record TradeRequirementRules(
     }
 }
 
+/// <summary>Represents the requirement of a wired trade.</summary>
+/// <remarks>Composing throws <see cref="InvalidDataException"/> when <paramref name="Rules"/> is missing for type 4 or set for another type.</remarks>
+/// <param name="Type">The requirement type code. Rules are on the wire only for type 4.</param>
+/// <param name="YouGetText">The text that describes what the user gets.</param>
+/// <param name="LayoutType">The layout type of the trade window.</param>
+/// <param name="Rules">The rules, or <see langword="null"/> when <paramref name="Type"/> is not 4.</param>
 public sealed record TradeRequirement(
     int Type,
     string YouGetText,
     string LayoutType,
     TradeRequirementRules? Rules) : IParserComposer<TradeRequirement>
 {
+    /// <summary>The requirement type that carries rules.</summary>
     public const int TypeWithRules = 4;
 
+    /// <summary>Parses the requirement from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeRequirement Parse(in PacketReader p)
     {
         int type = p.ReadInt();
@@ -364,6 +483,8 @@ public sealed record TradeRequirement(
         return new TradeRequirement(type, youGetText, layoutType, rules);
     }
 
+    /// <summary>Composes the requirement into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         WiredChestWire.Validate(this, in p);
@@ -381,6 +502,20 @@ public sealed record TradeRequirement(
 // Transactions.
 
 // §_-k1f§/WiredTransactionInfo — 13-field log row, transactionId and timestamp are 64-bit.
+/// <summary>Represents one row of a wired transaction log.</summary>
+/// <param name="TransactionId">The id of the transaction, sent as a 64 bit integer.</param>
+/// <param name="FlatId">The id of the room the transaction happened in.</param>
+/// <param name="TransactionType">The transaction type code.</param>
+/// <param name="TransactionDefinitionInfo">The text that describes the transaction definition.</param>
+/// <param name="UserId">The id of the user who made the transaction.</param>
+/// <param name="UserName">The name of the user who made the transaction.</param>
+/// <param name="Timestamp">The time of the transaction as a 64 bit value sent by the hotel.</param>
+/// <param name="ReadableTimestamp">The time of the transaction as text formatted by the hotel.</param>
+/// <param name="ChestCount">The number of chests involved.</param>
+/// <param name="WithdrawFurniCount">The number of furni withdrawn.</param>
+/// <param name="DepositFurniCount">The number of furni deposited.</param>
+/// <param name="WithdrawCoinsCount">The number of coins withdrawn.</param>
+/// <param name="DepositCoinsCount">The number of coins deposited.</param>
 public sealed record WiredTransactionInfo(
     long TransactionId,
     int FlatId,
@@ -396,6 +531,8 @@ public sealed record WiredTransactionInfo(
     int WithdrawCoinsCount,
     int DepositCoinsCount) : IParserComposer<WiredTransactionInfo>
 {
+    /// <summary>Parses the log row from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTransactionInfo Parse(in PacketReader p) => new(
         p.ReadLong(),
         p.ReadInt(),
@@ -411,6 +548,8 @@ public sealed record WiredTransactionInfo(
         p.ReadInt(),
         p.ReadInt());
 
+    /// <summary>Composes the log row into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteLong(TransactionId);
@@ -430,6 +569,13 @@ public sealed record WiredTransactionInfo(
 }
 
 // §_-c1v§ — the paged log container carried by WiredTransactionLogList.
+/// <summary>Represents one page of a wired transaction log.</summary>
+/// <param name="LogListType">The kind of log, 0 for a chest log or 1 for the room log.</param>
+/// <param name="LogListId">The id of the log list, sent as a 64 bit integer.</param>
+/// <param name="TotalLogs">The total number of rows in the log.</param>
+/// <param name="CurrentPage">The number of the page.</param>
+/// <param name="Amount">The page size the hotel reports.</param>
+/// <param name="Logs">The rows on the page.</param>
 public sealed record WiredTransactionLogPage(
     int LogListType,
     long LogListId,
@@ -438,9 +584,13 @@ public sealed record WiredTransactionLogPage(
     int Amount,
     IReadOnlyList<WiredTransactionInfo> Logs) : IParserComposer<WiredTransactionLogPage>
 {
+    /// <summary>The log list type of a chest transaction log.</summary>
     public const int TypeChestLogs = 0;
+    /// <summary>The log list type of the room transaction log.</summary>
     public const int TypeRoomLogs = 1;
 
+    /// <summary>Parses the page from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTransactionLogPage Parse(in PacketReader p)
     {
         int logListType = p.ReadInt();
@@ -456,6 +606,8 @@ public sealed record WiredTransactionLogPage(
         return new WiredTransactionLogPage(logListType, logListId, totalLogs, currentPage, amount, logs);
     }
 
+    /// <summary>Composes the page into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteInt(LogListType);
@@ -470,15 +622,22 @@ public sealed record WiredTransactionLogPage(
 }
 
 // id 2910
+/// <summary>Received with one page of a wired transaction log.</summary>
+/// <remarks>Received as the Flash <c>WiredTransactionLogList</c> message. The hotel sends it in answer to <see cref="WiredTransactionGetChestLogs"/> and <see cref="WiredTransactionGetRoomLogs"/>.</remarks>
+/// <param name="Logs">The log page.</param>
 public sealed record WiredTransactionLogList(WiredTransactionLogPage Logs)
     : IParserComposer<WiredTransactionLogList>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTransactionLogList Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredTransactionLogList ParseFlash(in PacketReader p) =>
         new(WiredTransactionLogPage.Parse(p));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -490,10 +649,17 @@ public sealed record WiredTransactionLogList(WiredTransactionLogPage Logs)
 }
 
 // One (furni-type, count) entry inside a transaction's deposited/withdrawn lists.
+/// <summary>Represents a furni type and a count in the details of a wired transaction.</summary>
+/// <param name="Type">The furni type.</param>
+/// <param name="Count">The number of furni of the type.</param>
 public sealed record ChestFurniCount(ChestItemType Type, int Count) : IParserComposer<ChestFurniCount>
 {
+    /// <summary>Parses the entry from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ChestFurniCount Parse(in PacketReader p) => new(ChestItemType.Parse(p), p.ReadInt());
 
+    /// <summary>Composes the entry into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         Type.Compose(p);
@@ -502,6 +668,12 @@ public sealed record ChestFurniCount(ChestItemType Type, int Count) : IParserCom
 }
 
 // §_-k1f§/WiredTransactionDetails
+/// <summary>Represents the details of one wired transaction.</summary>
+/// <param name="TransactionInfo">The log row of the transaction.</param>
+/// <param name="ChestIds">The ids of the chests involved.</param>
+/// <param name="DepositedFurnis">The deposited furni types with their counts.</param>
+/// <param name="WithdrawnFurnis">The withdrawn furni types with their counts.</param>
+/// <param name="IsIncompleteData">Whether the hotel marks the details as incomplete.</param>
 public sealed record WiredTransactionDetails(
     WiredTransactionInfo TransactionInfo,
     IReadOnlyList<int> ChestIds,
@@ -509,6 +681,8 @@ public sealed record WiredTransactionDetails(
     IReadOnlyList<ChestFurniCount> WithdrawnFurnis,
     bool IsIncompleteData) : IParserComposer<WiredTransactionDetails>
 {
+    /// <summary>Parses the details from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTransactionDetails Parse(in PacketReader p)
     {
         WiredTransactionInfo info = WiredTransactionInfo.Parse(p);
@@ -519,6 +693,8 @@ public sealed record WiredTransactionDetails(
         return new WiredTransactionDetails(info, chestIds, deposited, withdrawn, incomplete);
     }
 
+    /// <summary>Composes the details into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         TransactionInfo.Compose(p);
@@ -547,15 +723,22 @@ public sealed record WiredTransactionDetails(
 }
 
 // id 1306
+/// <summary>Received with the details of one wired transaction.</summary>
+/// <remarks>Received as the Flash <c>WiredTransactionLogDetails</c> message. The hotel sends it in answer to <see cref="WiredTransactionGetLogDetails"/>.</remarks>
+/// <param name="Details">The transaction details.</param>
 public sealed record WiredTransactionLogDetails(WiredTransactionDetails Details)
     : IParserComposer<WiredTransactionLogDetails>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTransactionLogDetails Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredTransactionLogDetails ParseFlash(in PacketReader p) =>
         new(WiredTransactionDetails.Parse(p));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -568,15 +751,25 @@ public sealed record WiredTransactionLogDetails(WiredTransactionDetails Details)
 
 // id 2677 — internalId is a client-side counter and is NOT on the wire. The reward tail is only
 // present for success type 2 when trailing bytes remain.
+/// <summary>Received when a wired transaction succeeds.</summary>
+/// <remarks>Received as the Flash <c>WiredTransactionSuccess</c> message. The reward fields are on the wire only when <paramref name="TransactionSuccessTypeId"/> is 2 and bytes remain after it.</remarks>
+/// <param name="TransactionSuccessTypeId">The success type code.</param>
+/// <param name="RewardContents">The reward, or <see langword="null"/> when none was sent.</param>
+/// <param name="RewardText">The reward text, empty when no reward was sent.</param>
+/// <param name="OpenByDefault">Whether the reward is shown open by default, <see langword="false"/> when no reward was sent.</param>
 public sealed record WiredTransactionSuccess(
     int TransactionSuccessTypeId,
     TradeRequirementRule? RewardContents,
     string RewardText,
     bool OpenByDefault) : IParserComposer<WiredTransactionSuccess>
 {
+    /// <summary>The success type code of a transaction that carries a reward.</summary>
     public const int TypeReward = 2;
+    /// <summary>Gets whether the message carries a reward.</summary>
     public bool HasReward => RewardContents is not null;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTransactionSuccess Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -596,6 +789,8 @@ public sealed record WiredTransactionSuccess(
         return new WiredTransactionSuccess(type, reward, rewardText, openByDefault);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -632,6 +827,17 @@ public sealed record WiredTransactionSuccess(
 // Contracts.
 
 // id 2976 — discriminated by ContractType (short). WiredUpdateContract(1908) writes this exact layout.
+/// <summary>Received with the contents of a wired contract.</summary>
+/// <remarks>Received as the Flash <c>WiredContractContents</c> message. <see cref="WiredUpdateContract"/> writes the same layout. The payment fields are on the wire only for a payment contract and the reward fields only for a reward contract.</remarks>
+/// <param name="ContractId">The id of the contract.</param>
+/// <param name="ContractType">The contract type, 0 for payment, 1 for trade or 2 for reward, sent as a 16 bit integer.</param>
+/// <param name="Definition">What the user gives and gets.</param>
+/// <param name="PaymentMode">The payment mode of a payment contract, sent as a 16 bit integer, otherwise 0.</param>
+/// <param name="ReceiveText">The receive text of a payment contract, otherwise empty.</param>
+/// <param name="LayoutType">The layout type of a payment contract, otherwise empty.</param>
+/// <param name="RewardCategory">The reward category of a reward contract, sent as a 16 bit integer, otherwise 0.</param>
+/// <param name="ShowDialog">Whether a reward contract shows a dialog; otherwise, <see langword="false"/>.</param>
+/// <param name="RewardText">The reward text of a reward contract, otherwise empty.</param>
 public sealed record WiredContractContents(
     int ContractId,
     short ContractType,
@@ -643,10 +849,15 @@ public sealed record WiredContractContents(
     bool ShowDialog,
     string RewardText) : IParserComposer<WiredContractContents>
 {
+    /// <summary>The contract type of a payment contract.</summary>
     public const int TypePayment = 0;
+    /// <summary>The contract type of a trade contract.</summary>
     public const int TypeTrade = 1;
+    /// <summary>The contract type of a reward contract.</summary>
     public const int TypeReward = 2;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredContractContents Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -679,6 +890,8 @@ public sealed record WiredContractContents(
             paymentMode, receiveText, layoutType, rewardCategory, showDialog, rewardText);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -707,15 +920,24 @@ public sealed record WiredContractContents(
 }
 
 // id 3720
+/// <summary>Received with the result of a wired contract update.</summary>
+/// <remarks>Received as the Flash <c>WiredContractUpdateResult</c> message. The hotel sends it in answer to <see cref="WiredUpdateContract"/>.</remarks>
+/// <param name="ContractId">The id of the contract.</param>
+/// <param name="IsSuccess">Whether the update succeeded.</param>
+/// <param name="FailCode">The failure code of a failed update.</param>
 public sealed record WiredContractUpdateResult(int ContractId, bool IsSuccess, string FailCode)
     : IParserComposer<WiredContractUpdateResult>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredContractUpdateResult Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredContractUpdateResult ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadBool(), p.ReadString());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -730,13 +952,20 @@ public sealed record WiredContractUpdateResult(int ContractId, bool IsSuccess, s
 
 // id 1479 (INCOMING) — server pushes "open this contract editor". Distinct from the OUT id-1594
 // message of the same name (a plain contractId composer, wired separately by the coordinator).
+/// <summary>Represents the message that requests a wired contract or asks the client to open its editor.</summary>
+/// <remarks>Sent and received as the Flash <c>WiredOpenContract</c> message. Sent, it requests the contract, which arrives as <see cref="WiredContractContents"/>. Received, it asks the client to open the contract editor.</remarks>
+/// <param name="ContractId">The id of the contract.</param>
 public sealed record WiredOpenContract(int ContractId) : IParserComposer<WiredOpenContract>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredOpenContract Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredOpenContract ParseFlash(in PacketReader p) => new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -749,6 +978,15 @@ public sealed record WiredOpenContract(int ContractId) : IParserComposer<WiredOp
 
 // §_-ru§/§_-z1l§ — the classic two-user trading-window snapshot. Item elements are §_-X12§,
 // which is byte-identical to the shared TradeItem parser.
+/// <summary>Represents the offers of both users in a wired trade.</summary>
+/// <param name="FirstUserId">The id of the first user, written as a 32 bit integer.</param>
+/// <param name="FirstUserItems">The items the first user offers.</param>
+/// <param name="FirstUserNumItems">The item count the hotel reports for the first user.</param>
+/// <param name="FirstUserNumCredits">The credit count the hotel reports for the first user.</param>
+/// <param name="SecondUserId">The id of the second user, written as a 32 bit integer.</param>
+/// <param name="SecondUserItems">The items the second user offers.</param>
+/// <param name="SecondUserNumItems">The item count the hotel reports for the second user.</param>
+/// <param name="SecondUserNumCredits">The credit count the hotel reports for the second user.</param>
 public sealed record WiredTradingItems(
     Id FirstUserId,
     IReadOnlyList<TradeItem> FirstUserItems,
@@ -759,6 +997,8 @@ public sealed record WiredTradingItems(
     int SecondUserNumItems,
     int SecondUserNumCredits) : IParserComposer<WiredTradingItems>
 {
+    /// <summary>Parses the offers from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTradingItems Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -776,6 +1016,8 @@ public sealed record WiredTradingItems(
             secondUserId, secondItems, secondNumItems, secondNumCredits);
     }
 
+    /// <summary>Composes the offers into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -818,18 +1060,28 @@ public sealed record WiredTradingItems(
 }
 
 // id 3650
+/// <summary>Received when the hotel starts a wired trade.</summary>
+/// <remarks>Received as the Flash <c>WiredTradeInitiate</c> message.</remarks>
+/// <param name="Requirement">The requirement of the trade.</param>
+/// <param name="ShowRequirementsImmediate">Whether the requirements are shown right away.</param>
+/// <param name="OverridePreviousTrade">Whether the trade replaces a wired trade that is already open.</param>
+/// <param name="TimeoutSeconds">The timeout of the trade in seconds.</param>
 public sealed record WiredTradeInitiate(
     TradeRequirement Requirement,
     bool ShowRequirementsImmediate,
     bool OverridePreviousTrade,
     int TimeoutSeconds) : IParserComposer<WiredTradeInitiate>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTradeInitiate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredTradeInitiate ParseFlash(in PacketReader p) =>
         new(TradeRequirement.Parse(p), p.ReadBool(), p.ReadBool(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -844,15 +1096,24 @@ public sealed record WiredTradeInitiate(
 }
 
 // id 2488
+/// <summary>Received when the offers in a wired trade change.</summary>
+/// <remarks>Received as the Flash <c>WiredTradeItemsUpdate</c> message.</remarks>
+/// <param name="TradingItems">The offers of both users.</param>
+/// <param name="CanAccept">Whether the trade can be accepted.</param>
+/// <param name="Extra">The extra value the hotel sends with the update.</param>
 public sealed record WiredTradeItemsUpdate(WiredTradingItems TradingItems, bool CanAccept, int Extra)
     : IParserComposer<WiredTradeItemsUpdate>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTradeItemsUpdate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredTradeItemsUpdate ParseFlash(in PacketReader p) =>
         new(WiredTradingItems.Parse(p), p.ReadBool(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -865,13 +1126,20 @@ public sealed record WiredTradeItemsUpdate(WiredTradingItems TradingItems, bool 
     }
 }
 
+/// <summary>Received when a wired trade is canceled.</summary>
+/// <remarks>Received as the Flash <c>WiredTradeCancelled</c> message.</remarks>
+/// <param name="TransactionFailureTypeId">The failure type code that explains the outcome.</param>
 public sealed record WiredTradeCancelled(int TransactionFailureTypeId) : IParserComposer<WiredTradeCancelled>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTradeCancelled Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredTradeCancelled ParseFlash(in PacketReader p) => new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -879,15 +1147,22 @@ public sealed record WiredTradeCancelled(int TransactionFailureTypeId) : IParser
         p.WriteInt(value.TransactionFailureTypeId);
 }
 
+/// <summary>Received when a wired transaction fails.</summary>
+/// <remarks>Received as the Flash <c>WiredTransactionFail</c> message.</remarks>
+/// <param name="TransactionFailureTypeId">The failure type code that explains the outcome.</param>
 public sealed record WiredTransactionFail(int TransactionFailureTypeId)
     : IParserComposer<WiredTransactionFail>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTransactionFail Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredTransactionFail ParseFlash(in PacketReader p) =>
         new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -895,15 +1170,22 @@ public sealed record WiredTransactionFail(int TransactionFailureTypeId)
         p.WriteInt(value.TransactionFailureTypeId);
 }
 
+/// <summary>Received with a wired trade transaction notification.</summary>
+/// <remarks>Received as the Flash <c>WiredTradeTransactionNotification</c> message.</remarks>
+/// <param name="TradeTransactionNotificationId">The id of the notification.</param>
 public sealed record WiredTradeTransactionNotification(int TradeTransactionNotificationId)
     : IParserComposer<WiredTradeTransactionNotification>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTradeTransactionNotification Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredTradeTransactionNotification ParseFlash(in PacketReader p) =>
         new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -912,8 +1194,12 @@ public sealed record WiredTradeTransactionNotification(int TradeTransactionNotif
         in PacketWriter p) => p.WriteInt(value.TradeTransactionNotificationId);
 }
 
+/// <summary>Received when a wired trade completes.</summary>
+/// <remarks>Received as the Flash <c>WiredTradeCompleted</c> message. The message carries no fields.</remarks>
 public sealed record WiredTradeCompleted : IParserComposer<WiredTradeCompleted>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTradeCompleted Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -923,6 +1209,8 @@ public sealed record WiredTradeCompleted : IParserComposer<WiredTradeCompleted>
         return new WiredTradeCompleted();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -932,13 +1220,20 @@ public sealed record WiredTradeCompleted : IParserComposer<WiredTradeCompleted>
 // Outgoing composers. Each mirrors the SWF getMessageArray() push order exactly.
 
 // id 806
+/// <summary>Requests the current contents of a wired chest.</summary>
+/// <remarks>Sent as the Flash <c>OpenChestAndGetContents</c> message.</remarks>
+/// <param name="ChestId">The id of the chest, written as a 32 bit integer.</param>
 public sealed record OpenChestAndGetContents(Id ChestId) : IParserComposer<OpenChestAndGetContents>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static OpenChestAndGetContents Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static OpenChestAndGetContents ParseFlash(in PacketReader p) => new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -947,13 +1242,20 @@ public sealed record OpenChestAndGetContents(Id ChestId) : IParserComposer<OpenC
 }
 
 // id 2935
+/// <summary>Sent when the user closes a wired chest.</summary>
+/// <remarks>Sent as the Flash <c>CloseChest</c> message.</remarks>
+/// <param name="ChestId">The id of the chest, written as a 32 bit integer.</param>
 public sealed record CloseChest(Id ChestId) : IParserComposer<CloseChest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CloseChest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static CloseChest ParseFlash(in PacketReader p) => new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -962,13 +1264,21 @@ public sealed record CloseChest(Id ChestId) : IParserComposer<CloseChest>
 }
 
 // id 1630
+/// <summary>Sent when the user locks or unlocks wired chests.</summary>
+/// <remarks>Sent as the Flash <c>LockAllChests</c> message.</remarks>
+/// <param name="Lock">Whether the chests are locked.</param>
+/// <param name="ApplyToAllInRoom">Whether the change applies to every chest in the room.</param>
 public sealed record LockAllChests(bool Lock, bool ApplyToAllInRoom) : IParserComposer<LockAllChests>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static LockAllChests Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static LockAllChests ParseFlash(in PacketReader p) => new(p.ReadBool(), p.ReadBool());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -981,13 +1291,21 @@ public sealed record LockAllChests(bool Lock, bool ApplyToAllInRoom) : IParserCo
 }
 
 // id 3407
+/// <summary>Sent when the user buys capacity upgrades for a wired chest.</summary>
+/// <remarks>Sent as the Flash <c>UpgradeChest</c> message. The hotel answers with <see cref="UpgradeChestResult"/>.</remarks>
+/// <param name="ChestId">The id of the chest.</param>
+/// <param name="UpgradeAmount">The number of upgrades to buy.</param>
 public sealed record UpgradeChest(int ChestId, int UpgradeAmount) : IParserComposer<UpgradeChest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static UpgradeChest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static UpgradeChest ParseFlash(in PacketReader p) => new(p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1000,13 +1318,20 @@ public sealed record UpgradeChest(int ChestId, int UpgradeAmount) : IParserCompo
 }
 
 // id 3611
+/// <summary>Sent when the user withdraws everything available from a wired chest.</summary>
+/// <remarks>Sent as the Flash <c>WithdrawAllFromChest</c> message.</remarks>
+/// <param name="ChestId">The id of the chest, written as a 32 bit integer.</param>
 public sealed record WithdrawAllFromChest(Id ChestId) : IParserComposer<WithdrawAllFromChest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WithdrawAllFromChest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WithdrawAllFromChest ParseFlash(in PacketReader p) => new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1015,14 +1340,22 @@ public sealed record WithdrawAllFromChest(Id ChestId) : IParserComposer<Withdraw
 }
 
 // id 2843
+/// <summary>Sent when the user withdraws coins from a wired chest.</summary>
+/// <remarks>Sent as the Flash <c>WithdrawCoinsFromChest</c> message.</remarks>
+/// <param name="ChestId">The id of the chest, written as a 32 bit integer.</param>
+/// <param name="CoinAmount">The number of coins to withdraw.</param>
 public sealed record WithdrawCoinsFromChest(Id ChestId, int CoinAmount) : IParserComposer<WithdrawCoinsFromChest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WithdrawCoinsFromChest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WithdrawCoinsFromChest ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1034,15 +1367,24 @@ public sealed record WithdrawCoinsFromChest(Id ChestId, int CoinAmount) : IParse
 }
 
 // id 873 — ChestItemType expands to bool/int/string between the two ints.
+/// <summary>Sent when the user withdraws items of one furni type from a wired chest.</summary>
+/// <remarks>Sent as the Flash <c>WithdrawItemsFromChest</c> message.</remarks>
+/// <param name="ChestId">The id of the chest, written as a 32 bit integer.</param>
+/// <param name="ItemType">The furni type to withdraw.</param>
+/// <param name="Count">The number of items to withdraw.</param>
 public sealed record WithdrawItemsFromChest(Id ChestId, ChestItemType ItemType, int Count)
     : IParserComposer<WithdrawItemsFromChest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WithdrawItemsFromChest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WithdrawItemsFromChest ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), ChestItemType.Parse(p), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1057,13 +1399,20 @@ public sealed record WithdrawItemsFromChest(Id ChestId, ChestItemType ItemType, 
 }
 
 // id 3514
+/// <summary>Sent when the user starts depositing inventory items into a wired chest.</summary>
+/// <remarks>Sent as the Flash <c>StartAddingToChest</c> message. The hotel answers by starting a wired trade with <see cref="WiredTradeInitiate"/>.</remarks>
+/// <param name="ChestId">The id of the chest, written as a 32 bit integer.</param>
 public sealed record StartAddingToChest(Id ChestId) : IParserComposer<StartAddingToChest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static StartAddingToChest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static StartAddingToChest ParseFlash(in PacketReader p) => new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1072,6 +1421,15 @@ public sealed record StartAddingToChest(Id ChestId) : IParserComposer<StartAddin
 }
 
 // id 2905
+/// <summary>Sent when the user changes the notification preferences of a wired chest.</summary>
+/// <remarks>Sent as the Flash <c>SetChestNotificationPreferences</c> message. The hotel confirms with <see cref="ChestPreferencesUpdateSuccess"/>.</remarks>
+/// <param name="ChestId">The id of the chest.</param>
+/// <param name="NotificationMode">The notification mode code.</param>
+/// <param name="NotifyFlagA">The first notification flag.</param>
+/// <param name="NotifyFlagB">The second notification flag.</param>
+/// <param name="EventFlagA">The first event flag.</param>
+/// <param name="EventFlagB">The second event flag.</param>
+/// <param name="EventFlagC">The third event flag.</param>
 public sealed record SetChestNotificationPreferences(
     int ChestId,
     int NotificationMode,
@@ -1081,6 +1439,8 @@ public sealed record SetChestNotificationPreferences(
     bool EventFlagB,
     bool EventFlagC) : IParserComposer<SetChestNotificationPreferences>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SetChestNotificationPreferences Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -1093,6 +1453,8 @@ public sealed record SetChestNotificationPreferences(
         p.ReadBool(),
         p.ReadBool());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1110,15 +1472,25 @@ public sealed record SetChestNotificationPreferences(
 }
 
 // id 2907
+/// <summary>Sent when the user changes the lock and capacity options of a wired chest.</summary>
+/// <remarks>Sent as the Flash <c>SetChestOptions</c> message.</remarks>
+/// <param name="ChestId">The id of the chest, written as a 32 bit integer.</param>
+/// <param name="LockChest">Whether the chest is locked.</param>
+/// <param name="AutoLockChest">Whether the chest locks automatically.</param>
+/// <param name="Capacity">The capacity of the chest.</param>
 public sealed record SetChestOptions(Id ChestId, bool LockChest, bool AutoLockChest, int Capacity)
     : IParserComposer<SetChestOptions>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SetChestOptions Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static SetChestOptions ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadBool(), p.ReadBool(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1132,6 +1504,17 @@ public sealed record SetChestOptions(Id ChestId, bool LockChest, bool AutoLockCh
 }
 
 // id 3830
+/// <summary>Sent when the user changes the name, description, state and preview preferences of a wired chest.</summary>
+/// <remarks>Sent as the Flash <c>SetChestPreferences</c> message. The hotel confirms with <see cref="ChestPreferencesUpdateSuccess"/>.</remarks>
+/// <param name="ChestId">The id of the chest, written as a 32 bit integer.</param>
+/// <param name="ChestName">The name of the chest.</param>
+/// <param name="ChestDescription">The description of the chest.</param>
+/// <param name="PrefFlagA">The first preference flag.</param>
+/// <param name="PrefFlagB">The second preference flag.</param>
+/// <param name="ChestState">The state code of the chest.</param>
+/// <param name="OpenState">The open state code of the chest.</param>
+/// <param name="AmountPreview">The preview amount setting of the chest.</param>
+/// <param name="DisabledFlag">The disabled flag of the chest.</param>
 public sealed record SetChestPreferences(
     Id ChestId,
     string ChestName,
@@ -1143,6 +1526,8 @@ public sealed record SetChestPreferences(
     int AmountPreview,
     bool DisabledFlag) : IParserComposer<SetChestPreferences>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SetChestPreferences Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -1157,6 +1542,8 @@ public sealed record SetChestPreferences(
         p.ReadInt(),
         p.ReadBool());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1178,15 +1565,24 @@ public sealed record SetChestPreferences(
 }
 
 // id 1999
+/// <summary>Requests one page of the transaction log of a wired chest.</summary>
+/// <remarks>Sent as the Flash <c>WiredTransactionGetChestLogs</c> message. The hotel answers with <see cref="WiredTransactionLogList"/>.</remarks>
+/// <param name="LogListId">The id of the chest transaction log list.</param>
+/// <param name="PageSize">The number of rows per page.</param>
+/// <param name="Page">The one based page number.</param>
 public sealed record WiredTransactionGetChestLogs(int LogListId, int PageSize, int Page)
     : IParserComposer<WiredTransactionGetChestLogs>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTransactionGetChestLogs Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredTransactionGetChestLogs ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1200,14 +1596,21 @@ public sealed record WiredTransactionGetChestLogs(int LogListId, int PageSize, i
 }
 
 // id 475 — transactionId is pushed as new Long(): 8 bytes on the wire, not an int.
+/// <summary>Requests the details of one wired transaction.</summary>
+/// <remarks>Sent as the Flash <c>WiredTransactionGetLogDetails</c> message. The hotel answers with <see cref="WiredTransactionLogDetails"/>.</remarks>
+/// <param name="TransactionId">The id of the transaction, written as a 64 bit integer.</param>
 public sealed record WiredTransactionGetLogDetails(long TransactionId)
     : IParserComposer<WiredTransactionGetLogDetails>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTransactionGetLogDetails Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredTransactionGetLogDetails ParseFlash(in PacketReader p) => new(p.ReadLong());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1217,15 +1620,23 @@ public sealed record WiredTransactionGetLogDetails(long TransactionId)
 }
 
 // id 2016
+/// <summary>Requests one page of the room's wired transaction log.</summary>
+/// <remarks>Sent as the Flash <c>WiredTransactionGetRoomLogs</c> message. The hotel answers with <see cref="WiredTransactionLogList"/>.</remarks>
+/// <param name="PageSize">The number of rows per page.</param>
+/// <param name="Page">The one based page number.</param>
 public sealed record WiredTransactionGetRoomLogs(int PageSize, int Page)
     : IParserComposer<WiredTransactionGetRoomLogs>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTransactionGetRoomLogs Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredTransactionGetRoomLogs ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1238,14 +1649,21 @@ public sealed record WiredTransactionGetRoomLogs(int PageSize, int Page)
 }
 
 // id 1908 — writes the exact same layout WiredContractContents(2976) reads.
+/// <summary>Sent when the user saves a wired contract.</summary>
+/// <remarks>Sent as the Flash <c>WiredUpdateContract</c> message. It writes the same layout that <see cref="WiredContractContents"/> reads, and the hotel answers with <see cref="WiredContractUpdateResult"/>.</remarks>
+/// <param name="Contract">The complete contract definition.</param>
 public sealed record WiredUpdateContract(WiredContractContents Contract) : IParserComposer<WiredUpdateContract>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredUpdateContract Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredUpdateContract ParseFlash(in PacketReader p) =>
         new(WiredContractContents.Read(in p));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1257,15 +1675,25 @@ public sealed record WiredUpdateContract(WiredContractContents Contract) : IPars
 // id 3111. The flag says REMOVE, not add: WiredTradingModel.requestAddItemsToTrading sends false
 // and requestRemoveItemFromTrading sends true. Naming it the other way round makes a deposit
 // arrive as a withdrawal of items the offer does not hold, which the hotel answers by refusing.
+/// <summary>Sent when the user adds items to or removes items from the open wired trade.</summary>
+/// <remarks>Sent as the Flash <c>WiredTradeAddDeleteItems</c> message. Use <see cref="WiredTradeAddDeleteItems.Add"/> or <see cref="WiredTradeAddDeleteItems.Remove"/> to create an instance.</remarks>
+/// <param name="IsRemove">Whether the items are taken back out of the offer instead of added.</param>
+/// <param name="Ids">The inventory ids of the items, each written as a 32 bit integer.</param>
 public sealed record WiredTradeAddDeleteItems(bool IsRemove, IReadOnlyList<Id> Ids)
     : IParserComposer<WiredTradeAddDeleteItems>
 {
-    /// <summary>Offers items to the open trade.</summary>
+    /// <summary>Creates a request that offers items in the open wired trade.</summary>
+    /// <param name="ids">The inventory ids of the items to offer.</param>
+    /// <returns>A request with <see cref="IsRemove"/> cleared.</returns>
     public static WiredTradeAddDeleteItems Add(IReadOnlyList<Id> ids) => new(false, ids);
 
-    /// <summary>Takes items back off the open trade.</summary>
+    /// <summary>Creates a request that takes items back out of the open wired trade.</summary>
+    /// <param name="ids">The inventory ids of the items to take back.</param>
+    /// <returns>A request with <see cref="IsRemove"/> set.</returns>
     public static WiredTradeAddDeleteItems Remove(IReadOnlyList<Id> ids) => new(true, ids);
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTradeAddDeleteItems Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -1280,6 +1708,8 @@ public sealed record WiredTradeAddDeleteItems(bool IsRemove, IReadOnlyList<Id> I
         return new WiredTradeAddDeleteItems(is_remove, ids);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1298,8 +1728,12 @@ public sealed record WiredTradeAddDeleteItems(bool IsRemove, IReadOnlyList<Id> I
 }
 
 // id 2646 — empty body.
+/// <summary>Sent when the user cancels the open wired trade.</summary>
+/// <remarks>Sent as the Flash <c>WiredTradeCancel</c> message, which carries no fields.</remarks>
 public sealed record WiredTradeCancel : IParserComposer<WiredTradeCancel>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTradeCancel Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -1309,6 +1743,8 @@ public sealed record WiredTradeCancel : IParserComposer<WiredTradeCancel>
         return new WiredTradeCancel();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1316,13 +1752,20 @@ public sealed record WiredTradeCancel : IParserComposer<WiredTradeCancel>
 }
 
 // id 2818
+/// <summary>Sent when the user confirms the open wired trade or withdraws the confirmation.</summary>
+/// <remarks>Sent as the Flash <c>WiredTradeConfirm</c> message.</remarks>
+/// <param name="Confirm">Whether the trade is confirmed.</param>
 public sealed record WiredTradeConfirm(bool Confirm) : IParserComposer<WiredTradeConfirm>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredTradeConfirm Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WiredTradeConfirm ParseFlash(in PacketReader p) => new(p.ReadBool());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

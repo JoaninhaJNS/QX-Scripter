@@ -8,16 +8,29 @@ using Qx.Model.Messages.Incoming;
 
 namespace Qx.Game;
 
+/// <summary>Represents a category of achievements as the client groups them.</summary>
+/// <param name="Code">The category code, such as <see cref="AchievementCategory.Archive"/>.</param>
+/// <param name="Achievements">The achievements filed under the category.</param>
 public sealed record AchievementCategory(string Code, IReadOnlyList<Achievement> Achievements)
 {
+    /// <summary>The code of the category that holds archived achievements.</summary>
     public const string Archive = "archive";
+    /// <summary>The code of the category that holds achievements marked as new.</summary>
     public const string New = "new";
+    /// <summary>The code of the category that holds wired game achievements.</summary>
     public const string WiredGames = "wired_games";
 
+    /// <summary>Gets the number of levels achieved across the category's achievements.</summary>
     public int Progress => Achievements.Sum(achievement => achievement.LevelsAchieved);
+    /// <summary>Gets the total number of levels across the category's achievements.</summary>
     public int MaxProgress => Achievements.Sum(achievement => achievement.LevelCount);
+    /// <summary>Gets the fraction of levels achieved, from 0 to 1.</summary>
+    /// <remarks>Returns 0 when <see cref="MaxProgress"/> is 0.</remarks>
     public double Completion => MaxProgress <= 0 ? 0 : (double)Progress / MaxProgress;
+    /// <summary>Gets whether every level in the category has been achieved.</summary>
+    /// <remarks>Returns <see langword="false"/> when the category has no levels.</remarks>
     public bool IsComplete => MaxProgress > 0 && Progress >= MaxProgress;
+    /// <summary>Gets whether the category is a regular category rather than <see cref="New"/> or <see cref="WiredGames"/>.</summary>
     public bool IsListed => Code != New && Code != WiredGames;
 }
 
@@ -72,6 +85,12 @@ internal sealed record AchievementStateUpdate(
     long RequestEpoch,
     long PublicationEpoch);
 
+/// <summary>Manages the achievements, achievement score and badge point limits of the user.</summary>
+/// <remarks>
+/// All members are safe to call from any thread. The state is cleared when the hotel connection
+/// closes and when a new session connects. Every read returns a copy, so changing a returned
+/// <see cref="Achievement"/> does not affect the stored state.
+/// </remarks>
 public sealed class AchievementManager : GameStateManager
 {
     private readonly object operations_sync = new();
@@ -89,6 +108,11 @@ public sealed class AchievementManager : GameStateManager
     private bool delivering;
     private int delivery_thread_id;
 
+    /// <summary>Gets or sets the codes of the achievements marked as new.</summary>
+    /// <remarks>
+    /// Achievements with these codes are listed in the <see cref="AchievementCategory.New"/>
+    /// category. Empty codes are dropped when set, and setting the value raises <see cref="Changed"/>.
+    /// </remarks>
     public IReadOnlyList<string> NewAchievementCodes
     {
         get => ReadOnly(State.NewCodes);
@@ -109,22 +133,40 @@ public sealed class AchievementManager : GameStateManager
         }
     }
 
+    /// <summary>Gets every known achievement, including those the client does not list.</summary>
     public IReadOnlyList<Achievement> All => Clone(State.Achievements);
+    /// <summary>Gets whether the achievement list has been received in the current session.</summary>
     public bool IsLoaded => State.Loaded;
+    /// <summary>Gets the user's achievement score.</summary>
+    /// <remarks>The score is only received on the Flash client and is 0 until <see cref="IsScoreLoaded"/> is <see langword="true"/>.</remarks>
     public int Score => State.Score;
+    /// <summary>Gets whether the achievement score has been received in the current session.</summary>
     public bool IsScoreLoaded => State.ScoreLoaded;
+    /// <summary>Gets the category the client opens first, as sent with the achievement list.</summary>
     public string DefaultCategory => State.DefaultCategory;
+    /// <summary>Gets the points each badge level requires.</summary>
     public BadgePointLimits PointLimits => Clone(State.PointLimits);
+    /// <summary>Gets whether the badge point limits have been received in the current session.</summary>
     public bool ArePointLimitsLoaded => State.PointLimitsLoaded;
 
     internal AchievementState State => Volatile.Read(ref state);
 
+    /// <summary>Gets the achievement with the specified id.</summary>
+    /// <param name="id">The id of the achievement.</param>
+    /// <returns>The achievement, or <see langword="null"/> if it is not known.</returns>
     public Achievement? ById(int id)
     {
         Achievement? value = State.Achievements.FirstOrDefault(achievement => achievement.Id == id);
         return value is null ? null : Clone(value);
     }
 
+    /// <summary>Gets the achievement with the specified code.</summary>
+    /// <remarks>
+    /// The code is reduced with <see cref="Achievement.CodeOf(string)"/> first, so a badge code such as
+    /// <c>ACH_RoomEntry5</c> matches the <c>RoomEntry</c> achievement. The comparison ignores case.
+    /// </remarks>
+    /// <param name="code">The achievement code or a badge code of one of its levels.</param>
+    /// <returns>The achievement, or <see langword="null"/> if it is not known.</returns>
     public Achievement? ByCode(string code)
     {
         ArgumentNullException.ThrowIfNull(code);
@@ -134,10 +176,24 @@ public sealed class AchievementManager : GameStateManager
         return value is null ? null : Clone(value);
     }
 
+    /// <summary>Gets the achievement that grants the specified badge.</summary>
+    /// <remarks>Equivalent to <see cref="ByCode(string)"/>.</remarks>
+    /// <param name="badgeCode">The badge code, such as <c>ACH_RoomEntry5</c>.</param>
+    /// <returns>The achievement, or <see langword="null"/> if it is not known.</returns>
     public Achievement? ByBadge(string badgeCode) => ByCode(badgeCode);
 
+    /// <summary>Gets the listed achievements grouped into categories the way the client shows them.</summary>
+    /// <remarks>
+    /// Categories keep the order in which they first appear, followed by <c>misc</c> when present,
+    /// then <see cref="AchievementCategory.Archive"/> and <see cref="AchievementCategory.WiredGames"/>,
+    /// which are always included, and <see cref="AchievementCategory.New"/> when any achievement is
+    /// marked as new. Archived achievements are only filed under the archive category.
+    /// </remarks>
     public IReadOnlyList<AchievementCategory> Categories => CategoriesFor(State);
 
+    /// <summary>Gets the category with the specified code.</summary>
+    /// <param name="code">The category code. The comparison ignores case.</param>
+    /// <returns>The category, or <see langword="null"/> if there is none with that code.</returns>
     public AchievementCategory? Category(string code)
     {
         ArgumentNullException.ThrowIfNull(code);
@@ -145,9 +201,13 @@ public sealed class AchievementManager : GameStateManager
             string.Equals(category.Code, code, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Gets the number of levels achieved across all listed achievements.</summary>
     public int Progress => Listed(State).Sum(achievement => achievement.LevelsAchieved);
+    /// <summary>Gets the total number of levels across all listed achievements.</summary>
     public int MaxProgress => Listed(State).Sum(achievement => achievement.LevelCount);
 
+    /// <summary>Gets the fraction of levels achieved across all listed achievements, from 0 to 1.</summary>
+    /// <remarks>Returns 0 when no levels are known.</remarks>
     public double Completion
     {
         get
@@ -159,12 +219,22 @@ public sealed class AchievementManager : GameStateManager
         }
     }
 
+    /// <summary>Gets the listed achievements that have not reached their final level.</summary>
     public IReadOnlyList<Achievement> Unfinished => Clone(
         Listed(State).Where(achievement => !achievement.IsFinalLevel));
 
+    /// <summary>Gets the listed achievements that have reached their final level.</summary>
     public IReadOnlyList<Achievement> Finished => Clone(
         Listed(State).Where(achievement => achievement.IsFinalLevel));
 
+    /// <summary>Gets the unfinished listed achievements that are closest to their next level.</summary>
+    /// <remarks>
+    /// Only achievements that show a progress bar are included. They are ordered by
+    /// <see cref="Achievement.Progress"/> descending, then by the fewest points still to earn.
+    /// </remarks>
+    /// <param name="count">The maximum number of achievements to return.</param>
+    /// <returns>Up to <paramref name="count"/> achievements.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="count"/> is negative.</exception>
     public IReadOnlyList<Achievement> Closest(int count = 10)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(count);
@@ -175,6 +245,16 @@ public sealed class AchievementManager : GameStateManager
             .Take(count));
     }
 
+    /// <summary>Gets the badge the next level of an achievement grants and the points it requires.</summary>
+    /// <remarks>
+    /// The point limit comes from <see cref="PointLimits"/> when it has an entry for the next level,
+    /// and from the achievement's own <see cref="Achievement.ScoreLimit"/> otherwise.
+    /// </remarks>
+    /// <param name="code">The achievement code or a badge code of one of its levels.</param>
+    /// <returns>
+    /// The next badge, or <see langword="null"/> if the achievement is not known, is at its final
+    /// level, or has a badge code that does not follow the level pattern.
+    /// </returns>
     public NextBadge? Next(string code)
     {
         ArgumentNullException.ThrowIfNull(code);
@@ -196,14 +276,25 @@ public sealed class AchievementManager : GameStateManager
             achievement.PointsToNextLevel);
     }
 
+    /// <summary>Occurs when the full achievement list is received.</summary>
+    /// <remarks>The argument is the list as the server sent it.</remarks>
     public event Action<IReadOnlyList<Achievement>>? ListChanged;
+    /// <summary>Occurs when the server updates a single achievement.</summary>
+    /// <remarks>The argument is the updated achievement.</remarks>
     public event Action<Achievement>? Updated;
+    /// <summary>Occurs when an achievement update raises the achievement's level.</summary>
+    /// <remarks>The arguments are the achievement before and after the update. Raised after <see cref="Updated"/>.</remarks>
     public event Action<Achievement, Achievement>? LevelUp;
+    /// <summary>Occurs when the achievement score is received.</summary>
+    /// <remarks>The argument is the new score.</remarks>
     public event Action<int>? ScoreChanged;
+    /// <summary>Occurs when the achievements, score, point limits or new achievement codes change.</summary>
+    /// <remarks>Raised after the more specific events. It is not raised when the state is cleared.</remarks>
     public event Action? Changed;
     internal event Action<AchievementStateUpdate>? StateCommitted;
     internal event Action<AchievementStateUpdate>? StateChanged;
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         CommitReset(CurrentSession);
@@ -225,13 +316,29 @@ public sealed class AchievementManager : GameStateManager
         OnIncoming(MessageContracts.Achievements.PointLimits, ApplyPointLimits);
     }
 
+    /// <summary>Requests the achievement list from the server.</summary>
+    /// <remarks>Returns without waiting. The result arrives through <see cref="ListChanged"/>.</remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void Request() => Operations().RequestAchievements();
 
+    /// <summary>Requests the badge point limits from the server.</summary>
+    /// <remarks>Returns without waiting. The result is stored in <see cref="PointLimits"/> and raises <see cref="Changed"/>.</remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void RequestPointLimits() => Operations().RequestPointLimits();
 
+    /// <summary>Gets whether data that only the Flash client receives, such as the achievement score, is supported.</summary>
+    /// <remarks>Always returns <see langword="true"/>.</remarks>
     public bool IsFlashOnlyDataSupported =>
         true;
 
+    /// <summary>Requests the achievement list if it has not been loaded and waits for it.</summary>
+    /// <remarks>Completes immediately when the list is already loaded. Concurrent callers share one request.</remarks>
+    /// <param name="timeoutMs">The time to wait for the list, in milliseconds.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with every known achievement.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when the list does not arrive within <paramref name="timeoutMs"/>.</exception>
     public Task<IReadOnlyList<Achievement>> EnsureLoadedAsync(
         int timeoutMs = 10000,
         CancellationToken cancellationToken = default)
@@ -241,6 +348,14 @@ public sealed class AchievementManager : GameStateManager
         return Operations().EnsureAchievementsLoadedAsync(timeoutMs, cancellationToken);
     }
 
+    /// <summary>Requests the badge point limits if they have not been loaded and waits for them.</summary>
+    /// <remarks>Completes immediately when the limits are already loaded. Concurrent callers share one request.</remarks>
+    /// <param name="timeoutMs">The time to wait for the limits, in milliseconds.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the badge point limits.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when the limits do not arrive within <paramref name="timeoutMs"/>.</exception>
     public Task<BadgePointLimits> EnsurePointLimitsLoadedAsync(
         int timeoutMs = 10000,
         CancellationToken cancellationToken = default)
@@ -408,6 +523,7 @@ public sealed class AchievementManager : GameStateManager
 
     internal bool IsCurrentPublication(AchievementStateUpdate update) => UpdateCurrent(update);
 
+    /// <inheritdoc/>
     protected override void Reset() => CommitReset(CurrentSession);
 
     private void BindSession(Session session) => CommitReset(session);
@@ -1074,6 +1190,16 @@ public sealed class AchievementManager : GameStateManager
     }
 }
 
+/// <summary>Represents the badge the next level of an achievement grants.</summary>
+/// <param name="Achievement">The achievement at its current level.</param>
+/// <param name="BadgeCode">The badge code the next level grants.</param>
+/// <param name="Level">The next level.</param>
+/// <param name="PointLimit">
+/// The point total the badge point limits give for the next level, or the achievement's
+/// <see cref="Qx.Model.Messages.Incoming.Achievement.ScoreLimit"/> when no limit was sent for it.
+/// </param>
+/// <param name="CurrentPoints">The points earned in the current level, counted from where the level started.</param>
+/// <param name="PointsToGo">The points still to earn before the next level, never below zero.</param>
 public sealed record NextBadge(
     Achievement Achievement,
     string BadgeCode,

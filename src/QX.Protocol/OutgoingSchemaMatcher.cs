@@ -2,8 +2,22 @@ using Qx.Messages;
 
 namespace Qx.Protocol;
 
+/// <summary>Provides a check of whether an outgoing packet body matches one of a message's schemas.</summary>
 public static class OutgoingSchemaMatcher
 {
+    /// <summary>Gets whether the whole packet body, read from position 0, matches one of the supported schemas.</summary>
+    /// <remarks>
+    /// Schemas with a <see cref="OutgoingWireType.Decimal"/> parameter, or an <see cref="OutgoingWireType.Unknown"/>
+    /// parameter without known element types, are skipped. A boolean must be 0 or 1 and a character must be a
+    /// one-character string. The packet position is not changed. Read errors other than
+    /// <see cref="IndexOutOfRangeException"/> and <see cref="InvalidDataException"/> are not caught, so floats and
+    /// collections require a packet whose client type is <see cref="Qx.ClientType.Flash"/>.
+    /// </remarks>
+    /// <param name="packet">The outgoing packet to check.</param>
+    /// <param name="schemas">The candidate schemas of the message.</param>
+    /// <param name="has_supported_schema">Whether at least one schema could be checked.</param>
+    /// <returns><see langword="true"/> if a supported schema reads the body to its end without error; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="packet"/> or <paramref name="schemas"/> is <see langword="null"/>.</exception>
     public static bool TryMatch(
         IPacket packet,
         IReadOnlyList<OutgoingMessageSchema> schemas,

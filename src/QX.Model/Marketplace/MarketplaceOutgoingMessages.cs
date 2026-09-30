@@ -4,9 +4,13 @@ using Qx.Model.Messages.Incoming;
 
 namespace Qx.Model.Messages.Outgoing;
 
+/// <summary>Represents a request for the hotel's marketplace settings.</summary>
+/// <remarks>Only the modern Flash marketplace layout has the message. The hotel answers with <see cref="MarketplaceConfiguration"/>.</remarks>
 public sealed record GetMarketplaceConfiguration
     : IParserComposer<GetMarketplaceConfiguration>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetMarketplaceConfiguration Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -17,6 +21,8 @@ public sealed record GetMarketplaceConfiguration
         return new GetMarketplaceConfiguration();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -25,9 +31,13 @@ public sealed record GetMarketplaceConfiguration
         in PacketWriter p) => MarketplaceWire.RequireModernFlash(in p);
 }
 
+/// <summary>Represents a request that asks whether the local user may list a marketplace offer.</summary>
+/// <remarks>Only the modern Flash marketplace layout has the message. The hotel answers with <see cref="MarketplaceCanMakeOfferResult"/>.</remarks>
 public sealed record GetMarketplaceCanMakeOffer
     : IParserComposer<GetMarketplaceCanMakeOffer>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetMarketplaceCanMakeOffer Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -38,6 +48,8 @@ public sealed record GetMarketplaceCanMakeOffer
         return new GetMarketplaceCanMakeOffer();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -46,9 +58,13 @@ public sealed record GetMarketplaceCanMakeOffer
         in PacketWriter p) => MarketplaceWire.RequireModernFlash(in p);
 }
 
+/// <summary>Represents a request to buy a batch of marketplace listing tokens.</summary>
+/// <remarks>Only the modern Flash marketplace layout has the message.</remarks>
 public sealed record BuyMarketplaceTokens
     : IParserComposer<BuyMarketplaceTokens>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BuyMarketplaceTokens Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -59,6 +75,8 @@ public sealed record BuyMarketplaceTokens
         return new BuyMarketplaceTokens();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -67,11 +85,20 @@ public sealed record BuyMarketplaceTokens
         in PacketWriter p) => MarketplaceWire.RequireModernFlash(in p);
 }
 
+/// <summary>Represents a request to list inventory items on the marketplace at one price each.</summary>
+/// <remarks>
+/// The legacy Flash marketplace layout carries exactly one item id; the modern layout carries a list.
+/// The hotel answers with <see cref="MarketplaceMakeOfferResult"/>.
+/// </remarks>
 public sealed record MakeMarketplaceOffer
     : IParserComposer<MakeMarketplaceOffer>
 {
     private IReadOnlyList<Id> _item_ids = Array.Empty<Id>();
 
+    /// <summary>Initializes a new instance of the <see cref="MakeMarketplaceOffer"/> record.</summary>
+    /// <param name="price">The price per item in credits.</param>
+    /// <param name="furni_category">The category of the items, <see cref="MarketplaceFurniCategory.Floor"/> or <see cref="MarketplaceFurniCategory.Wall"/>.</param>
+    /// <param name="item_ids">The inventory item ids to list.</param>
     public MakeMarketplaceOffer(
         int price,
         MarketplaceFurniCategory furni_category,
@@ -82,15 +109,20 @@ public sealed record MakeMarketplaceOffer
         ItemIds = item_ids;
     }
 
+    /// <summary>Gets the price per item in credits.</summary>
     public int Price { get; init; }
+    /// <summary>Gets the category of the items, <see cref="MarketplaceFurniCategory.Floor"/> or <see cref="MarketplaceFurniCategory.Wall"/>.</summary>
     public MarketplaceFurniCategory FurniCategory { get; init; }
 
+    /// <summary>Gets the inventory item ids to list, as a read only copy.</summary>
     public IReadOnlyList<Id> ItemIds
     {
         get => _item_ids;
         init => _item_ids = MarketplaceWire.FreezeValues(value, nameof(ItemIds));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static MakeMarketplaceOffer Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -115,6 +147,8 @@ public sealed record MakeMarketplaceOffer
         return new MakeMarketplaceOffer(price, category, item_ids);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -146,11 +180,18 @@ public sealed record MakeMarketplaceOffer
     }
 }
 
+/// <summary>Represents a request for the marketplace statistics of one furni kind.</summary>
+/// <remarks>The hotel answers with <see cref="MarketplaceItemStats"/>.</remarks>
+/// <param name="FurniCategory">The marketplace category of the furni.</param>
+/// <param name="FurniTypeId">The furni type id.</param>
+/// <param name="ExtraData">The extra data string, only sent by the modern Flash layout and only when not empty. The legacy layout requires an empty string.</param>
 public sealed record GetMarketplaceItemStats(
     MarketplaceFurniCategory FurniCategory,
     int FurniTypeId,
     string ExtraData) : IParserComposer<GetMarketplaceItemStats>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetMarketplaceItemStats Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -167,6 +208,8 @@ public sealed record GetMarketplaceItemStats(
         return new GetMarketplaceItemStats(category, furni_type_id, extra_data);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -188,6 +231,15 @@ public sealed record GetMarketplaceItemStats(
     }
 }
 
+/// <summary>Represents a marketplace offer search.</summary>
+/// <remarks>The hotel answers with <see cref="MarketplaceOffers"/>.</remarks>
+/// <param name="MinimumPrice">The lowest price to include, in credits, or -1 for no lower bound.</param>
+/// <param name="MaximumPrice">The highest price to include, in credits, or -1 for no upper bound.</param>
+/// <param name="SearchQuery">The search text.</param>
+/// <param name="SortOrder">The order of the results.</param>
+/// <param name="CombineUniqueOffers">
+/// Whether unique offers are grouped, required by the modern Flash layout and <see langword="null"/> on the legacy layout.
+/// </param>
 public sealed record SearchMarketplaceOffers(
     int MinimumPrice,
     int MaximumPrice,
@@ -195,6 +247,8 @@ public sealed record SearchMarketplaceOffers(
     MarketplaceSortOrder SortOrder,
     bool? CombineUniqueOffers) : IParserComposer<SearchMarketplaceOffers>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SearchMarketplaceOffers Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -217,6 +271,8 @@ public sealed record SearchMarketplaceOffers(
             combine_unique_offers);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -252,10 +308,15 @@ public sealed record SearchMarketplaceOffers(
     }
 }
 
+/// <summary>Represents a request for the local user's own marketplace offers.</summary>
+/// <remarks>The hotel answers with <see cref="MarketplaceOwnOffers"/>.</remarks>
+/// <param name="Category">The slice of offers to list, required by the modern Flash layout and <see langword="null"/> on the legacy layout.</param>
 public sealed record GetMarketplaceOwnOffers(
     MarketplaceOwnOffersCategory? Category)
     : IParserComposer<GetMarketplaceOwnOffers>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetMarketplaceOwnOffers Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -269,6 +330,8 @@ public sealed record GetMarketplaceOwnOffers(
         return new GetMarketplaceOwnOffers(category);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -293,15 +356,25 @@ public sealed record GetMarketplaceOwnOffers(
     }
 }
 
+/// <summary>Represents a request to buy a marketplace offer.</summary>
+/// <remarks>
+/// Flash buys by offer id, so the only concrete form is <see cref="BuyMarketplaceOffer"/>. The hotel
+/// answers with <see cref="MarketplaceBuyResult"/>.
+/// </remarks>
 public abstract record MarketplaceBuyOfferRequest
     : IParserComposer<MarketplaceBuyOfferRequest>
 {
+    /// <summary>Parses the message from a packet as a <see cref="BuyMarketplaceOffer"/>.</summary>
+    /// <param name="p">The packet reader.</param>
     public static MarketplaceBuyOfferRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static MarketplaceBuyOfferRequest ParseFlash(in PacketReader p) =>
         new BuyMarketplaceOffer(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidDataException">Thrown when the value is not a <see cref="BuyMarketplaceOffer"/>.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -319,9 +392,13 @@ public abstract record MarketplaceBuyOfferRequest
     }
 }
 
+/// <summary>Represents a request to buy a marketplace offer by its id.</summary>
+/// <param name="OfferId">The id of the offer to buy.</param>
 public sealed record BuyMarketplaceOffer(Id OfferId)
     : MarketplaceBuyOfferRequest, IParserComposer<BuyMarketplaceOffer>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static new BuyMarketplaceOffer Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -329,15 +406,22 @@ public sealed record BuyMarketplaceOffer(Id OfferId)
         new(p.ReadInt());
 }
 
+/// <summary>Represents a request to cancel one of the local user's marketplace offers.</summary>
+/// <remarks>The hotel answers with <see cref="MarketplaceCancelOfferResult"/>.</remarks>
+/// <param name="OfferId">The id of the offer to cancel.</param>
 public sealed record CancelMarketplaceOffer(Id OfferId)
     : IParserComposer<CancelMarketplaceOffer>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CancelMarketplaceOffer Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static CancelMarketplaceOffer ParseFlash(in PacketReader p) =>
         new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -348,9 +432,12 @@ public sealed record CancelMarketplaceOffer(Id OfferId)
     }
 }
 
+/// <summary>Represents a request to collect the credits from sold marketplace offers.</summary>
 public sealed record RedeemMarketplaceOfferCredits
     : IParserComposer<RedeemMarketplaceOfferCredits>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static RedeemMarketplaceOfferCredits Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -360,6 +447,8 @@ public sealed record RedeemMarketplaceOfferCredits
         return new RedeemMarketplaceOfferCredits();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -370,9 +459,13 @@ public sealed record RedeemMarketplaceOfferCredits
     }
 }
 
+/// <summary>Represents a request to cancel every open marketplace offer of the local user.</summary>
+/// <remarks>Only the modern Flash marketplace layout has the message. The hotel answers with <see cref="MarketplaceCancelAllOffersResult"/>.</remarks>
 public sealed record CancelAllMarketplaceOffers
     : IParserComposer<CancelAllMarketplaceOffers>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CancelAllMarketplaceOffers Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -383,6 +476,8 @@ public sealed record CancelAllMarketplaceOffers
         return new CancelAllMarketplaceOffers();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -391,10 +486,15 @@ public sealed record CancelAllMarketplaceOffers
         in PacketWriter p) => MarketplaceWire.RequireModernFlash(in p);
 }
 
+/// <summary>Represents a request to clear the local user's sold or expired marketplace offer history.</summary>
+/// <remarks>Only the modern Flash marketplace layout has the message. The hotel answers with <see cref="MarketplaceClearOwnHistoryResult"/>.</remarks>
+/// <param name="Category">The history to clear, <see cref="MarketplaceOwnOffersCategory.Sold"/> or <see cref="MarketplaceOwnOffersCategory.Expired"/>.</param>
 public sealed record ClearMarketplaceOwnHistory(
     MarketplaceOwnOffersCategory Category)
     : IParserComposer<ClearMarketplaceOwnHistory>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ClearMarketplaceOwnHistory Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -407,6 +507,8 @@ public sealed record ClearMarketplaceOwnHistory(
         return new ClearMarketplaceOwnHistory(category);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

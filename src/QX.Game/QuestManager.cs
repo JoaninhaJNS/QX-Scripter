@@ -60,6 +60,21 @@ internal readonly record struct QuestRequestCorrelation(
     long RequestEpoch,
     int OutstandingRequests);
 
+/// <summary>
+/// Manages the quests of the current session.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Tracks the available and seasonal quest lists, the current quest, the last completion and
+/// cancellation and the daily quest from the Flash quest messages. Collections and models returned
+/// by the properties are copies, so changing them does not change the manager's state.
+/// </para>
+/// <para>
+/// The state is cleared when the hotel connection closes and when a new hotel session connects.
+/// Events are raised after the state is updated and are skipped once the session they belong to has
+/// ended. All members are safe to call from any thread.
+/// </para>
+/// </remarks>
 public sealed class QuestManager : GameStateManager
 {
     private readonly object operations_sync = new();
@@ -84,28 +99,45 @@ public sealed class QuestManager : GameStateManager
     private bool delivering;
     private int delivery_thread_id;
 
+    /// <summary>Gets the available quests from the last quest list the server sent.</summary>
+    /// <remarks>Empty until the list is received and after the state is cleared.</remarks>
     public IReadOnlyList<QuestData> Available => State.Available.Select(Clone).ToArray();
+    /// <summary>Gets the seasonal quests from the last seasonal quest list the server sent.</summary>
+    /// <remarks>Empty until the list is received and after the state is cleared.</remarks>
     public IReadOnlyList<QuestData> Seasonal => State.Seasonal.Select(Clone).ToArray();
+    /// <summary>Gets the quest from the last quest update, or <see langword="null"/> if none was received.</summary>
     public QuestData? Current => State.Current is { } value ? Clone(value) : null;
+    /// <summary>Gets the last quest completion the server reported, or <see langword="null"/> if none was received.</summary>
     public QuestCompleted? LastCompletion =>
         State.LastCompletion is { } value ? Clone(value) : null;
+    /// <summary>Gets the last quest cancellation the server reported, or <see langword="null"/> if none was received.</summary>
     public QuestCancelled? LastCancellation =>
         State.LastCancellation is { } value ? Clone(value) : null;
+    /// <summary>Gets the last daily quest the server sent, or <see langword="null"/> if none was received.</summary>
     public QuestDaily? Daily => State.Daily is { } value ? Clone(value) : null;
+    /// <summary>Gets whether the last quest list asked the client to open the quest window.</summary>
     public bool OpenWindow => State.OpenWindow;
 
+    /// <summary>Occurs when the server sends the list of available quests, with the received list.</summary>
     public event Action<Quests>? AvailableChanged;
+    /// <summary>Occurs when the server sends the list of seasonal quests, with the received list.</summary>
     public event Action<QuestsSeasonal>? SeasonalChanged;
+    /// <summary>Occurs when the server sends a quest update, with the updated quest.</summary>
     public event Action<QuestData>? CurrentChanged;
+    /// <summary>Occurs when the server reports a completed quest, with the completion message.</summary>
     public event Action<QuestCompleted>? Completed;
+    /// <summary>Occurs when the server reports a canceled quest, with the cancellation message.</summary>
     public event Action<QuestCancelled>? Cancelled;
+    /// <summary>Occurs when the server sends the daily quest, with the received message.</summary>
     public event Action<QuestDaily>? DailyChanged;
+    /// <summary>Occurs after the quest state is cleared when the hotel connection closes or a new session connects.</summary>
     public event Action? ResetCompleted;
     internal event Action<QuestStateUpdate>? StateCommitted;
     internal event Action<QuestStateUpdate>? StateChanged;
 
     internal QuestState State => Volatile.Read(ref state);
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         CommitReset(CurrentSession);
@@ -127,8 +159,17 @@ public sealed class QuestManager : GameStateManager
         OnIncoming(MessageContracts.Quests.Daily, ApplyDaily);
     }
 
+    /// <summary>Requests the list of available quests from the server.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when the quest operations are not bound yet.</exception>
     public void RequestAvailable() => Operations().RequestAvailable();
 
+    /// <summary>Gets the available quests, requesting them from the server if they are not loaded yet.</summary>
+    /// <param name="timeoutMs">The time to wait for the quest list, in milliseconds.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the available quests.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the quest operations are not bound yet.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when the quest list does not arrive within the timeout.</exception>
     public Task<IReadOnlyList<QuestData>> EnsureAvailableLoadedAsync(
         int timeoutMs = 10000,
         CancellationToken cancellationToken = default)
@@ -138,21 +179,42 @@ public sealed class QuestManager : GameStateManager
         return Operations().EnsureAvailableLoadedAsync(timeoutMs, cancellationToken);
     }
 
+    /// <summary>Requests the list of seasonal quests from the server.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when the quest operations are not bound yet.</exception>
     public void RequestSeasonal() => Operations().RequestSeasonal();
 
+    /// <summary>Requests a daily quest from the server.</summary>
+    /// <param name="is_easy">Whether to request an easy daily quest rather than a hard one.</param>
+    /// <param name="index">The index of the daily quest.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the quest operations are not bound yet.</exception>
     public void RequestDaily(bool is_easy, int index) =>
         Operations().RequestDaily(is_easy, index);
 
+    /// <summary>Sends a request to accept a quest.</summary>
+    /// <param name="quest_id">The id of the quest.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the quest operations are not bound yet.</exception>
     public void Accept(Id quest_id) => Operations().Accept(quest_id);
 
+    /// <summary>Sends a request to activate a quest.</summary>
+    /// <param name="quest_id">The id of the quest.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the quest operations are not bound yet.</exception>
     public void Activate(Id quest_id) => Operations().Activate(quest_id);
 
+    /// <summary>Sends a request to reject a quest.</summary>
+    /// <param name="quest_id">The id of the quest.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the quest operations are not bound yet.</exception>
     public void Reject(Id quest_id) => Operations().Reject(quest_id);
 
+    /// <summary>Sends a request to cancel the current quest.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when the quest operations are not bound yet.</exception>
     public void Cancel() => Operations().Cancel();
 
+    /// <summary>Sends the message that opens the quest tracker.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when the quest operations are not bound yet.</exception>
     public void OpenTracker() => Operations().OpenTracker();
 
+    /// <summary>Sends the message that completes the friend request quest.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when the quest operations are not bound yet.</exception>
     public void CompleteFriendRequestQuest() =>
         Operations().CompleteFriendRequestQuest();
 
@@ -312,6 +374,7 @@ public sealed class QuestManager : GameStateManager
 
     internal bool IsCurrentPublication(QuestStateUpdate update) => UpdateCurrent(update);
 
+    /// <inheritdoc/>
     protected override void Reset() => CommitReset(CurrentSession);
 
     private void BindSession(Session session) => CommitReset(session);

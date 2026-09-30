@@ -14,13 +14,18 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// Requests another user's extended profile: figure, motto, creation date, achievement
-    /// score, group memberships and friend/relationship flags.
+    /// Requests another user's extended profile, with figure, motto, creation date, achievement
+    /// score, group memberships and friend and relationship flags.
     /// </summary>
+    /// <remarks>
+    /// The request asks the hotel not to open the profile window. The reply is not blocked, so the
+    /// game client also receives it.
+    /// </remarks>
     /// <param name="userId">The target user's account id, not their room index.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
     /// <returns>The profile whose id matches <paramref name="userId"/>.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching profile arrived in time.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="userId"/> is not positive, or <paramref name="timeoutMs"/> is outside 1 to 120000.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching profile arrived in time.</exception>
     public async Task<UserProfile> GetProfile(Id userId, int timeoutMs = 10000)
     {
         RemoteProfileResult result = await Application
@@ -33,12 +38,17 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Requests a group's details: name, description, badge, home room, member count and the
+    /// Requests a group's details, with name, description, badge, home room, member count and the
     /// local user's membership state.
     /// </summary>
+    /// <remarks>
+    /// The request asks the hotel not to open the group window. The reply is not blocked, so the
+    /// game client also receives it.
+    /// </remarks>
     /// <param name="groupId">The group id.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching group details arrived in time.</exception>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The details of the group whose id matches <paramref name="groupId"/>.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching group details arrived in time.</exception>
     public async Task<GroupData> GetGroup(Id groupId, int timeoutMs = 10000)
     {
         GroupDetailsResult result = await Application
@@ -51,13 +61,17 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Requests a pet's stats: breed, level, experience, energy, happiness, scratches and
-    /// owner. The pet must be visible to the server in the current context (in the room or in
-    /// the inventory).
+    /// Requests a pet's stats, with breed, level, experience, energy, happiness, scratches and owner.
     /// </summary>
+    /// <remarks>
+    /// The pet must be visible to the server in the current context (in the room or in the
+    /// inventory). The request is sent once without a retry, and the reply is not blocked, so the
+    /// game client also receives it.
+    /// </remarks>
     /// <param name="petId">The pet id.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching pet info arrived in time.</exception>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000.</param>
+    /// <returns>The stats of the pet whose id matches <paramref name="petId"/>.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching pet info arrived in time.</exception>
     public async Task<PetInfo> GetPetInfo(Id petId, int timeoutMs = 10000)
     {
         PetInfoReadResult result = await Application
@@ -102,12 +116,16 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Requests the contents of a sticky note (post-it) placed in the room, returning its text
-    /// and colour.
+    /// Requests the contents of a sticky note (post-it) placed in the room.
     /// </summary>
+    /// <remarks>
+    /// The request is sent once without a retry, and the reply is not blocked, so the game client
+    /// also receives it.
+    /// </remarks>
     /// <param name="itemId">The wall item id of the sticky note.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching item data arrived in time.</exception>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000.</param>
+    /// <returns>The sticky note's id, color and text.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching item data arrived in time.</exception>
     public async Task<Sticky> GetSticky(Id itemId, int timeoutMs = 10000)
     {
         StickyReadResult result = await Application
@@ -122,12 +140,16 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Requests the badges a user has equipped in their profile slots. This is the small
-    /// selected set, not the user's full badge collection.
+    /// Requests the badges a user has equipped in their profile slots.
     /// </summary>
+    /// <remarks>
+    /// This is the small selected set, not the user's full badge collection. The reply is not
+    /// blocked, so the game client also receives it.
+    /// </remarks>
     /// <param name="userId">The target user's account id.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching badge list arrived in time.</exception>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The user's id and equipped badges.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching badge list arrived in time.</exception>
     public async Task<UserBadges> GetBadges(Id userId, int timeoutMs = 10000)
     {
         RemoteBadgesResult result = await Application
@@ -141,6 +163,18 @@ public partial class ScriptGlobals
             Array.AsReadOnly(result.Badges.ToArray()));
     }
 
+    /// <summary>
+    /// Requests the relationship summary shown on a user's profile.
+    /// </summary>
+    /// <remarks>
+    /// Each entry holds a relationship type, how many friends the user marked with it, and one
+    /// randomly picked friend with that relationship. The reply is not blocked, so the game client
+    /// also receives it.
+    /// </remarks>
+    /// <param name="userId">The target user's account id.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The user's id and relationship entries.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching relationship status arrived in time.</exception>
     public async Task<RelationshipStatus> GetRelationship(Id userId, int timeoutMs = 10000)
     {
         RemoteRelationshipResult result = await Application
@@ -168,12 +202,13 @@ public partial class ScriptGlobals
     /// <c>owner:name</c>, <c>roomname:text</c>, <c>tag:text</c> and <c>group:name</c>; empty
     /// means no filter.
     /// </param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
     /// <returns>
     /// The result, which is matched back to the exact <paramref name="code"/> and
-    /// <paramref name="filter"/> that were requested.
+    /// <paramref name="filter"/> that were requested. The reply also reaches the game client.
     /// </returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching search result arrived in time.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="code"/> is empty or white space.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching search result arrived in time.</exception>
     public async Task<NavigatorSearchResult> SearchRooms(
         string code,
         string filter,
@@ -193,7 +228,8 @@ public partial class ScriptGlobals
     /// </summary>
     /// <param name="code">The navigator view code; see <see cref="SearchRooms"/>.</param>
     /// <param name="filter">The filter text; see <see cref="SearchRooms"/>.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>A query over the rooms of every result block.</returns>
     public async Task<RoomDataQuery> SearchRoomQuery(
         string code,
         string filter = "",
@@ -204,16 +240,21 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Searches for user accounts by name. The server returns both exact and partial matches,
-    /// including offline users, and applies its own result cap.
+    /// Searches for user accounts by name and waits for the result.
     /// </summary>
+    /// <remarks>
+    /// The server returns both exact and partial matches, including offline users, and applies its
+    /// own result cap. The reply is not blocked, so the game client also receives it.
+    /// </remarks>
     /// <param name="name">The name or name fragment to search for.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
     /// <returns>
-    /// The first search result that arrives. The reply carries no echo of the query, so a
-    /// concurrent search elsewhere in the client could in principle satisfy this call.
+    /// The first search result that arrives, split into friends and other users. The reply carries
+    /// no echo of the query, so a concurrent search elsewhere in the client could in principle
+    /// satisfy this call.
     /// </returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No search result arrived in time.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or white space.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no search result arrived in time.</exception>
     public async Task<UserSearchResults> SearchUsers(string name, int timeoutMs = 10000)
     {
         FriendsSearchResult result = await Application.InvokeAsync<FriendsSearchRequest, FriendsSearchResult>(
@@ -226,10 +267,13 @@ public partial class ScriptGlobals
     /// <summary>
     /// Requests the marketplace price history and current offer counts for one furni kind.
     /// </summary>
+    /// <remarks>The reply is not blocked, so the game client also receives it.</remarks>
     /// <param name="itemType">The furni category: 1 floor item, 2 wall item, 3 limited edition.</param>
-    /// <param name="kind">The furni type id (the sprite/class id shared by all copies of that furni).</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching stats arrived in time.</exception>
+    /// <param name="kind">The furni type id (the sprite or class id shared by all copies of that furni).</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The stats whose category and furni type match the request.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="itemType"/> is not 1, 2 or 3, or <paramref name="kind"/> is below 1.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching stats arrived in time.</exception>
     public Task<MarketplaceItemStatsSnapshot> GetMarketplaceStats(
         int itemType,
         int kind,
@@ -239,18 +283,21 @@ public partial class ScriptGlobals
     /// <summary>
     /// Requests marketplace stats for one furni kind, narrowed to a specific variant.
     /// </summary>
+    /// <remarks>The reply is not blocked, so the game client also receives it.</remarks>
     /// <param name="itemType">The furni category: 1 floor item, 2 wall item, 3 limited edition.</param>
     /// <param name="kind">The furni type id.</param>
     /// <param name="extraData">
-    /// The variant discriminator, for example the limited-edition serial data. Pass an empty
+    /// The variant discriminator, for example the limited edition serial data. Pass an empty
     /// string for the whole kind.
     /// </param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The stats whose category and furni type match the request.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="itemType"/> is not 1, 2 or 3, or <paramref name="kind"/> is below 1.</exception>
     /// <exception cref="NotSupportedException">
-    /// The session is a Flash client whose marketplace uses the legacy wire layout, which has
+    /// Thrown when the session is a Flash client whose marketplace uses the legacy wire layout, which has
     /// no field for <paramref name="extraData"/>, and a non-empty value was supplied.
     /// </exception>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching stats arrived in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching stats arrived in time.</exception>
     public Task<MarketplaceItemStatsSnapshot> GetMarketplaceStats(
         int itemType,
         int kind,
@@ -268,37 +315,71 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Requests marketplace stats for a floor furni kind. Shorthand for
-    /// <c>GetMarketplaceStats(1, kind)</c>.
+    /// Requests marketplace stats for a floor furni kind.
     /// </summary>
+    /// <remarks>Shorthand for <c>GetMarketplaceStats(1, kind)</c>.</remarks>
     /// <param name="kind">The furni type id.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The stats of the floor furni kind.</returns>
     public Task<MarketplaceItemStatsSnapshot> GetFloorItemStats(int kind, int timeoutMs = 10000) => GetMarketplaceStats(1, kind, timeoutMs);
 
     /// <summary>
-    /// Requests marketplace stats for a wall furni kind. Shorthand for
-    /// <c>GetMarketplaceStats(2, kind)</c>.
+    /// Requests marketplace stats for a wall furni kind.
     /// </summary>
+    /// <remarks>Shorthand for <c>GetMarketplaceStats(2, kind)</c>.</remarks>
     /// <param name="kind">The furni type id.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The stats of the wall furni kind.</returns>
     public Task<MarketplaceItemStatsSnapshot> GetWallItemStats(int kind, int timeoutMs = 10000) => GetMarketplaceStats(2, kind, timeoutMs);
 
     /// <summary>
     /// Searches the marketplace for offers currently on sale, grouping duplicate unique items.
     /// </summary>
-    /// <param name="name">Free-text name filter; empty matches everything.</param>
-    /// <param name="minPrice">Minimum price in credits, or -1 for no lower bound.</param>
-    /// <param name="maxPrice">Maximum price in credits, or -1 for no upper bound.</param>
+    /// <remarks>
+    /// The first search result that arrives after the request is taken as the answer. The reply is
+    /// not blocked, so the game client also receives it.
+    /// </remarks>
+    /// <param name="name">The free text name filter; empty matches everything.</param>
+    /// <param name="minPrice">The minimum price in credits, or -1 for no lower bound.</param>
+    /// <param name="maxPrice">The maximum price in credits, or -1 for no upper bound.</param>
     /// <param name="sort">
-    /// Sort order: 1 highest price, 2 lowest price, 3 most trades, 4 least trades, 5 most
+    /// The sort order: 1 highest price, 2 lowest price, 3 most trades, 4 least trades, 5 most
     /// offers, 6 least offers.
     /// </param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No offers arrived in time.</exception>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The first page of up to 100 offers, with the total offer count.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when a price is below -1, <paramref name="sort"/> is outside 1 to 6, or <paramref name="timeoutMs"/> is outside 1 to 120000.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="minPrice"/> is greater than <paramref name="maxPrice"/>.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no offers arrived in time.</exception>
     public Task<MarketplaceOfferPage> SearchMarketplace(
         string name = "", int minPrice = -1, int maxPrice = -1, int sort = 1, int timeoutMs = 10000) =>
         SearchMarketplace(name, minPrice, maxPrice, sort, true, timeoutMs);
 
+    /// <summary>
+    /// Searches the marketplace for offers currently on sale, choosing whether duplicate unique
+    /// items are grouped.
+    /// </summary>
+    /// <remarks>
+    /// The first search result that arrives after the request is taken as the answer. The reply is
+    /// not blocked, so the game client also receives it.
+    /// </remarks>
+    /// <param name="name">The free text name filter; empty matches everything.</param>
+    /// <param name="minPrice">The minimum price in credits, or -1 for no lower bound.</param>
+    /// <param name="maxPrice">The maximum price in credits, or -1 for no upper bound.</param>
+    /// <param name="sort">
+    /// The sort order: 1 highest price, 2 lowest price, 3 most trades, 4 least trades, 5 most
+    /// offers, 6 least offers.
+    /// </param>
+    /// <param name="combineUniques"><see langword="true"/> to group duplicate unique items into one offer; otherwise, <see langword="false"/>.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The first page of up to 100 offers, with the total offer count.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when a price is below -1, <paramref name="sort"/> is outside 1 to 6, or <paramref name="timeoutMs"/> is outside 1 to 120000.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="minPrice"/> is greater than <paramref name="maxPrice"/>.</exception>
+    /// <exception cref="NotSupportedException">
+    /// Thrown when <paramref name="combineUniques"/> is <see langword="false"/> and the Flash marketplace uses
+    /// the legacy wire layout, which cannot turn grouping off.
+    /// </exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no offers arrived in time.</exception>
     public Task<MarketplaceOfferPage> SearchMarketplace(
     string name,
     int minPrice,
@@ -323,11 +404,27 @@ public partial class ScriptGlobals
     /// Requests the local user's own marketplace offers that are still open for sale, together
     /// with the credits waiting to be redeemed.
     /// </summary>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No offers arrived in time.</exception>
+    /// <remarks>The reply is not blocked, so the game client also receives it.</remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The first page of up to 100 open offers, with the total count and the credits waiting.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no offers arrived in time.</exception>
     public Task<MarketplaceOwnOfferPage> GetMyMarketplaceOffers(int timeoutMs = 10000) =>
         GetMyMarketplaceOffers(1, timeoutMs);
 
+    /// <summary>
+    /// Requests the local user's own marketplace offers in one category, together with the credits
+    /// waiting to be redeemed.
+    /// </summary>
+    /// <remarks>The reply is not blocked, so the game client also receives it.</remarks>
+    /// <param name="category">The offer category: 1 open, 2 sold, 3 expired.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The first page of up to 100 offers, with the total count and the credits waiting.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="category"/> is outside 1 to 3, or <paramref name="timeoutMs"/> is outside 1 to 120000.</exception>
+    /// <exception cref="NotSupportedException">
+    /// Thrown when <paramref name="category"/> is not 1 and the Flash marketplace uses the legacy wire layout,
+    /// which only reports open offers.
+    /// </exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no offers arrived in time.</exception>
     public Task<MarketplaceOwnOfferPage> GetMyMarketplaceOffers(
     int category,
     int timeoutMs)
@@ -340,7 +437,17 @@ public partial class ScriptGlobals
             Ct).AsTask();
     }
 
-    /// <exception cref="Qx.Game.RequestTimeoutException">No badge list arrived in time.</exception>
+    /// <summary>
+    /// Requests the local user's full owned badge inventory from the server.
+    /// </summary>
+    /// <remarks>
+    /// The inventory is read in pages of 500 from one consistent snapshot. The reply also updates
+    /// the tracked badge state read by <see cref="BadgeInventory"/>.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds for the server to answer, from 1 to 120000.</param>
+    /// <returns>Every owned badge.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the badge snapshot was invalid or incomplete.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no badge list arrived in time.</exception>
     public async Task<BadgeInventory> GetBadgeInventory(int timeoutMs = 10000)
     {
         BadgeRefreshResult refreshed = await Application
@@ -369,11 +476,16 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Requests every achievement the account can earn, with the current level and progress of
-    /// each. The reply also refreshes the tracked achievement state read by the
-    /// <c>Achievements</c> property.
+    /// Requests every achievement the account can earn, with the current level and progress of each.
     /// </summary>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No achievement list arrived in time.</exception>
+    /// <remarks>
+    /// The list is read in pages of 500 from one consistent snapshot. The reply also refreshes the
+    /// tracked achievement state read by <see cref="Achievements"/>.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds for the server to answer, from 1 to 120000.</param>
+    /// <returns>Every achievement and the default achievement category.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the achievement snapshot was invalid or incomplete.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no achievement list arrived in time.</exception>
     public async Task<Achievements> GetAchievements(int timeoutMs = 10000)
     {
         AchievementRefreshResult refreshed = await Application
@@ -517,8 +629,14 @@ public partial class ScriptGlobals
     /// <summary>
     /// Requests the groups the local user belongs to, with the membership rank in each.
     /// </summary>
+    /// <remarks>
+    /// The request is sent once without a retry and only works on the Flash client. The reply is
+    /// not blocked, so the game client also receives it.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000.</param>
     /// <returns>The memberships, or an empty list when the user is in no group.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No membership list arrived in time.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the session is not a Flash session, or the membership pages were inconsistent.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no membership list arrived in time.</exception>
     public async Task<IReadOnlyList<GuildMembership>> GetGuildMemberships(int timeoutMs = 10000)
     {
         const int page_limit = 500;
@@ -592,12 +710,17 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Requests the navigator record for a room: name, owner, description, tags, door mode,
-    /// visitor counts, rating and group. Works for any room, not only the current one.
+    /// Requests the navigator record for a room, with name, owner, description, tags, door mode,
+    /// visitor counts, rating and group.
     /// </summary>
+    /// <remarks>
+    /// It works for any room, not only the current one. The request is sent once without a retry,
+    /// and the reply is not blocked, so the game client also receives it.
+    /// </remarks>
     /// <param name="roomId">The room id.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching room data arrived in time.</exception>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000.</param>
+    /// <returns>The data of the room whose id matches <paramref name="roomId"/>.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching room data arrived in time.</exception>
     public async Task<RoomData> GetRoomData(Id roomId, int timeoutMs = 10000)
     {
         RoomDataReadResult result = await Application
@@ -640,14 +763,17 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Requests the list of users who hold rights in a room. The server answers only for rooms
-    /// the local user owns.
+    /// Requests the list of users who hold rights in a room.
     /// </summary>
+    /// <remarks>
+    /// The server answers only for rooms the local user owns. The request is sent once without a
+    /// retry, and the reply is not blocked, so the game client also receives it.
+    /// </remarks>
     /// <param name="roomId">The room id.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds.</param>
-    /// <returns>The rights holders as id/name pairs; the owner is not included.</returns>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000.</param>
+    /// <returns>The rights holders as id and name pairs; the owner is not included.</returns>
     /// <exception cref="Qx.Game.RequestTimeoutException">
-    /// No matching rights list arrived in time - which is also what happens when the local user
+    /// Thrown when no matching rights list arrived in time, which is also what happens when the local user
     /// does not own the room.
     /// </exception>
     public async Task<IReadOnlyList<IdName>> GetRightsFor(Id roomId, int timeoutMs = 10000)
@@ -666,9 +792,11 @@ public partial class ScriptGlobals
     /// <summary>
     /// Requests the rights holders of the room the user is currently in.
     /// </summary>
-    /// <param name="timeoutMs">Total time budget in milliseconds.</param>
-    /// <exception cref="InvalidOperationException">The user is not in a room.</exception>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching rights list arrived in time.</exception>
+    /// <remarks>Same as <see cref="GetRightsFor(Id, int)"/> for the current room.</remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000.</param>
+    /// <returns>The rights holders as id and name pairs; the owner is not included.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the user is not in a room.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching rights list arrived in time.</exception>
     public Task<IReadOnlyList<IdName>> GetRights(int timeoutMs = 10000)
     {
         if (!Room.IsInRoom)
@@ -676,6 +804,29 @@ public partial class ScriptGlobals
         return GetRightsFor(Room.RoomId, timeoutMs);
     }
 
+    /// <summary>
+    /// Reads a room's settings, applies a change to them and saves the result.
+    /// </summary>
+    /// <remarks>
+    /// The current settings are requested first, then passed to <paramref name="update"/>. The
+    /// save carries the revisions of that read, so it fails instead of overwriting when the
+    /// settings, the room or the session changed in between. Each of the two steps gets its own
+    /// <paramref name="timeoutMs"/>.
+    /// </remarks>
+    /// <param name="update">
+    /// The function that receives the current settings and returns the settings to save. It must
+    /// keep the room id.
+    /// </param>
+    /// <param name="roomId">The room to change, or <see langword="null"/> for the current room.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for each step, from 1 to 120000.</param>
+    /// <returns>The settings that were saved.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="update"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no room id was given and the user is not in a room, <paramref name="update"/> returned
+    /// <see langword="null"/> or changed the room id, or the settings could not be loaded.
+    /// </exception>
+    /// <exception cref="Qx.Game.Application.RoomSettingsRejectedException">Thrown when the server refused to send or save the settings.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when the settings or the save confirmation did not arrive in time.</exception>
     public async Task<RoomSettings> ModifyRoomSettings(
     Func<RoomSettings, RoomSettings> update,
     Id? roomId = null,
@@ -705,10 +856,14 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Requests the rooms owned by the local user, through the navigator's <c>"my"</c> view.
+    /// Requests the rooms owned by the local user through the navigator's own rooms search.
     /// </summary>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No search result arrived in time.</exception>
+    /// <remarks>
+    /// Same as <see cref="GetMyRooms(int)"/>, returned as a list instead of a query.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The rooms the local user owns.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no search result arrived in time.</exception>
     public async Task<IReadOnlyList<RoomData>> GetUserRooms(int timeoutMs = 10000)
     {
         RoomDataQuery rooms = await FindRooms(NavigatorQuickSearch.MyRooms, timeoutMs);
@@ -719,8 +874,14 @@ public partial class ScriptGlobals
     /// Requests the saved wardrobe outfits, each with its slot number, figure string and
     /// gender.
     /// </summary>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No wardrobe arrived in time.</exception>
+    /// <remarks>
+    /// The wardrobe reply is blocked, so the game client does not see it. The outfits are read in
+    /// pages of 500 from one consistent snapshot.
+    /// </remarks>
+    /// <param name="timeoutMs">The total timeout in milliseconds, from 1 to 120000, covering one automatic retry and every page.</param>
+    /// <returns>The wardrobe state and every saved outfit.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the wardrobe changed while it was being read, or the result was incomplete.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no wardrobe arrived in time.</exception>
     public async Task<Wardrobe> GetWardrobe(int timeoutMs = 10000)
     {
         long started = Environment.TickCount64;
@@ -770,15 +931,20 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Requests a room's editable settings: name, description, door mode, category, capacity,
-    /// tags, trade mode, moderation permissions and the wall/floor appearance flags. The server
-    /// answers only for rooms the local user owns.
+    /// Requests a room's editable settings, with name, description, door mode, category, capacity,
+    /// tags, trade mode, moderation permissions and the wall and floor appearance flags.
     /// </summary>
+    /// <remarks>
+    /// The server answers only for rooms the local user may edit. For other rooms it sends a
+    /// settings error or nothing at all.
+    /// </remarks>
     /// <param name="roomId">The room id.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The room's current settings.</returns>
+    /// <exception cref="Qx.Game.Application.RoomSettingsRejectedException">Thrown when the server answered with a settings error.</exception>
     /// <exception cref="Qx.Game.RequestTimeoutException">
-    /// No matching settings arrived in time - also the outcome when the room is not owned by the
-    /// local user.
+    /// Thrown when no matching settings arrived in time, which can also be the outcome when the room is not
+    /// owned by the local user.
     /// </exception>
     public async Task<RoomSettings> GetRoomSettings(Id roomId, int timeoutMs = 10000) =>
         ToLegacyRoomSettings(await GetRoomSettingsState(roomId, timeoutMs));
@@ -859,21 +1025,27 @@ public partial class ScriptGlobals
         settings.NftGroupIds);
 
     /// <summary>
-    /// Requests the catalog's top-level page tree for one catalog mode.
+    /// Gets the catalog's page tree for one catalog mode, requesting it when no fresh copy is cached.
     /// </summary>
     /// <param name="catalogType">
     /// The catalog mode: <c>"NORMAL"</c> for the credit catalog, <c>"BUILDERS_CLUB"</c> for the
-    /// builders club catalog.
+    /// builders club catalog. Case is ignored.
     /// </param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching index arrived in time.</exception>
+    /// <param name="timeoutMs">The timeout in milliseconds for the server to answer, from 1 to 120000.</param>
+    /// <returns>The catalog index.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when an argument is outside its allowed range or the catalog mode is not known.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching index arrived in time.</exception>
     /// <remarks>
-    /// Answered from the catalog cache when a copy newer than
-    /// <see cref="Qx.Game.CatalogManager.DefaultMaxAge"/> is held, and the cache is cleared
-    /// outright when the hotel announces a republish. Pass <see cref="TimeSpan.Zero"/> as
-    /// <paramref name="maxAge"/> to insist on a fetch.
+    /// Answered from the catalog cache when a copy younger than <paramref name="maxAge"/> is held,
+    /// and the cache is cleared outright when the hotel announces a republish. Concurrent callers
+    /// for the same catalog mode share one request, and a new index clears the cached pages of that
+    /// mode.
     /// </remarks>
-    /// <param name="maxAge">How old a cached copy may be.</param>
+    /// <param name="maxAge">
+    /// How old a cached copy may be, or <see langword="null"/> for
+    /// <see cref="Qx.Game.CatalogManager.DefaultMaxAge"/> (5 minutes). <see cref="TimeSpan.Zero"/>
+    /// always requests a new copy and <see cref="Timeout.InfiniteTimeSpan"/> accepts any cached copy.
+    /// </param>
     public Task<CatalogIndex> GetCatalogIndex(
         string catalogType = "NORMAL",
         int timeoutMs = 10000,
@@ -881,18 +1053,26 @@ public partial class ScriptGlobals
         Game.Catalog.GetIndexAsync(catalogType, maxAge, timeoutMs, Ct);
 
     /// <summary>
-    /// Requests one catalog page with its offers, which is what supplies the page id and offer
-    /// id pair needed by <see cref="PurchaseFromCatalog"/>.
+    /// Gets one catalog page with its offers, requesting it when no fresh copy is cached.
     /// </summary>
     /// <param name="pageId">The catalog page id, taken from <see cref="GetCatalogIndex"/>.</param>
     /// <param name="offerId">
-    /// An offer to pre-select on the page, or -1 for none. It does not restrict the reply.
+    /// An offer to preselect on the page, or -1 for none. It does not restrict the reply.
     /// </param>
     /// <param name="catalogType">The catalog mode; see <see cref="GetCatalogIndex"/>.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching page arrived in time.</exception>
-    /// <remarks>Cached the same way as <see cref="GetCatalogIndex"/>.</remarks>
-    /// <param name="maxAge">How old a cached copy may be.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for the server to answer, from 1 to 120000.</param>
+    /// <returns>The catalog page with its offers.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when an argument is outside its allowed range or the catalog mode is not known.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching page arrived in time.</exception>
+    /// <remarks>
+    /// The page supplies the page id and offer id pair needed by <see cref="PurchaseFromCatalog"/>.
+    /// It is cached the same way as <see cref="GetCatalogIndex"/>, and concurrent callers for the
+    /// same page share one request.
+    /// </remarks>
+    /// <param name="maxAge">
+    /// How old a cached copy may be, or <see langword="null"/> for
+    /// <see cref="Qx.Game.CatalogManager.DefaultMaxAge"/> (5 minutes).
+    /// </param>
     public Task<CatalogPage> GetCatalogPage(
         int pageId,
         int offerId = -1,
@@ -902,12 +1082,15 @@ public partial class ScriptGlobals
         Game.Catalog.GetPageAsync(pageId, catalogType, maxAge, offerId, timeoutMs, Ct);
 
     /// <summary>
-    /// Searches the navigator for rooms owned by a user and keeps only exact owner-name
-    /// matches, since the server's <c>owner:</c> filter also returns near matches.
+    /// Searches the navigator for rooms owned by a user and keeps only exact owner name matches.
     /// </summary>
-    /// <param name="ownerName">The owner's user name; compared case-insensitively.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No search result arrived in time.</exception>
+    /// <remarks>
+    /// The filtering is needed because the server's <c>owner:</c> filter also returns near matches.
+    /// </remarks>
+    /// <param name="ownerName">The owner's user name; compared ignoring case.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The rooms whose owner name equals <paramref name="ownerName"/>.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no search result arrived in time.</exception>
     public async Task<IReadOnlyList<RoomData>> SearchRoomsByOwner(string ownerName, int timeoutMs = 10000)
     {
         RoomDataQuery rooms = await FindRoomsByOwner(ownerName, timeoutMs);
@@ -916,11 +1099,12 @@ public partial class ScriptGlobals
 
     /// <summary>
     /// Searches the navigator by room name and keeps only rooms whose name actually contains
-    /// the search text, case-insensitively.
+    /// the search text, ignoring case.
     /// </summary>
-    /// <param name="roomName">The room-name fragment to look for.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No search result arrived in time.</exception>
+    /// <param name="roomName">The room name fragment to look for.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The rooms whose name contains <paramref name="roomName"/>.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no search result arrived in time.</exception>
     public async Task<IReadOnlyList<RoomData>> SearchRoomsByName(string roomName, int timeoutMs = 10000)
     {
         RoomDataQuery rooms = await FindRoomsByName(roomName, timeoutMs);
@@ -928,12 +1112,12 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Searches the navigator by tag and keeps only rooms that really carry that tag,
-    /// case-insensitively.
+    /// Searches the navigator by tag and keeps only rooms that really carry that tag, ignoring case.
     /// </summary>
     /// <param name="tag">The tag to look for, without a leading <c>#</c>.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No search result arrived in time.</exception>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The rooms tagged with <paramref name="tag"/>.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no search result arrived in time.</exception>
     public async Task<IReadOnlyList<RoomData>> SearchRoomsByTag(string tag, int timeoutMs = 10000)
     {
         RoomDataQuery rooms = await FindRoomsByTag(tag, timeoutMs);
@@ -942,11 +1126,12 @@ public partial class ScriptGlobals
 
     /// <summary>
     /// Searches the navigator by group and keeps only rooms attached to a group whose name
-    /// contains the search text, case-insensitively.
+    /// contains the search text, ignoring case.
     /// </summary>
-    /// <param name="groupName">The group-name fragment to look for.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No search result arrived in time.</exception>
+    /// <param name="groupName">The group name fragment to look for.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
+    /// <returns>The rooms whose group name contains <paramref name="groupName"/>.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no search result arrived in time.</exception>
     public async Task<IReadOnlyList<RoomData>> SearchRoomsByGroup(string groupName, int timeoutMs = 10000)
     {
         RoomDataQuery rooms = await FindRoomsByGroup(groupName, timeoutMs);
@@ -959,13 +1144,13 @@ public partial class ScriptGlobals
     /// <summary>
     /// Searches for a user account and returns the single exact name match.
     /// </summary>
-    /// <param name="name">The exact user name; matched case-insensitively.</param>
-    /// <param name="timeoutMs">Total time budget in milliseconds, across one retry.</param>
+    /// <param name="name">The exact user name; matched ignoring case.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds, from 1 to 120000, covering one automatic retry.</param>
     /// <returns>
-    /// The matching account, or <see langword="null"/> when the search returned results but none
-    /// of them carried that exact name.
+    /// The first friend or other user whose name equals <paramref name="name"/>, or
+    /// <see langword="null"/> when no result carries that exact name.
     /// </returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No search result arrived in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no search result arrived in time.</exception>
     public async Task<UserSearchResult?> SearchUser(string name, int timeoutMs = 10000)
     {
         UserSearchResults results = await SearchUsers(name, timeoutMs);

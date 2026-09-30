@@ -2,9 +2,7 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
-/// <summary>
-/// The detailed statistics of a single pet, as returned by <c>GetPetInfo</c>.
-/// </summary>
+/// <summary>Represents the detailed statistics of a single pet, as returned by <c>GetPetInfo</c>.</summary>
 /// <remarks>
 /// This message does not carry the pet type. The type is only present on the room
 /// entity (<see cref="Pet.PetType"/>), and both values are needed together: the
@@ -15,25 +13,39 @@ public sealed class PetInfo : IParserComposer<PetInfo>
 {
     private IReadOnlyList<int> skill_thresholds = Array.AsReadOnly(Array.Empty<int>());
 
+    /// <summary>Gets or sets the pet identifier.</summary>
     public Id Id { get; set; }
+    /// <summary>Gets or sets the pet's name.</summary>
     public string Name { get; set; } = "";
+    /// <summary>Gets or sets the pet's current level.</summary>
     public int Level { get; set; }
+    /// <summary>Gets or sets the highest level the pet can reach.</summary>
     public int MaxLevel { get; set; }
+    /// <summary>Gets or sets the experience the pet has gathered towards the next level.</summary>
     public int Experience { get; set; }
+    /// <summary>Gets or sets the experience the pet needs for the next level.</summary>
     public int MaxExperience { get; set; }
+    /// <summary>Gets or sets the pet's current energy.</summary>
     public int Energy { get; set; }
+    /// <summary>Gets or sets the pet's energy cap.</summary>
     public int MaxEnergy { get; set; }
-    /// <summary>The nutrition level of the pet. The client calls this field <c>nutrition</c>.</summary>
+    /// <summary>Gets or sets the pet's nutrition level.</summary>
+    /// <remarks>The client calls this field <c>nutrition</c>.</remarks>
     public int Happiness { get; set; }
-    /// <summary>The nutrition cap of the pet. The client calls this field <c>maxNutrition</c>.</summary>
+    /// <summary>Gets or sets the pet's nutrition cap.</summary>
+    /// <remarks>The client calls this field <c>maxNutrition</c>.</remarks>
     public int MaxHappiness { get; set; }
-    /// <summary>The respect count of the pet. The client calls this field <c>respect</c>.</summary>
+    /// <summary>Gets or sets the number of respects the pet has received.</summary>
+    /// <remarks>The client calls this field <c>respect</c>.</remarks>
     public int Scratches { get; set; }
+    /// <summary>Gets or sets the identifier of the pet's owner.</summary>
     public Id OwnerId { get; set; }
+    /// <summary>Gets or sets the pet's age in days.</summary>
     public int Age { get; set; }
+    /// <summary>Gets or sets the name of the pet's owner.</summary>
     public string OwnerName { get; set; } = "";
     /// <summary>
-    /// The breed variant of the pet within its type, not the pet type itself.
+    /// Gets or sets the breed variant of the pet within its type, not the pet type itself.
     /// </summary>
     /// <remarks>
     /// Only meaningful together with <see cref="Pet.PetType"/> from the room entity.
@@ -42,25 +54,45 @@ public sealed class PetInfo : IParserComposer<PetInfo>
     /// Use <see cref="Pet.PetType"/> to identify what kind of pet this is.
     /// </remarks>
     public int BreedId { get; set; }
+    /// <summary>Gets or sets whether the pet's saddle is unlocked without a purchase.</summary>
     public bool HasFreeSaddle { get; set; }
+    /// <summary>Gets or sets whether a user is riding the pet.</summary>
     public bool IsRiding { get; set; }
+    /// <summary>Gets or sets the experience thresholds at which the pet unlocks its skills; the list is copied on set.</summary>
+    /// <exception cref="ArgumentNullException">Thrown when set to <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when set to a list with more than 65535 values.</exception>
     public IReadOnlyList<int> SkillThresholds
     {
         get => skill_thresholds;
         set => skill_thresholds = RoomObjectReadWire.Freeze(value);
     }
+    /// <summary>Gets or sets the hotel's access rights code for who may command the pet.</summary>
+    /// <remarks>The numbering is hotel-specific and is passed through unchanged.</remarks>
     public int AccessRights { get; set; }
+    /// <summary>Gets or sets whether the pet may be bred right now.</summary>
     public bool CanBreed { get; set; }
+    /// <summary>Gets or sets whether the pet may be harvested right now.</summary>
     public bool CanHarvest { get; set; }
+    /// <summary>Gets or sets whether the pet is dead and may be revived.</summary>
     public bool CanRevive { get; set; }
+    /// <summary>Gets or sets the pet's rarity tier as sent by the hotel.</summary>
     public int RarityLevel { get; set; }
+    /// <summary>Gets or sets the full length of the pet's wellbeing timer in seconds.</summary>
     public int MaxWellbeingSeconds { get; set; }
+    /// <summary>Gets or sets the seconds of wellbeing the pet has left.</summary>
     public int RemainingWellbeingSeconds { get; set; }
+    /// <summary>Gets or sets the seconds left in the pet's current growth stage, which applies to monsterplants.</summary>
     public int RemainingGrowingSeconds { get; set; }
+    /// <summary>Gets or sets whether the local user may breed the pet.</summary>
     public bool HasBreedingPermission { get; set; }
 
+    /// <summary>Initializes a new instance of the <see cref="PetInfo"/> class.</summary>
     public PetInfo() { }
 
+    /// <summary>Reads pet info from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the payload is too short or bytes remain after the last field.</exception>
     public static PetInfo Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -108,6 +140,9 @@ public sealed class PetInfo : IParserComposer<PetInfo>
         return value;
     }
 
+    /// <summary>Writes the pet info to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

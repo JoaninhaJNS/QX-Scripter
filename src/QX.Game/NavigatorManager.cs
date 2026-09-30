@@ -6,31 +6,69 @@ using Qx.Model.Messages.Outgoing;
 
 namespace Qx.Game;
 
+/// <summary>
+/// Specifies which room field a navigator text search matches.
+/// </summary>
 public enum RoomSearchField
 {
+    /// <summary>Any field, sent without a prefix.</summary>
     Anything,
+    /// <summary>The room owner's name, sent with the <c>owner:</c> prefix.</summary>
     Owner,
+    /// <summary>The room name, sent with the <c>roomname:</c> prefix.</summary>
     RoomName,
+    /// <summary>A room tag, sent with the <c>tag:</c> prefix.</summary>
     Tag,
+    /// <summary>The room's group, sent with the <c>group:</c> prefix.</summary>
     Group
 }
 
+/// <summary>
+/// Represents an immutable copy of a navigator search entry, either a quick link or a saved search.
+/// </summary>
+/// <param name="Id">The id of a saved search, or 0 for a quick link.</param>
+/// <param name="SearchCode">The code of the view the search belongs to, such as <c>hotel_view</c>.</param>
+/// <param name="Filter">The filter text in the navigator's prefix syntax.</param>
+/// <param name="Localization">The text key of the label the client shows.</param>
 public sealed record NavigatorSearchEntrySnapshot(
     int Id,
     string SearchCode,
     string Filter,
     string Localization);
 
+/// <summary>
+/// Represents an immutable copy of a navigator category and the quick links offered under it.
+/// </summary>
+/// <param name="SearchCode">The code of the category.</param>
+/// <param name="QuickLinks">The searches the hotel offers under the category.</param>
 public sealed record NavigatorCategorySnapshot(
     string SearchCode,
     IReadOnlyList<NavigatorSearchEntrySnapshot> QuickLinks);
 
+/// <summary>
+/// Represents an immutable copy of a room the hotel promotes in the navigator.
+/// </summary>
+/// <param name="RoomId">The id of the room.</param>
+/// <param name="AreaId">The id of the promoted area the room belongs to.</param>
+/// <param name="Image">The image reference of the room's tile.</param>
+/// <param name="Caption">The caption of the room's tile.</param>
 public sealed record NavigatorLiftedRoomSnapshot(
     int RoomId,
     int AreaId,
     string Image,
     string Caption);
 
+/// <summary>
+/// Represents an immutable copy of a room category that rooms can be filed under.
+/// </summary>
+/// <param name="NodeId">The id of the category, which is the value of a room's category field.</param>
+/// <param name="Name">The name of the category.</param>
+/// <param name="Visible">Whether the category is shown.</param>
+/// <param name="Automatic">Whether the hotel assigns the category itself.</param>
+/// <param name="AutomaticCategoryKey">The key of an automatic category.</param>
+/// <param name="GlobalCategoryKey">The hotel-wide key the category maps to.</param>
+/// <param name="StaffOnly">Whether only staff may file a room under the category.</param>
+/// <param name="Selectable">Whether a room owner can file a room under the category, which requires it to be visible, not automatic and not staff only.</param>
 public sealed record NavigatorFlatCategorySnapshot(
     int NodeId,
     string Name,
@@ -41,8 +79,22 @@ public sealed record NavigatorFlatCategorySnapshot(
     bool StaffOnly,
     bool Selectable);
 
+/// <summary>
+/// Represents an immutable copy of the local user's navigator settings.
+/// </summary>
+/// <param name="HomeRoomId">The id of the local user's home room.</param>
+/// <param name="RoomIdToEnter">The id of the room the hotel tells the client to enter.</param>
 public sealed record NavigatorSettingsSnapshot(Id HomeRoomId, Id RoomIdToEnter);
 
+/// <summary>
+/// Represents an immutable copy of how the local user has arranged the navigator window.
+/// </summary>
+/// <param name="WindowX">The x position of the window.</param>
+/// <param name="WindowY">The y position of the window.</param>
+/// <param name="WindowWidth">The width of the window.</param>
+/// <param name="WindowHeight">The height of the window.</param>
+/// <param name="LeftPaneHidden">Whether the category pane is collapsed.</param>
+/// <param name="ResultsMode">The mode the results are drawn in, such as a list or thumbnails.</param>
 public sealed record NavigatorPreferencesSnapshot(
     int WindowX,
     int WindowY,
@@ -51,11 +103,26 @@ public sealed record NavigatorPreferencesSnapshot(
     bool LeftPaneHidden,
     int ResultsMode);
 
+/// <summary>
+/// Represents an immutable copy of the navigator metadata sent for a room.
+/// </summary>
+/// <param name="RoomId">The id of the room.</param>
+/// <param name="FirstValue">The first metadata value.</param>
+/// <param name="SecondValue">The second metadata value.</param>
 public sealed record NavigatorRoomMetadataSnapshot(
     Id RoomId,
     string FirstValue,
     string SecondValue);
 
+/// <summary>
+/// Represents an immutable copy of one block of rooms in a navigator search result.
+/// </summary>
+/// <param name="SearchCode">The search code of the block.</param>
+/// <param name="Text">The title text of the block.</param>
+/// <param name="ActionAllowed">The action code the hotel allows for the block.</param>
+/// <param name="ForceClosed">Whether the block is shown collapsed.</param>
+/// <param name="ViewMode">The view mode the block is shown in.</param>
+/// <param name="Rooms">The rooms in the block.</param>
 public sealed record NavigatorSearchBlockSnapshot(
     string SearchCode,
     string Text,
@@ -64,14 +131,37 @@ public sealed record NavigatorSearchBlockSnapshot(
     int ViewMode,
     IReadOnlyList<RoomDataSnapshot> Rooms);
 
+/// <summary>
+/// Represents an immutable copy of a navigator search result.
+/// </summary>
+/// <param name="SearchCode">The search code the result answers.</param>
+/// <param name="Filter">The filter text the result answers.</param>
+/// <param name="Blocks">The blocks of rooms in the result.</param>
 public sealed record NavigatorSearchSnapshot(
     string SearchCode,
     string Filter,
     IReadOnlyList<NavigatorSearchBlockSnapshot> Blocks)
 {
+    /// <summary>
+    /// Gets the rooms of every block, in block order.
+    /// </summary>
     public IEnumerable<RoomDataSnapshot> Rooms => Blocks.SelectMany(block => block.Rooms);
 }
 
+/// <summary>
+/// Represents an immutable view of the navigator state at one point in time.
+/// </summary>
+/// <param name="MetadataLoaded">Whether the navigator categories have been received.</param>
+/// <param name="FlatCategoriesLoaded">Whether the room categories have been received.</param>
+/// <param name="Generation">The session generation the state belongs to.</param>
+/// <param name="Revision">The revision of the state, which increases with every change.</param>
+/// <param name="Categories">The navigator categories and their quick links.</param>
+/// <param name="SavedSearches">The local user's saved searches.</param>
+/// <param name="LiftedRooms">The rooms the hotel promotes.</param>
+/// <param name="FlatCategories">The room categories that rooms can be filed under.</param>
+/// <param name="CollapsedCategories">The codes of the categories the local user has collapsed.</param>
+/// <param name="Settings">The local user's navigator settings, or <see langword="null"/> when not received.</param>
+/// <param name="Preferences">The local user's navigator window preferences, or <see langword="null"/> when not received.</param>
 public sealed record NavigatorState(
     bool MetadataLoaded,
     bool FlatCategoriesLoaded,
@@ -85,6 +175,9 @@ public sealed record NavigatorState(
     NavigatorSettingsSnapshot? Settings,
     NavigatorPreferencesSnapshot? Preferences)
 {
+    /// <summary>
+    /// Gets an empty navigator state.
+    /// </summary>
     public static NavigatorState Empty { get; } = new(
         false,
         false,
@@ -111,6 +204,18 @@ internal enum NavigatorStateChangeKind
     Reset
 }
 
+/// <summary>
+/// Manages the navigator state received from the hotel and sends navigator room requests.
+/// </summary>
+/// <remarks>
+/// <para>
+/// All members are safe to call from any thread. Each change publishes a new immutable
+/// <see cref="NavigatorState"/>. Search results are not stored in the state.
+/// </para>
+/// <para>
+/// The state is cleared when the hotel connection closes.
+/// </para>
+/// </remarks>
 public sealed class NavigatorManager : GameStateManager
 {
     private readonly object publication_sync = new();
@@ -135,11 +240,15 @@ public sealed class NavigatorManager : GameStateManager
     private long committed_generation;
     private long reset_generation = -1;
 
+    /// <summary>
+    /// Gets the current navigator state.
+    /// </summary>
     public NavigatorState State => Volatile.Read(ref state);
 
     internal event Action<NavigatorStateChangeKind, NavigatorState>? StateChanged;
     internal event Action<NavigatorSearchSnapshot, long, long>? SearchReceived;
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         OnIncoming(
@@ -204,6 +313,14 @@ public sealed class NavigatorManager : GameStateManager
                 Snapshot(message)));
     }
 
+    /// <summary>
+    /// Builds the navigator filter text that searches a room field for a text.
+    /// </summary>
+    /// <param name="field">The room field to search.</param>
+    /// <param name="text">The text to search for.</param>
+    /// <returns>The text with the prefix of <paramref name="field"/>, or the text unchanged for <see cref="RoomSearchField.Anything"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="field"/> is not a defined value.</exception>
     public static string FilterText(RoomSearchField field, string text)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -219,11 +336,24 @@ public sealed class NavigatorManager : GameStateManager
         };
     }
 
+    /// <summary>
+    /// Sends a request to set the local user's home room.
+    /// </summary>
+    /// <param name="room_id">The id of the room.</param>
     public void SetHomeRoom(Id room_id) =>
         SendMessage(
             MessageContracts.Navigator.HomeRoomUpdate,
             new SetHomeRoomRequest(room_id));
 
+    /// <summary>
+    /// Sends a request to create a room.
+    /// </summary>
+    /// <param name="name">The name of the room.</param>
+    /// <param name="description">The description of the room.</param>
+    /// <param name="model">The name of the floor plan model.</param>
+    /// <param name="category">The id of the room category.</param>
+    /// <param name="max_visitors">The maximum number of visitors.</param>
+    /// <param name="trade_mode">The trading mode of the room.</param>
     public void CreateRoom(
         string name,
         string description,
@@ -241,6 +371,10 @@ public sealed class NavigatorManager : GameStateManager
                 max_visitors,
                 trade_mode));
 
+    /// <summary>
+    /// Sends a request to delete a room.
+    /// </summary>
+    /// <param name="room_id">The id of the room.</param>
     public void DeleteRoom(Id room_id) =>
         SendMessage(
             MessageContracts.Navigator.RoomDelete,
@@ -261,6 +395,7 @@ public sealed class NavigatorManager : GameStateManager
                 ReadOnly(block.Rooms.Select(SnapshotRoom))))));
     }
 
+    /// <inheritdoc/>
     protected override void Reset()
     {
         long state_generation = CurrentStateGeneration;

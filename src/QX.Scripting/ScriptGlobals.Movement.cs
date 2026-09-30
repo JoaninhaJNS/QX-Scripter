@@ -6,17 +6,23 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// Subscribes to every movement of every avatar: each status update while walking or
-    /// standing, each roller slide and each wired move, together with what caused it.
+    /// Registers a handler that runs on every movement of every avatar, together with what caused it.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// Movements are each status update while walking or standing, each roller slide and each
+    /// wired move.
+    /// </para>
+    /// <para>
     /// Unlike <see cref="OnAvatarMoved"/> this also fires when a status update leaves the avatar
     /// on its tile, which is how a walk that starts or stops is seen. Read
     /// <see cref="RoomManager.Revision"/> before sending a command and compare it with
     /// <see cref="AvatarMovement.Revision"/> to keep only the movements that came after it.
+    /// </para>
     /// </remarks>
-    /// <param name="handler">Receives the avatar in its updated state and the movement.</param>
-    /// <returns>A handle that unsubscribes when disposed; also disposed when the script stops.</returns>
+    /// <param name="handler">The handler to call with the avatar in its updated state and the movement.</param>
+    /// <returns>A handle that removes the handler when disposed; it is also disposed when the script stops.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public IDisposable OnAvatarMovement(Action<Avatar, AvatarMovement> handler) =>
         Subscribe(
             handler,
@@ -24,11 +30,16 @@ public partial class ScriptGlobals
             listener => Room.AvatarMovementReceived -= listener);
 
     /// <summary>
-    /// Subscribes to the movements of the local user's own avatar only. Same events as
-    /// <see cref="OnAvatarMovement"/>, already filtered, and still correct after the avatar
-    /// re-enters a room with a new index.
+    /// Registers a handler that runs on every movement of the local user's own avatar.
     /// </summary>
-    /// <returns>A handle that unsubscribes when disposed; also disposed when the script stops.</returns>
+    /// <remarks>
+    /// It receives the same events as <see cref="OnAvatarMovement"/>, filtered by
+    /// <see cref="AvatarMovement.IsSelf"/>, and stays correct after the avatar enters a room
+    /// again with a new index.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the movement.</param>
+    /// <returns>A handle that removes the handler when disposed; it is also disposed when the script stops.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public IDisposable OnSelfMovement(Action<AvatarMovement> handler)
     {
         ArgumentNullException.ThrowIfNull(handler);
@@ -40,12 +51,16 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Subscribes to every movement of every floor item: roller slides, wired moves and
-    /// rotations, and moves by someone with rights. Wired and roller moves are reported even when
-    /// they leave the item where it was, which is what a wired cycle can be timed by.
+    /// Registers a handler that runs on every movement of every floor item.
     /// </summary>
-    /// <param name="handler">Receives the item in its updated state and the movement.</param>
-    /// <returns>A handle that unsubscribes when disposed; also disposed when the script stops.</returns>
+    /// <remarks>
+    /// Movements are roller slides, wired moves and rotations, and moves by someone with rights.
+    /// Wired and roller moves are reported even when they leave the item where it was, which is
+    /// what a wired cycle can be timed by.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the item in its updated state and the movement.</param>
+    /// <returns>A handle that removes the handler when disposed; it is also disposed when the script stops.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public IDisposable OnFloorItemMovement(Action<FloorItem, FloorItemMovement> handler) =>
         Subscribe(
             handler,

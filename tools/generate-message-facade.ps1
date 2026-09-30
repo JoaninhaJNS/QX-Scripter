@@ -79,7 +79,6 @@ foreach ($raw_line in [IO.File]::ReadAllLines($messages_path))
         continue
     }
 
-    $summary_fields = [Collections.Generic.List[string]]::new()
     $names = [Collections.Generic.List[string]]::new()
     $has_key = $false
     foreach ($field in $line -split '[ \t]+')
@@ -132,27 +131,31 @@ foreach ($raw_line in [IO.File]::ReadAllLines($messages_path))
             throw "Message name '$name' is not a valid C# identifier."
         }
 
-        $summary_fields.Add("$runes`:$name")
         if (!$names.Contains($name))
         {
             $names.Add($name)
         }
     }
 
-    if ($summary_fields.Count -eq 0)
+    if ($names.Count -eq 0)
     {
         throw "Message row '$line' has no Flash aliases."
     }
-    $summary = $summary_fields -join ' '
     foreach ($name in $names)
     {
-        $summaries = $null
-        if (!$directions[$direction].TryGetValue($name, [ref]$summaries))
+        $other_names = $null
+        if (!$directions[$direction].TryGetValue($name, [ref]$other_names))
         {
-            $summaries = [Collections.Generic.SortedSet[string]]::new([StringComparer]::Ordinal)
-            $directions[$direction][$name] = $summaries
+            $other_names = [Collections.Generic.SortedSet[string]]::new([StringComparer]::Ordinal)
+            $directions[$direction][$name] = $other_names
         }
-        $summaries.Add($summary) | Out-Null
+        foreach ($other in $names)
+        {
+            if ($other -cne $name)
+            {
+                $other_names.Add($other) | Out-Null
+            }
+        }
     }
 }
 
@@ -161,8 +164,7 @@ foreach ($section in $compatibility_aliases.Keys)
     foreach ($alias in $compatibility_aliases[$section].Keys)
     {
         $canonical = $compatibility_aliases[$section][$alias]
-        $summaries = $null
-        if (!$directions[$section].TryGetValue($canonical, [ref]$summaries))
+        if (!$directions[$section].ContainsKey($canonical))
         {
             throw "Compatibility alias '$alias' targets missing message '$canonical'."
         }
@@ -170,31 +172,38 @@ foreach ($section in $compatibility_aliases.Keys)
         {
             throw "Compatibility alias '$alias' already exists in the manifest."
         }
-        $directions[$section].Add($alias, $summaries)
+        $directions[$section].Add($alias, [Collections.Generic.SortedSet[string]]::new([StringComparer]::Ordinal))
     }
 }
 
 $lines = [Collections.Generic.List[string]]::new()
 $lines.Add('namespace Qx.Protocol;')
 $lines.Add('')
-$lines.Add('/// <summary>')
-$lines.Add('/// Compile-checked message name constants generated from <c>Resources/messages.ini</c>.')
-$lines.Add('/// Each constant carries the exact spelling used by Flash.')
-$lines.Add('/// </summary>')
+$lines.Add('/// <summary>Provides the Flash message names as compile-checked constants.</summary>')
+$lines.Add('/// <remarks>Generated from <c>Resources/messages.ini</c>. Every constant is spelled exactly as in the Flash client.</remarks>')
 $lines.Add('public static class Msg')
 $lines.Add('{')
-foreach ($entry in @(@('Incoming', 'In', 'server to client'), @('Outgoing', 'Out', 'client to server')))
+foreach ($entry in @(@('Incoming', 'In', 'incoming', 'server to the client'), @('Outgoing', 'Out', 'outgoing', 'client to the server')))
 {
     $section = $entry[0]
     $class_name = $entry[1]
-    $description = $entry[2]
-    $lines.Add("    /// <summary>$section message names ($description).</summary>")
+    $adjective = $entry[2]
+    $route = $entry[3]
+    $lines.Add("    /// <summary>Provides the $adjective message names, sent from the $route.</summary>")
     $lines.Add("    public static class $class_name")
     $lines.Add('    {')
     foreach ($name in $directions[$section].Keys)
     {
-        $summary = [Security.SecurityElement]::Escape(($directions[$section][$name] -join ' | '))
-        $lines.Add("        /// <summary>$summary</summary>")
+        if ($compatibility_aliases[$section].Keys -ccontains $name)
+        {
+            $lines.Add("        /// <summary>An older spelling of <see cref=`"$($compatibility_aliases[$section][$name])`"/>.</summary>")
+        }
+        else
+        {
+            $other_names = @($directions[$section][$name] | ForEach-Object { "<c>$_</c>" })
+            $also = if ($other_names.Count -eq 0) { '' } else { ', also named ' + ($other_names -join ' and ') }
+            $lines.Add("        /// <summary>The $adjective Flash message <c>$name</c>$also.</summary>")
+        }
         $lines.Add("        public const string $name = `"$name`";")
     }
     $lines.Add('    }')

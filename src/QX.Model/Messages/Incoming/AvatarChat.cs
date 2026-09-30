@@ -2,15 +2,41 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Specifies how a chat message was spoken.</summary>
 public enum ChatType
 {
+    /// <summary>A normal chat message.</summary>
     Talk,
+    /// <summary>A shouted chat message.</summary>
     Shout,
+    /// <summary>A whispered chat message.</summary>
     Whisper
 }
 
+/// <summary>Represents a link embedded in a chat message.</summary>
+/// <param name="Key">The key of the link in the message.</param>
+/// <param name="Url">The URL of the link.</param>
+/// <param name="Flag">The boolean flag the server sends with the link.</param>
 public readonly record struct ChatLink(string Key, string Url, bool Flag);
 
+/// <summary>
+/// Represents the <c>Chat</c>, <c>Shout</c> and <c>Whisper</c> messages, received when an avatar speaks in the room.
+/// </summary>
+/// <param name="Index">The room index of the avatar that spoke.</param>
+/// <param name="Message">The text of the message.</param>
+/// <param name="Gesture">The gesture shown with the message.</param>
+/// <param name="BubbleStyle">The chat bubble style.</param>
+/// <param name="Links">The links embedded in the message.</param>
+/// <param name="TrackingId">The tracking identifier sent with the message.</param>
+/// <param name="Type">
+/// How the message was spoken. The parser sets <see cref="ChatType.Whisper"/> when a whisper identifier is present
+/// and <see cref="ChatType.Talk"/> otherwise, so a parsed <c>Shout</c> reads as talk until the room state sets the
+/// type from the message name.
+/// </param>
+/// <param name="ChatId">The chat identifier, or <see langword="null"/> when the message does not carry one.</param>
+/// <param name="WhisperId">
+/// The whisper identifier, or <see langword="null"/> when the message does not carry one.
+/// </param>
 public sealed record AvatarChat(
     int Index,
     string Message,
@@ -22,6 +48,8 @@ public sealed record AvatarChat(
     int? ChatId = null,
     int? WhisperId = null) : IParserComposer<AvatarChat>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static AvatarChat Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -44,6 +72,9 @@ public sealed record AvatarChat(
         return new AvatarChat(index, message, gesture, bubble_style, links, tracking_id, type, chat_id, whisper_id);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <remarks><see cref="WhisperId"/> is only written when <see cref="ChatId"/> has a value.</remarks>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

@@ -2,21 +2,24 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
-/// <summary>One room the local user may advertise.</summary>
+/// <summary>Represents a room the user may advertise with a room event.</summary>
 /// <param name="RoomId">The room's identifier.</param>
-/// <param name="RoomName">Its name.</param>
+/// <param name="RoomName">The room's name.</param>
 /// <param name="HasControllers">Whether the room has anyone with rights besides the owner.</param>
 public sealed record RoomAdRoom(Id RoomId, string RoomName, bool HasControllers)
     : IParserComposer<RoomAdRoom>
 {
     private string room_name = RoomName ?? throw new ArgumentNullException(nameof(RoomName));
 
+    /// <summary>Gets the room's name.</summary>
     public string RoomName
     {
         get => room_name;
         init => room_name = value ?? throw new ArgumentNullException(nameof(RoomName));
     }
 
+    /// <summary>Parses the room from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static RoomAdRoom Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -28,6 +31,8 @@ public sealed record RoomAdRoom(Id RoomId, string RoomName, bool HasControllers)
         return value;
     }
 
+    /// <summary>Composes the room into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -81,11 +86,9 @@ internal readonly record struct RoomAdRoomWireSnapshot(
     string RoomName,
     bool HasControllers);
 
-/// <summary>
-/// Which rooms may be advertised, answered before a room-event purchase.
-/// </summary>
+/// <summary>Represents the <c>RoomAdPurchaseInfo</c> message, received with the rooms the user may advertise before a room event purchase.</summary>
 /// <remarks>
-/// id 3787. Read this before buying: the purchase names a room, and only the rooms listed here are
+/// Read this before buying: the purchase names a room, and only the rooms listed here are
 /// eligible. Membership decides how long the event runs, which is what <paramref name="IsVip"/>
 /// reports.
 /// </remarks>
@@ -96,12 +99,15 @@ public sealed record RoomAdPurchaseInfo(bool IsVip, IReadOnlyList<RoomAdRoom> Ro
 {
     private IReadOnlyList<RoomAdRoom> rooms = Freeze(Rooms);
 
+    /// <summary>Gets the rooms that may be advertised.</summary>
     public IReadOnlyList<RoomAdRoom> Rooms
     {
         get => rooms;
         init => rooms = Freeze(value);
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static RoomAdPurchaseInfo Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -130,6 +136,8 @@ public sealed record RoomAdPurchaseInfo(bool IsVip, IReadOnlyList<RoomAdRoom> Ro
         return new RoomAdPurchaseInfo(isVip, Array.AsReadOnly(rooms));
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -178,9 +186,12 @@ internal readonly record struct RoomAdPurchaseInfoWireSnapshot(
     bool IsVip,
     IReadOnlyList<RoomAdRoomWireSnapshot> Rooms);
 
-/// <summary>Asks which rooms may be advertised.</summary>
+/// <summary>Represents the outgoing <c>GetRoomAdPurchaseInfo</c> message, sent to ask which rooms may be advertised.</summary>
+/// <remarks>The message carries no data. The hotel answers with <see cref="RoomAdPurchaseInfo"/>.</remarks>
 public sealed record GetRoomAdPurchaseInfo : IParserComposer<GetRoomAdPurchaseInfo>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetRoomAdPurchaseInfo Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -190,6 +201,8 @@ public sealed record GetRoomAdPurchaseInfo : IParserComposer<GetRoomAdPurchaseIn
         return new GetRoomAdPurchaseInfo();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -197,11 +210,9 @@ public sealed record GetRoomAdPurchaseInfo : IParserComposer<GetRoomAdPurchaseIn
         ArgumentNullException.ThrowIfNull(value);
 }
 
-/// <summary>
-/// Buys a room event, which advertises a room in the navigator for a while.
-/// </summary>
+/// <summary>Represents the outgoing <c>PurchaseRoomAd</c> message, sent to buy a room event that advertises a room in the navigator for a while.</summary>
 /// <remarks>
-/// id 2928. Argument order taken from the client's own call, which passes the page and offer it is
+/// Argument order taken from the client's own call, which passes the page and offer it is
 /// buying from followed by the event's own details. The hotel answers with the ordinary catalog
 /// purchase messages, so the outcome arrives the same way any other purchase does.
 /// </remarks>
@@ -224,9 +235,13 @@ public sealed record PurchaseRoomAd(
     string Description,
     int CategoryId) : IParserComposer<PurchaseRoomAd>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PurchaseRoomAd Parse(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt(), p.ReadId(), p.ReadString(), p.ReadBool(), p.ReadString(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteInt(PageId);

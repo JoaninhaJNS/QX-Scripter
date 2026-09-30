@@ -7,25 +7,36 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// The earnings vault: what each source has paid out and is waiting to be claimed.
+    /// Gets the earnings vault manager, which tracks what each source has paid out and is waiting
+    /// to be claimed.
     /// </summary>
     public EarningsManager Earnings => Game.Earnings;
 
     /// <summary>
-    /// The whole vault, fetching it from the hotel on first use.
+    /// Gets the whole vault, requesting it from the hotel when it has not been loaded yet.
     /// </summary>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <remarks>
+    /// Once the vault is loaded, the cached copy is read without a request.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds for the vault request.</param>
+    /// <returns>The vault with every entry.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the vault changed while it was read.</exception>
     public async Task<EarningStatus> GetEarnings(int timeoutMs = 10000) =>
         (await ReadEarningsSnapshot(timeoutMs).ConfigureAwait(false)).Status;
 
     /// <summary>
-    /// The categories that are holding something, with what each one is worth.
+    /// Gets the categories that are holding something, with what each one is worth.
     /// </summary>
     /// <remarks>
     /// One row per category, in the order the hotel listed them, so a script can print the vault
-    /// without adding anything up itself.
+    /// without adding anything up itself. The vault is requested from the hotel only when it has
+    /// not been loaded yet.
     /// </remarks>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for the vault request.</param>
+    /// <returns>One line per category.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the vault changed while it was read.</exception>
     public async Task<IReadOnlyList<EarningsLine>> GetEarningsByCategory(int timeoutMs = 10000)
     {
         EarningStatus status = await GetEarnings(timeoutMs);
@@ -41,9 +52,15 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// What the whole vault is worth, added up across every category.
+    /// Gets what the whole vault is worth, added up across every category.
     /// </summary>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <remarks>
+    /// The vault is requested from the hotel only when it has not been loaded yet.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds for the vault request.</param>
+    /// <returns>A line with <see cref="EarningCategory.All"/> as its category and the vault totals.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the vault changed while it was read.</exception>
     public async Task<EarningsLine> GetEarningsTotal(int timeoutMs = 10000)
     {
         EarningStatus status = await GetEarnings(timeoutMs);
@@ -56,22 +73,28 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Claims one category of the vault.
+    /// Sends a claim for one category of the vault.
     /// </summary>
     /// <remarks>
-    /// The hotel answers with a result rather than a new vault. Subscribe with
-    /// <see cref="OnEarningsClaimed"/> to see whether it went through.
+    /// It returns without waiting. The hotel answers with a result rather than a new vault;
+    /// subscribe with <see cref="OnEarningsClaimed"/> to see whether it went through. A refused
+    /// claim leaves the cached vault unchanged.
     /// </remarks>
-    /// <param name="category">The category to claim.</param>
+    /// <param name="category">
+    /// The category to claim; <see cref="EarningCategory.All"/> claims every category.
+    /// </param>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the application runtime is not active.</exception>
     public void ClaimEarnings(EarningCategory category) => Game.Earnings.Claim(category);
 
     /// <summary>
-    /// Claims every category in one request.
+    /// Sends a claim for every category in one request.
     /// </summary>
     /// <remarks>
-    /// This is one request, not one per category: the hotel takes the claim-all sentinel and empties
-    /// the whole vault, exactly as the client's claim-all button does.
+    /// This is one request, not one per category: the hotel takes the claim-all value
+    /// <see cref="EarningCategory.All"/> and empties the whole vault, exactly as the client's
+    /// claim-all button does. It returns without waiting for the answer.
     /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the application runtime is not active.</exception>
     public void ClaimAllEarnings() => Game.Earnings.ClaimAll();
 
     /// <summary>
@@ -80,10 +103,14 @@ public partial class ScriptGlobals
     /// <remarks>
     /// Sent one category at a time so a category the hotel refuses can be told apart from one it
     /// accepted, which a single claim-all cannot report. Categories holding nothing but duckets are
-    /// left alone, matching the client, whose claim button lights up for the rest.
+    /// left alone, matching the client, whose claim button lights up for the rest. A category
+    /// whose answer times out is skipped and not reported as accepted. The vault is requested
+    /// from the hotel first when it has not been loaded yet.
     /// </remarks>
-    /// <param name="timeoutMs">How long to wait for each answer.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for the vault request and for each claim answer.</param>
     /// <returns>The categories the hotel accepted.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, the session changed, or the vault changed while it was read.</exception>
     public async Task<IReadOnlyList<EarningCategory>> ClaimEarningsPerCategory(int timeoutMs = 10000)
     {
         EarningReadSnapshot snapshot = await ReadEarningsSnapshot(timeoutMs).ConfigureAwait(false);
@@ -128,11 +155,20 @@ public partial class ScriptGlobals
         return claimed;
     }
 
-    /// <summary>Asks the hotel to resend the vault.</summary>
+    /// <summary>Sends a request for the hotel to resend the vault.</summary>
+    /// <remarks>
+    /// It returns without waiting; the answer updates <see cref="Earnings"/> and raises
+    /// <see cref="OnEarningsChanged"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the application runtime is not active.</exception>
     public void RefreshEarnings() => Game.Earnings.Request();
 
-    /// <summary>Runs a callback whenever the vault arrives or changes.</summary>
-    /// <param name="handler">Receives the vault as it now stands.</param>
+    /// <summary>Registers a handler that runs whenever the vault arrives or is changed by a successful claim.</summary>
+    /// <remarks>
+    /// No handle is returned, so the handler stays registered until the script stops.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the vault as it now stands.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnEarningsChanged(Action<EarningStatus> handler)
     {
         _ = Subscribe(
@@ -141,8 +177,12 @@ public partial class ScriptGlobals
             value => Game.Earnings.StatusChanged -= value);
     }
 
-    /// <summary>Runs a callback whenever the hotel answers a claim.</summary>
-    /// <param name="handler">Receives the category and whether the claim went through.</param>
+    /// <summary>Registers a handler that runs whenever the hotel answers a claim, whether it succeeded or not.</summary>
+    /// <remarks>
+    /// No handle is returned, so the handler stays registered until the script stops.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the category and whether the claim went through.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnEarningsClaimed(Action<EarningClaimResult> handler)
     {
         _ = Subscribe(
@@ -151,8 +191,12 @@ public partial class ScriptGlobals
             value => Game.Earnings.Claimed -= value);
     }
 
-    /// <summary>Runs a callback whenever the hotel says a category gained something.</summary>
-    /// <param name="handler">Receives the category.</param>
+    /// <summary>Registers a handler that runs whenever the hotel reports that a category has a new reward.</summary>
+    /// <remarks>
+    /// No handle is returned, so the handler stays registered until the script stops.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the category.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnEarningAvailable(Action<EarningCategory> handler)
     {
         _ = Subscribe(
@@ -354,14 +398,14 @@ public partial class ScriptGlobals
 }
 
 /// <summary>
-/// What one category of the vault is worth.
+/// Represents what one category of the earnings vault is worth.
 /// </summary>
 /// <param name="Category">
 /// The category, or <see cref="EarningCategory.All"/> when the row is the whole vault added up.
 /// </param>
-/// <param name="Credits">Credits waiting.</param>
-/// <param name="Duckets">Duckets waiting.</param>
-/// <param name="Products">How many items are waiting.</param>
+/// <param name="Credits">The credits waiting.</param>
+/// <param name="Duckets">The duckets waiting.</param>
+/// <param name="Products">The number of items waiting.</param>
 /// <param name="HasClaimable">
 /// Whether there is anything the client would light its claim button for. Duckets on their own do
 /// not count, which is the client's rule rather than this one.

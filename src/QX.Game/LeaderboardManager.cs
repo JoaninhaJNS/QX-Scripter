@@ -9,10 +9,16 @@ using Qx.Model.Messages.Outgoing;
 
 namespace Qx.Game;
 
+/// <summary>
+/// Specifies which players a leaderboard ranks.
+/// </summary>
 public enum LeaderboardScope
 {
+    /// <summary>All players in the hotel.</summary>
     Total,
+    /// <summary>The local user's friends.</summary>
     Friends,
+    /// <summary>The members of the local user's favorite group.</summary>
     Groups
 }
 
@@ -61,6 +67,19 @@ internal interface ILeaderboardOperations
         int direction);
 }
 
+/// <summary>
+/// Manages the game leaderboards received by the local user.
+/// </summary>
+/// <remarks>
+/// <para>
+/// All members are safe to call from any thread. One board is kept per scope and period, and a new
+/// response replaces the stored board for that scope and period. Events are raised in the order the
+/// state changed and are not raised when the hotel session changed before they could be delivered.
+/// </para>
+/// <para>
+/// The state is cleared when the hotel connection closes and when a new session connects.
+/// </para>
+/// </remarks>
 public sealed class LeaderboardManager : GameStateManager
 {
     private readonly object operations_sync = new();
@@ -79,23 +98,58 @@ public sealed class LeaderboardManager : GameStateManager
     private bool delivering;
     private int delivery_thread_id;
 
+    /// <summary>
+    /// Gets the view size sent with each leaderboard request.
+    /// </summary>
+    /// <remarks>
+    /// Read from the <c>games.highscores.viewSize</c> game data variable. Defaults to 8.
+    /// </remarks>
     public int ViewSize { get; internal set; } = 8;
 
+    /// <summary>
+    /// Gets the window size sent with each leaderboard request.
+    /// </summary>
+    /// <remarks>
+    /// Read from the <c>games.highscores.windowSize</c> game data variable. Defaults to 50.
+    /// <see cref="RequestPreviousPage"/> moves back by this many ranks.
+    /// </remarks>
     public int WindowSize { get; internal set; } = 50;
 
+    /// <summary>
+    /// Gets the week covered by the last weekly board, or <see langword="null"/> when none was received.
+    /// </summary>
     public WeeklyLeaderboardPeriod? Period => State.Period;
 
+    /// <summary>
+    /// Gets the id of the local user's favorite group as reported by the last group board.
+    /// </summary>
+    /// <remarks>
+    /// 0 until a group board is received.
+    /// </remarks>
     public int FavouriteGroupId => State.FavouriteGroupId;
 
+    /// <summary>
+    /// Occurs when a leaderboard is received.
+    /// </summary>
+    /// <remarks>
+    /// The arguments are the board's scope, whether it is a weekly board, and the board.
+    /// </remarks>
     public event Action<LeaderboardScope, bool, Leaderboard>? BoardReceived;
     internal event Action<LeaderboardStateUpdate>? StateCommitted;
     internal event Action<LeaderboardStateUpdate>? StateChanged;
 
     internal LeaderboardState State => Volatile.Read(ref state);
 
+    /// <summary>
+    /// Gets the last board received for a scope and period.
+    /// </summary>
+    /// <param name="scope">The scope of the board.</param>
+    /// <param name="weekly">Whether to get the weekly board instead of the all-time board.</param>
+    /// <returns>The board, or <see langword="null"/> when none was received.</returns>
     public Leaderboard? Board(LeaderboardScope scope, bool weekly = false) =>
         State.Boards.GetValueOrDefault(new LeaderboardRoute(scope, weekly));
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         CommitReset(CurrentSession);
@@ -132,9 +186,35 @@ public sealed class LeaderboardManager : GameStateManager
             message => (message.Board, message.Period, message.FavouriteGroupId));
     }
 
+    /// <summary>
+    /// Requests a leaderboard for a game type from the server.
+    /// </summary>
+    /// <param name="gameTypeId">The id of the game type.</param>
+    /// <param name="scope">The scope of the board.</param>
+    /// <param name="weekly">Whether to request the weekly board instead of the all-time board.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
+    /// <remarks>
+    /// The request carries <see cref="ViewSize"/> and <see cref="WindowSize"/>, and a weekly request
+    /// carries <see cref="WeekOffset"/>. The response is stored and raised through
+    /// <see cref="BoardReceived"/>.
+    /// </remarks>
     public void Request(int gameTypeId, LeaderboardScope scope, bool weekly = false) =>
         Operations().Request(gameTypeId, scope, weekly, -1, 0);
 
+    /// <summary>
+    /// Requests the ranks below the stored board for a scope and period.
+    /// </summary>
+    /// <param name="scope">The scope of the board.</param>
+    /// <param name="weekly">Whether to page the weekly board instead of the all-time board.</param>
+    /// <returns>
+    /// <see langword="true"/> when a request was sent; <see langword="false"/> when no board is stored
+    /// or it has no more ranks below.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
+    /// <remarks>
+    /// The request uses the game type of the last leaderboard request and starts one rank after the
+    /// stored board's last rank.
+    /// </remarks>
     public bool RequestNextPage(LeaderboardScope scope, bool weekly = false)
     {
         LeaderboardState current = State;
@@ -150,6 +230,20 @@ public sealed class LeaderboardManager : GameStateManager
         return true;
     }
 
+    /// <summary>
+    /// Requests the ranks above the stored board for a scope and period.
+    /// </summary>
+    /// <param name="scope">The scope of the board.</param>
+    /// <param name="weekly">Whether to page the weekly board instead of the all-time board.</param>
+    /// <returns>
+    /// <see langword="true"/> when a request was sent; <see langword="false"/> when no board is stored
+    /// or it has no more ranks above.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
+    /// <remarks>
+    /// The request uses the game type of the last leaderboard request and starts
+    /// <see cref="WindowSize"/> ranks before the stored board's first rank, but not before rank 1.
+    /// </remarks>
     public bool RequestPreviousPage(LeaderboardScope scope, bool weekly = false)
     {
         LeaderboardState current = State;
@@ -165,6 +259,15 @@ public sealed class LeaderboardManager : GameStateManager
         return true;
     }
 
+    /// <summary>
+    /// Sets how many weeks back the next weekly leaderboard request looks.
+    /// </summary>
+    /// <param name="offset">The number of weeks back from the current week.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> is negative.</exception>
+    /// <remarks>
+    /// The value is capped at the <see cref="WeeklyLeaderboardPeriod.MaxOffset"/> of the stored
+    /// <see cref="Period"/>. No request is sent.
+    /// </remarks>
     public void SetWeekOffset(int offset)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(offset);
@@ -203,6 +306,12 @@ public sealed class LeaderboardManager : GameStateManager
         ThrowFailures(failure, publication_failure);
     }
 
+    /// <summary>
+    /// Gets how many weeks back weekly leaderboard requests look.
+    /// </summary>
+    /// <remarks>
+    /// Set by <see cref="SetWeekOffset"/> and updated from each weekly board received.
+    /// </remarks>
     public int WeekOffset => State.WeekOffset;
 
     internal void BindOperations(ILeaderboardOperations value)
@@ -291,6 +400,7 @@ public sealed class LeaderboardManager : GameStateManager
 
     internal bool IsCurrentPublication(LeaderboardStateUpdate update) => UpdateCurrent(update);
 
+    /// <inheritdoc/>
     protected override void Reset() => CommitReset(CurrentSession);
 
     private void BindSession(Session session) => CommitReset(session);

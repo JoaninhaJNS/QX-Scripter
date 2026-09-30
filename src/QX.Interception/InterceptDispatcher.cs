@@ -5,6 +5,11 @@ using Qx.Protocol;
 
 namespace Qx.Interception;
 
+/// <summary>Provides the dispatch of intercepted packets to the callbacks registered for their header.</summary>
+/// <remarks>
+/// Registrations by identifier or semantic key are resolved to headers again after every registration
+/// change or rebind, against the message manager that is bound at that time.
+/// </remarks>
 public sealed class InterceptDispatcher
 {
     private const string Category = "intercept";
@@ -41,20 +46,26 @@ public sealed class InterceptDispatcher
     private ISemanticMessageResolver? _semantic_resolver;
     private bool _messages_available;
 
-    /// <summary>
-    /// Identifiers that the bound message manager could not resolve to a header.
-    /// Callbacks registered under these identifiers are bound to nothing and never run.
-    /// </summary>
+    /// <summary>Gets the identifiers that the bound message manager could not resolve to a header.</summary>
+    /// <remarks>Callbacks registered under these identifiers are bound to nothing and never run.</remarks>
     public IReadOnlyList<Identifier> UnresolvedIdentifiers => Snapshot().Unresolved;
 
+    /// <summary>Gets the semantic message keys that the bound resolver could not resolve to a header.</summary>
+    /// <remarks>
+    /// Callbacks registered under these keys are bound to nothing and never run. Keys that are known but
+    /// do not apply to the current client are left out.
+    /// </remarks>
     public IReadOnlyList<MessageKey> UnresolvedKeys => Snapshot().UnresolvedKeys;
 
-    /// <summary>
-    /// Raised when an intercept callback throws. The failure is isolated: the remaining
-    /// callbacks registered for the same header still run.
-    /// </summary>
+    /// <summary>Occurs when an intercept callback throws.</summary>
+    /// <remarks>The failure is isolated: the remaining callbacks registered for the same header still run.</remarks>
     public event Action<Intercept, Exception>? CallbackFailed;
 
+    /// <summary>Registers a callback for packets with a header.</summary>
+    /// <param name="header">The header to intercept.</param>
+    /// <param name="callback">The callback that receives each matching packet.</param>
+    /// <returns>A handle that removes the callback when disposed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="callback"/> is <see langword="null"/>.</exception>
     public IDisposable Add(Header header, Action<Intercept> callback)
     {
         ArgumentNullException.ThrowIfNull(callback);
@@ -67,6 +78,12 @@ public sealed class InterceptDispatcher
         return new Subscription(this, registration);
     }
 
+    /// <summary>Registers a callback for packets of a named message.</summary>
+    /// <param name="identifier">The message to intercept.</param>
+    /// <param name="callback">The callback that receives each matching packet.</param>
+    /// <param name="manager">The message manager that resolves identifiers, which replaces the one used for every identifier registration.</param>
+    /// <returns>A handle that removes the callback when disposed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="callback"/> or <paramref name="manager"/> is <see langword="null"/>.</exception>
     public IDisposable Add(Identifier identifier, Action<Intercept> callback, IMessageManager manager)
     {
         ArgumentNullException.ThrowIfNull(callback);
@@ -81,6 +98,13 @@ public sealed class InterceptDispatcher
         return new Subscription(this, registration);
     }
 
+    /// <summary>Registers a callback for packets of a semantic message.</summary>
+    /// <param name="key">The semantic message key to intercept.</param>
+    /// <param name="callback">The callback that receives each matching packet.</param>
+    /// <param name="resolver">The resolver that maps keys to headers, which replaces the one used for every key registration.</param>
+    /// <returns>A handle that removes the callback when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="key"/> is empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="callback"/> or <paramref name="resolver"/> is <see langword="null"/>.</exception>
     public IDisposable Add(MessageKey key, Action<Intercept> callback, ISemanticMessageResolver resolver)
     {
         if (key.IsEmpty)
@@ -98,14 +122,19 @@ public sealed class InterceptDispatcher
     }
 
     /// <summary>
-    /// Rebinds every identifier registration against <paramref name="manager"/>.
+    /// Rebinds every identifier and semantic key registration against <paramref name="manager"/>.
     /// </summary>
+    /// <remarks>
+    /// Semantic keys resolve only when <paramref name="manager"/> also implements
+    /// <see cref="ISemanticMessageResolver"/>.
+    /// </remarks>
     /// <param name="manager">The message manager used to resolve identifiers to headers.</param>
     /// <param name="messages_available">
-    /// Whether a message catalog is currently loaded for the active client. When false,
-    /// unresolved identifiers are expected and are reported at debug level; when true an
-    /// unresolved identifier is a real defect and is reported as a warning.
+    /// Whether a message catalog is currently loaded for the active client. When false and nothing
+    /// resolves, unresolved registrations are expected and are reported at debug level; otherwise each
+    /// unresolved registration is a real defect and is reported once as a warning.
     /// </param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="manager"/> is <see langword="null"/>.</exception>
     public void Rebind(IMessageManager manager, bool messages_available = true)
     {
         ArgumentNullException.ThrowIfNull(manager);
@@ -118,6 +147,13 @@ public sealed class InterceptDispatcher
         }
     }
 
+    /// <summary>Runs every callback registered for the header of an intercepted packet.</summary>
+    /// <remarks>
+    /// The packet position is reset to zero before and after each callback. A callback that throws is
+    /// logged and reported through <see cref="CallbackFailed"/>, and the remaining callbacks still run.
+    /// </remarks>
+    /// <param name="intercept">The intercepted packet.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="intercept"/> is <see langword="null"/>.</exception>
     public void Dispatch(Intercept intercept)
     {
         ArgumentNullException.ThrowIfNull(intercept);

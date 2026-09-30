@@ -3,39 +3,42 @@ using Qx.Model;
 
 namespace Qx.Game;
 
-/// <summary>One person seen in the room, and when.</summary>
+/// <summary>Represents a user seen in the current room.</summary>
+/// <param name="userId">The id of the user.</param>
+/// <param name="name">The name of the user.</param>
 public sealed class RoomVisitor(Id userId, string name)
 {
+    /// <summary>Gets the id of the user.</summary>
     public Id UserId { get; } = userId;
+    /// <summary>Gets the name of the user.</summary>
     public string Name { get; } = name;
 
-    /// <summary>Where they last stood in the room's own numbering; used to order the list.</summary>
+    /// <summary>Gets the room index the user had when last seen entering.</summary>
+    /// <remarks><see cref="RoomVisitorLog.Visitors"/> is ordered by this index, highest first.</remarks>
     public int Index { get; internal set; }
 
+    /// <summary>Gets the local time the user last entered the room, or <see langword="null"/> when the user was already there when the room loaded.</summary>
     public DateTime? Entered { get; internal set; }
+    /// <summary>Gets the local time the user last left the room, or <see langword="null"/> while the user is in the room.</summary>
     public DateTime? Left { get; internal set; }
 
-    /// <summary>How many separate times they have come in while the log has been running.</summary>
+    /// <summary>Gets the number of times the user has entered the room while the log was recording.</summary>
     public int Visits { get; internal set; } = 1;
 
+    /// <summary>Gets whether the user is in the room.</summary>
     public bool IsHere => Left is null;
 }
 
-/// <summary>
-/// Who has been in the room since the session opened it.
-/// </summary>
+/// <summary>Represents a log of the users seen in the current room.</summary>
 /// <remarks>
 /// <para>
-/// Kept here rather than asked for, because there is nothing to ask. The hotel has no message for
-/// "who has been in this room" — <c>RoomVisits</c> is your own history of rooms you went to, which
-/// is a different question — so the only way to answer it is to watch people arrive and leave and
-/// remember. That also means the log begins when the room is opened and not before.
+/// The hotel has no message that lists past visitors of a room, so the log records users as they
+/// arrive and leave. It starts when the room is entered and is cleared when the room is left.
 /// </para>
 /// <para>
-/// Keyed by name, not by id. A visitor who leaves and comes back is the same person and should
-/// raise the count on one row rather than add a second, and the room hands out a fresh index each
-/// time, so the index cannot be the key. Bots and pets are left out: they are placed by the room,
-/// not visiting it.
+/// Visitors are keyed by name, ignoring case, because the room assigns a new index on every
+/// entry. A user who leaves and returns keeps one entry and its <see cref="RoomVisitor.Visits"/>
+/// count increases. Bots and pets are not recorded.
 /// </para>
 /// </remarks>
 public sealed class RoomVisitorLog
@@ -45,9 +48,14 @@ public sealed class RoomVisitorLog
     private RoomManager? _room;
     private Func<string?>? _ownName;
 
+    /// <summary>Occurs when a visitor enters or leaves the room, or when the log is cleared.</summary>
     public event Action? Changed;
 
-    /// <summary>Everyone seen, most recently arrived first.</summary>
+    /// <summary>Gets a copy of the visitors, most recently arrived first.</summary>
+    /// <remarks>
+    /// The list is ordered by <see cref="RoomVisitor.Index"/>, highest first. The visitors in it are
+    /// the live entries the log keeps updating.
+    /// </remarks>
     public IReadOnlyList<RoomVisitor> Visitors
     {
         get
@@ -57,12 +65,16 @@ public sealed class RoomVisitorLog
         }
     }
 
+    /// <summary>Gets the number of visitors in the log.</summary>
     public int Count
     {
         get { lock (_sync) return _visitors.Count; }
     }
 
-    /// <summary>Starts watching a room. Called once, when the game state is wired up.</summary>
+    /// <summary>Starts recording the users who enter and leave the specified room.</summary>
+    /// <remarks>Called once, when the game state is set up. The log is cleared each time the room is left.</remarks>
+    /// <param name="room">The room manager to watch.</param>
+    /// <param name="ownName">A function that returns the user's own name, used to record the user's own entry time while the room loads.</param>
     public void Watch(RoomManager room, Func<string?> ownName)
     {
         ArgumentNullException.ThrowIfNull(room);
@@ -75,6 +87,7 @@ public sealed class RoomVisitorLog
         room.Left += Clear;
     }
 
+    /// <summary>Removes all visitors from the log.</summary>
     public void Clear()
     {
         lock (_sync)

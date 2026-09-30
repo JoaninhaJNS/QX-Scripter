@@ -3,7 +3,7 @@ using Qx.Messages;
 namespace Qx.Model.Messages.Incoming;
 
 /// <summary>
-/// Where an earning came from.
+/// Specifies where an earning came from.
 /// </summary>
 /// <remarks>
 /// The values are positions in the client's own category table, which is what travels on the wire
@@ -12,25 +12,40 @@ namespace Qx.Model.Messages.Incoming;
 /// </remarks>
 public enum EarningCategory
 {
-    /// <summary>Every category at once. Only ever sent, never received as a source.</summary>
+    /// <summary>Every category at once.</summary>
+    /// <remarks>Only ever sent, never received as a source.</remarks>
     All = -1,
+    /// <summary>Earnings from the tutorial.</summary>
     Tutorial = 0,
+    /// <summary>Earnings from the daily gift.</summary>
     DailyGift = 1,
+    /// <summary>Earnings from achievements.</summary>
     Achievements = 2,
+    /// <summary>Earnings from the marketplace.</summary>
     Marketplace = 3,
+    /// <summary>Earnings from Habbo Club.</summary>
     HabboClub = 4,
+    /// <summary>Earnings from level progression.</summary>
     LevelProgression = 5,
+    /// <summary>Earnings from room bundle sales.</summary>
     RoomBundleSales = 6,
+    /// <summary>Earnings from the bonus bag.</summary>
     BonusBag = 7,
+    /// <summary>Earnings from donations.</summary>
     Donation = 8,
+    /// <summary>Earnings from surprises.</summary>
     Surprise = 9,
+    /// <summary>Earnings from Snowstorm.</summary>
     Snowstorm = 10,
+    /// <summary>Earnings from games.</summary>
     Games = 11,
+    /// <summary>Earnings from wired chests.</summary>
     WiredChest = 12,
+    /// <summary>Earnings from the agency.</summary>
     Agency = 13
 }
 
-/// <summary>What an earning pays out in.</summary>
+/// <summary>Specifies what an earning pays out in.</summary>
 public enum EarningRewardKind
 {
     /// <summary>Duckets, the activity points the purse holds as type 0.</summary>
@@ -40,7 +55,7 @@ public enum EarningRewardKind
 }
 
 /// <summary>
-/// One line of the earnings vault: a category, what it pays and how much of it.
+/// Represents one line of the earnings vault: a category, what it pays and how much of it.
 /// </summary>
 /// <remarks>
 /// A category can hold several lines. The client adds up the ones that share a kind and shows one
@@ -50,6 +65,7 @@ public sealed record EarningEntry : IParserComposer<EarningEntry>
 {
     private string _product_code = "";
 
+    /// <summary>Initializes a new instance of the <see cref="EarningEntry"/> record.</summary>
     /// <param name="Category">Where the earning came from.</param>
     /// <param name="Kind">Whether the amount is duckets or credits.</param>
     /// <param name="Amount">How much is waiting.</param>
@@ -69,12 +85,17 @@ public sealed record EarningEntry : IParserComposer<EarningEntry>
         this.ProductCode = ProductCode;
     }
 
+    /// <summary>Gets where the earning came from.</summary>
     public EarningCategory Category { get; init; }
 
+    /// <summary>Gets whether the amount is duckets or credits.</summary>
     public EarningRewardKind Kind { get; init; }
 
+    /// <summary>Gets how much is waiting.</summary>
     public int Amount { get; init; }
 
+    /// <summary>Gets the product this line hands over, empty when the line is plain currency.</summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
     public string ProductCode
     {
         get => _product_code;
@@ -85,6 +106,11 @@ public sealed record EarningEntry : IParserComposer<EarningEntry>
         }
     }
 
+    /// <summary>Deconstructs the entry into its parts.</summary>
+    /// <param name="Category">Where the earning came from.</param>
+    /// <param name="Kind">Whether the amount is duckets or credits.</param>
+    /// <param name="Amount">How much is waiting.</param>
+    /// <param name="ProductCode">The product this line hands over, empty when the line is plain currency.</param>
     public void Deconstruct(
         out EarningCategory Category,
         out EarningRewardKind Kind,
@@ -97,14 +123,18 @@ public sealed record EarningEntry : IParserComposer<EarningEntry>
         ProductCode = this.ProductCode;
     }
 
-    /// <summary>Whether this line hands over an item rather than currency.</summary>
+    /// <summary>Gets whether this line hands over an item rather than currency.</summary>
     public bool IsProduct => ProductCode.Length > 0;
 
+    /// <summary>Parses an earning entry from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static EarningEntry Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static EarningEntry ParseFlash(in PacketReader p) => ParseRoot(in p);
 
+    /// <summary>Composes the earning entry into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -176,23 +206,30 @@ internal readonly record struct EarningEntryWireSnapshot(
     int Amount,
     string ProductCode);
 
+/// <summary>
+/// Represents the <c>IncomeRewardStatus</c> message, received with the contents of the earnings vault.
+/// </summary>
 public sealed record EarningStatus : IParserComposer<EarningStatus>
 {
     private IReadOnlyList<EarningEntry> _entries =
         Array.AsReadOnly(Array.Empty<EarningEntry>());
 
+    /// <summary>Initializes a new instance of the <see cref="EarningStatus"/> record.</summary>
     /// <param name="Entries">The lines, in the order the hotel sent them.</param>
     public EarningStatus(IReadOnlyList<EarningEntry> Entries)
     {
         this.Entries = Entries;
     }
 
+    /// <summary>Gets the lines, in the order the hotel sent them, as a read only copy.</summary>
     public IReadOnlyList<EarningEntry> Entries
     {
         get => _entries;
         init => _entries = EarningWire.FreezeReferences(value, nameof(Entries));
     }
 
+    /// <summary>Deconstructs the message into its lines.</summary>
+    /// <param name="Entries">The lines, in the order the hotel sent them.</param>
     public void Deconstruct(out IReadOnlyList<EarningEntry> Entries)
     {
         Entries = this.Entries;
@@ -213,18 +250,18 @@ public sealed record EarningStatus : IParserComposer<EarningStatus>
         }
     }
 
-    /// <summary>How many credits one category is holding.</summary>
+    /// <summary>Gets how many credits one category is holding.</summary>
     /// <param name="category">The category, or <see cref="EarningCategory.All"/> for every one.</param>
     public int Credits(EarningCategory category = EarningCategory.All) =>
         Sum(category, EarningRewardKind.Credits);
 
-    /// <summary>How many duckets one category is holding.</summary>
+    /// <summary>Gets how many duckets one category is holding.</summary>
     /// <param name="category">The category, or <see cref="EarningCategory.All"/> for every one.</param>
     public int Duckets(EarningCategory category = EarningCategory.All) =>
         Sum(category, EarningRewardKind.Duckets);
 
     /// <summary>
-    /// How many items one category is holding.
+    /// Gets how many items one category is holding.
     /// </summary>
     /// <remarks>
     /// Counted, not added up: the client draws one product per line whatever amount the line
@@ -234,7 +271,7 @@ public sealed record EarningStatus : IParserComposer<EarningStatus>
     public int Products(EarningCategory category = EarningCategory.All) =>
         Entries.Count(entry => entry.IsProduct && (category == EarningCategory.All || entry.Category == category));
 
-    /// <summary>The lines of one category.</summary>
+    /// <summary>Gets the lines of one category.</summary>
     /// <param name="category">The category, or <see cref="EarningCategory.All"/> for every one.</param>
     public IReadOnlyList<EarningEntry> For(EarningCategory category) =>
         category == EarningCategory.All
@@ -242,7 +279,7 @@ public sealed record EarningStatus : IParserComposer<EarningStatus>
             : [.. Entries.Where(entry => entry.Category == category)];
 
     /// <summary>
-    /// Whether a category has anything worth pressing claim for.
+    /// Gets whether a category has anything worth pressing claim for.
     /// </summary>
     /// <remarks>
     /// Duckets alone do not count, which is the client's own rule: its purse indicator lights up
@@ -266,6 +303,8 @@ public sealed record EarningStatus : IParserComposer<EarningStatus>
         return total;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static EarningStatus Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -293,6 +332,8 @@ public sealed record EarningStatus : IParserComposer<EarningStatus>
         return new EarningStatus(entries);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -321,7 +362,7 @@ public sealed record EarningStatus : IParserComposer<EarningStatus>
 }
 
 /// <summary>
-/// The hotel's answer to a claim.
+/// Represents the <c>IncomeRewardClaimResponse</c> message, received with the hotel's answer to a claim.
 /// </summary>
 /// <param name="Category">
 /// The category that was claimed, echoed back. <see cref="EarningCategory.All"/> when the claim was
@@ -331,9 +372,11 @@ public sealed record EarningStatus : IParserComposer<EarningStatus>
 public sealed record EarningClaimResult(EarningCategory Category, bool Success)
     : IParserComposer<EarningClaimResult>
 {
-    /// <summary>Whether this answers a claim that asked for every category.</summary>
+    /// <summary>Gets whether this answers a claim that asked for every category.</summary>
     public bool IsClaimAll => Category == EarningCategory.All;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static EarningClaimResult Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -349,6 +392,8 @@ public sealed record EarningClaimResult(EarningCategory Category, bool Success)
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -363,9 +408,16 @@ public sealed record EarningClaimResult(EarningCategory Category, bool Success)
     }
 }
 
+/// <summary>
+/// Represents the <c>IncomeRewardNotification</c> message, received when the hotel announces a new reward in the
+/// earnings vault.
+/// </summary>
+/// <param name="Category">The category the reward belongs to.</param>
 public sealed record EarningNotification(EarningCategory Category)
     : IParserComposer<EarningNotification>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static EarningNotification Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -377,6 +429,8 @@ public sealed record EarningNotification(EarningCategory Category)
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

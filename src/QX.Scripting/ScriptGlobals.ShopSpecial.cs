@@ -22,19 +22,23 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// Buys a pet, which needs a name, a colour palette and a colour.
+    /// Buys a pet, which needs a name, a color palette and a color.
     /// </summary>
     /// <remarks>
-    /// The hotel expects these as one string: the name, the palette id and the colour as six
-    /// upper-case hexadecimal digits, separated by newlines. The name is validated server-side for
-    /// length and for characters, so a refusal here is usually the name rather than the funds.
+    /// The hotel expects these as one string: the name, the palette id and the color as six
+    /// upper-case hexadecimal digits, separated by newlines (see <see cref="PetPurchaseData"/>).
+    /// The name is validated by the server for length and for characters, so a refusal here is
+    /// usually the name rather than the funds. The task completes once the request is sent, as
+    /// with <see cref="BuyFromCatalog"/>.
     /// </remarks>
     /// <param name="pageId">The catalog page the pet offer sits on.</param>
     /// <param name="offerId">The pet offer.</param>
     /// <param name="name">The pet's name.</param>
-    /// <param name="paletteId">The colour palette, taken from the offer's available palettes.</param>
-    /// <param name="color">The colour, as a 24-bit RGB value.</param>
-    /// <param name="timeoutMs">How long to wait for the purchase result, in milliseconds.</param>
+    /// <param name="paletteId">The color palette, taken from the offer's available palettes.</param>
+    /// <param name="color">The color, as a 24-bit RGB value.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds. It is currently not used, because the call does not wait for an answer.</param>
+    /// <returns>An outcome with <see cref="CatalogPurchaseStatus.Dispatched"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is <see langword="null"/>, empty or white space.</exception>
     public Task<CatalogPurchaseOutcome> BuyPet(
         int pageId,
         int offerId,
@@ -55,8 +59,13 @@ public partial class ScriptGlobals
     /// format right. Mirrors the client's own construction.
     /// </remarks>
     /// <param name="name">The pet's name.</param>
-    /// <param name="paletteId">The colour palette.</param>
-    /// <param name="color">The colour, as a 24-bit RGB value.</param>
+    /// <param name="paletteId">The color palette.</param>
+    /// <param name="color">The color, as a 24-bit RGB value; higher bits are ignored.</param>
+    /// <returns>
+    /// The name, the palette id and the color as six upper-case hexadecimal digits, separated by
+    /// newlines.
+    /// </returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is <see langword="null"/>, empty or white space.</exception>
     public static string PetPurchaseData(string name, int paletteId, int color = 0xFFFFFF)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -69,8 +78,10 @@ public partial class ScriptGlobals
     /// </summary>
     /// <param name="pageId">The catalog page the offer sits on.</param>
     /// <param name="offerId">The offer to buy.</param>
-    /// <param name="badgeCode">Which badge to show; the code as it appears in the badge inventory.</param>
-    /// <param name="timeoutMs">How long to wait for the purchase result, in milliseconds.</param>
+    /// <param name="badgeCode">The badge to show, as its code appears in the badge inventory.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds. It is currently not used, because the call does not wait for an answer.</param>
+    /// <returns>An outcome with <see cref="CatalogPurchaseStatus.Dispatched"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="badgeCode"/> is <see langword="null"/>, empty or white space.</exception>
     public Task<CatalogPurchaseOutcome> BuyBadgeItem(
         int pageId,
         int offerId,
@@ -86,8 +97,9 @@ public partial class ScriptGlobals
     /// </summary>
     /// <param name="pageId">The catalog page the offer sits on.</param>
     /// <param name="offerId">The offer to buy.</param>
-    /// <param name="groupId">Which group it belongs to.</param>
-    /// <param name="timeoutMs">How long to wait for the purchase result, in milliseconds.</param>
+    /// <param name="groupId">The group the item belongs to, sent as the offer's extra data.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds. It is currently not used, because the call does not wait for an answer.</param>
+    /// <returns>An outcome with <see cref="CatalogPurchaseStatus.Dispatched"/>.</returns>
     public Task<CatalogPurchaseOutcome> BuyGroupItem(
         int pageId,
         int offerId,
@@ -100,8 +112,9 @@ public partial class ScriptGlobals
     /// </summary>
     /// <param name="pageId">The catalog page the offer sits on.</param>
     /// <param name="offerId">The offer to buy.</param>
-    /// <param name="inscription">The text to engrave.</param>
-    /// <param name="timeoutMs">How long to wait for the purchase result, in milliseconds.</param>
+    /// <param name="inscription">The text to engrave; <see langword="null"/> is sent as an empty string.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds. It is currently not used, because the call does not wait for an answer.</param>
+    /// <returns>An outcome with <see cref="CatalogPurchaseStatus.Dispatched"/>.</returns>
     public Task<CatalogPurchaseOutcome> BuyEngraved(
         int pageId,
         int offerId,
@@ -110,14 +123,21 @@ public partial class ScriptGlobals
         BuyFromCatalog(pageId, offerId, inscription ?? "", 1, timeoutMs);
 
     /// <summary>
-    /// Reads which rooms may be advertised, and whether the account's membership extends an event.
+    /// Requests which rooms may be advertised, and whether the account's membership extends an event.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Worth reading before <see cref="BuyRoomEvent"/>: only the rooms listed here are eligible, and
-    /// the extended form needs the membership this reports. The client silently drops the extended
-    /// flag when the membership has run out, so a script that assumes it buys the short form instead.
+    /// the extended form needs the membership this reports. The client drops the extended flag
+    /// when the membership has run out, so a script that assumes it buys the short form instead.
+    /// </para>
+    /// <para>
+    /// The request is sent once without a retry, and the reply is not blocked from the game client.
+    /// </para>
     /// </remarks>
-    /// <param name="timeoutMs">Total budget in milliseconds.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds.</param>
+    /// <returns>The membership flag and the rooms that may be advertised.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the request was not sent exactly once.</exception>
     public async Task<RoomAdPurchaseInfo> GetRoomEventInfo(int timeoutMs = 10000)
     {
         RoomAdInfoReadResult result = await Application
@@ -140,14 +160,20 @@ public partial class ScriptGlobals
     /// <summary>
     /// Buys a room event, which advertises a room in the navigator for a while.
     /// </summary>
+    /// <remarks>
+    /// The task completes once the request is sent and does not wait for the server's answer.
+    /// </remarks>
     /// <param name="pageId">The catalog page the offer sits on.</param>
     /// <param name="offerId">The offer to buy.</param>
-    /// <param name="roomId">Which room to advertise.</param>
+    /// <param name="roomId">The room to advertise.</param>
     /// <param name="name">The event's title as shown in the navigator.</param>
     /// <param name="description">The event's description.</param>
-    /// <param name="categoryId">Which navigator category it is listed under.</param>
-    /// <param name="extended">Whether to run the longer form, which needs the membership.</param>
-    /// <param name="timeoutMs">How long to wait for the purchase result, in milliseconds.</param>
+    /// <param name="categoryId">The navigator category the event is listed under.</param>
+    /// <param name="extended"><see langword="true"/> to run the longer form, which needs the membership; otherwise, <see langword="false"/>.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds. It is currently not used, because the call does not wait for an answer.</param>
+    /// <returns>An outcome with <see cref="CatalogPurchaseStatus.Dispatched"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is <see langword="null"/>, empty or white space.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public Task<CatalogPurchaseOutcome> BuyRoomEvent(
         int pageId,
         int offerId,
@@ -170,17 +196,18 @@ public partial class ScriptGlobals
     /// Buys a Builders Club floor offer directly into a spot in the current room.
     /// </summary>
     /// <remarks>
-    /// Builders Club does not stock the inventory: the item is placed as it is bought, so this
-    /// needs the tile and rotation up front. Fire-and-forget - the placement arrives as an ordinary
-    /// floor item add, and a rejected spot simply produces nothing.
+    /// Builders Club does not stock the inventory: the item is placed as it is bought, so the tile
+    /// and rotation are needed up front. Nothing confirms the placement: it arrives as an ordinary
+    /// floor item add, and a rejected spot produces nothing.
     /// </remarks>
     /// <param name="pageId">The catalog page the offer sits on.</param>
     /// <param name="offerId">The offer to place.</param>
-    /// <param name="x">Target tile column.</param>
-    /// <param name="y">Target tile row.</param>
-    /// <param name="direction">Rotation to place it at.</param>
-    /// <param name="extraData">The offer's selection data, empty when it takes none.</param>
-    /// <param name="isRetry">Whether the placement is a retry.</param>
+    /// <param name="x">The target tile x coordinate.</param>
+    /// <param name="y">The target tile y coordinate.</param>
+    /// <param name="direction">The rotation to place the item at.</param>
+    /// <param name="extraData">The offer's selection data, or empty when it takes none.</param>
+    /// <param name="isRetry"><see langword="true"/> when the placement is a retry; otherwise, <see langword="false"/>.</param>
+    /// <exception cref="InvalidOperationException">Thrown when there is no active hotel session or no ready room.</exception>
     public void PlaceBuildersClubFurni(
         int pageId,
         int offerId,
@@ -206,11 +233,16 @@ public partial class ScriptGlobals
     /// <summary>
     /// Buys a Builders Club wall offer directly onto a wall in the current room.
     /// </summary>
+    /// <remarks>
+    /// Nothing confirms the placement: it arrives as an ordinary wall item add.
+    /// </remarks>
     /// <param name="pageId">The catalog page the offer sits on.</param>
     /// <param name="offerId">The offer to place.</param>
-    /// <param name="wallLocation">Where on the wall it goes, in the <c>:w=x,y l=x,y r</c> form.</param>
-    /// <param name="extraData">The offer's selection data, empty when it takes none.</param>
-    /// <param name="isRetry">Whether the placement is a retry.</param>
+    /// <param name="wallLocation">The position on the wall, in the <c>:w=x,y l=x,y r</c> form.</param>
+    /// <param name="extraData">The offer's selection data, or empty when it takes none.</param>
+    /// <param name="isRetry"><see langword="true"/> when the placement is a retry; otherwise, <see langword="false"/>.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="wallLocation"/> is <see langword="null"/>, empty or white space.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no active hotel session or no ready room.</exception>
     public void PlaceBuildersClubWallItem(
         int pageId,
         int offerId,

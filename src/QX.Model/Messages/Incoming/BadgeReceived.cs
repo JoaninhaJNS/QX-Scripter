@@ -2,14 +2,26 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the <c>BadgeReceived</c> message, received when the user gets a new badge.</summary>
+/// <param name="BadgeId">The identifier of the badge.</param>
+/// <param name="Code">The badge code.</param>
+/// <param name="OwnerCount">
+/// The number of users who own the badge, or <see langword="null"/> when the message has no rarity data.
+/// </param>
+/// <param name="RarityId">
+/// The rarity of the badge, or <see langword="null"/> when the message has no rarity data.
+/// </param>
 public sealed record BadgeReceived(
     Id BadgeId,
     string Code,
     int? OwnerCount,
     int? RarityId) : IParserComposer<BadgeReceived>
 {
+    /// <summary>Gets whether the message carries both the owner count and the rarity.</summary>
     public bool HasRarityData => OwnerCount.HasValue && RarityId.HasValue;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BadgeReceived Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -42,6 +54,11 @@ public sealed record BadgeReceived(
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when only one of <see cref="OwnerCount"/> and <see cref="RarityId"/> has a value.
+    /// </exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

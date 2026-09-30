@@ -3,12 +3,19 @@ using Qx.Model.Polls;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the <c>PollOffer</c> message, received when the hotel offers the user a poll.</summary>
+/// <param name="PollId">The ID of the poll.</param>
+/// <param name="Type">The poll type sent by the hotel.</param>
+/// <param name="Headline">The headline of the offer.</param>
+/// <param name="Summary">The summary text of the offer.</param>
 public sealed record PollOffer(
     Id PollId,
     string Type,
     string Headline,
     string Summary) : IParserComposer<PollOffer>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PollOffer Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -25,6 +32,8 @@ public sealed record PollOffer(
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -45,6 +54,12 @@ public sealed record PollOffer(
     }
 }
 
+/// <summary>Represents the <c>PollContents</c> message, received with the questions of a poll the user has started.</summary>
+/// <param name="PollId">The ID of the poll.</param>
+/// <param name="StartMessage">The message shown before the questions.</param>
+/// <param name="EndMessage">The message shown after the poll is answered.</param>
+/// <param name="Questions">The question groups, in the order the hotel sent them.</param>
+/// <param name="IsNetPromoterScore">Whether the poll is a net promoter score poll.</param>
 public sealed record PollContents(
     Id PollId,
     string StartMessage,
@@ -52,6 +67,8 @@ public sealed record PollContents(
     IReadOnlyList<PollQuestionGroup> Questions,
     bool IsNetPromoterScore) : IParserComposer<PollContents>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PollContents Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -78,6 +95,8 @@ public sealed record PollContents(
             is_net_promoter_score);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -108,8 +127,12 @@ public sealed record PollContents(
     }
 }
 
+/// <summary>Represents the <c>PollError</c> message, received when a poll cannot be started.</summary>
+/// <remarks>The message carries no data.</remarks>
 public sealed record PollError : IParserComposer<PollError>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PollError Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -121,6 +144,8 @@ public sealed record PollError : IParserComposer<PollError>
         return new PollError();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -128,8 +153,12 @@ public sealed record PollError : IParserComposer<PollError>
         ArgumentNullException.ThrowIfNull(value);
 }
 
+/// <summary>Represents the outgoing <c>PollStart</c> message, sent to start a poll the hotel offered.</summary>
+/// <param name="PollId">The ID of the poll to start.</param>
 public sealed record StartPoll(Id PollId) : IParserComposer<StartPoll>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static StartPoll Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -140,6 +169,8 @@ public sealed record StartPoll(Id PollId) : IParserComposer<StartPoll>
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -151,8 +182,12 @@ public sealed record StartPoll(Id PollId) : IParserComposer<StartPoll>
     }
 }
 
+/// <summary>Represents the outgoing <c>PollReject</c> message, sent to decline a poll the hotel offered.</summary>
+/// <param name="PollId">The ID of the poll to decline.</param>
 public sealed record RejectPoll(Id PollId) : IParserComposer<RejectPoll>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static RejectPoll Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -163,6 +198,8 @@ public sealed record RejectPoll(Id PollId) : IParserComposer<RejectPoll>
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -174,10 +211,18 @@ public sealed record RejectPoll(Id PollId) : IParserComposer<RejectPoll>
     }
 }
 
+/// <summary>Represents the outgoing <c>PollAnswer</c> message, sent to answer one question of a poll.</summary>
+/// <param name="PollId">The ID of the poll.</param>
+/// <param name="Responses">
+/// The answers to the question. The Flash message carries exactly one response, so composing
+/// throws <see cref="InvalidDataException"/> for any other count.
+/// </param>
 public sealed record PollAnswer(
     Id PollId,
     IReadOnlyList<PollResponse> Responses) : IParserComposer<PollAnswer>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PollAnswer Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -197,6 +242,8 @@ public sealed record PollAnswer(
         return new PollAnswer(poll_id, PollWire.Freeze(new[] { response }));
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

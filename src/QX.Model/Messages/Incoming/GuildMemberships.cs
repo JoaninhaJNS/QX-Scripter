@@ -2,6 +2,15 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents a group the local user belongs to.</summary>
+/// <param name="Id">The identifier of the group.</param>
+/// <param name="Name">The name of the group.</param>
+/// <param name="BadgeCode">The group's badge code.</param>
+/// <param name="PrimaryColor">The primary color of the group.</param>
+/// <param name="SecondaryColor">The secondary color of the group.</param>
+/// <param name="IsFavorite">Whether the group is the user's favorite group.</param>
+/// <param name="OwnerId">The identifier of the group's owner.</param>
+/// <param name="HasForum">Whether the group has a forum.</param>
 public sealed record GuildMembership(
     Id Id,
     string Name,
@@ -12,6 +21,8 @@ public sealed record GuildMembership(
     Id OwnerId,
     bool HasForum) : IParserComposer<GuildMembership>
 {
+    /// <summary>Parses a group membership from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GuildMembership Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -26,6 +37,8 @@ public sealed record GuildMembership(
             p.ReadInt(),
             p.ReadBool());
 
+    /// <summary>Composes the group membership into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -61,21 +74,31 @@ public sealed record GuildMembership(
     }
 }
 
+/// <summary>
+/// Represents the <c>GuildMemberships</c> message, received with the groups the local user belongs to.
+/// </summary>
 public sealed record GuildMemberships : IParserComposer<GuildMemberships>
 {
     private IReadOnlyList<GuildMembership> _items =
         Array.AsReadOnly(Array.Empty<GuildMembership>());
 
+    /// <summary>Initializes a new instance of the <see cref="GuildMemberships"/> record.</summary>
+    /// <param name="Items">The groups, copied into a read only list.</param>
     public GuildMemberships(IReadOnlyList<GuildMembership> Items) => this.Items = Items;
 
+    /// <summary>Gets the groups, as a read only copy.</summary>
     public IReadOnlyList<GuildMembership> Items
     {
         get => _items;
         init => _items = PeopleWire.FreezeReferences(value, nameof(Items));
     }
 
+    /// <summary>Deconstructs the message into its groups.</summary>
+    /// <param name="Items">The groups.</param>
     public void Deconstruct(out IReadOnlyList<GuildMembership> Items) => Items = this.Items;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GuildMemberships Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -92,6 +115,8 @@ public sealed record GuildMemberships : IParserComposer<GuildMemberships>
         return new GuildMemberships(items);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

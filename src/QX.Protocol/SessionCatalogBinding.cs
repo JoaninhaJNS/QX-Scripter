@@ -2,8 +2,15 @@ using Qx;
 
 namespace Qx.Protocol;
 
+/// <summary>Represents the message names that a session catalog took from a fallback catalog of the same client build.</summary>
 public sealed record CatalogSupplement
 {
+    /// <summary>Initializes a new instance of the <see cref="CatalogSupplement"/> record.</summary>
+    /// <param name="provenance">The provenance of the fallback catalog, which must come from <see cref="CatalogOrigin.GEarthHandshake"/> or <see cref="CatalogOrigin.Sulek"/>.</param>
+    /// <param name="alias_count">The number of message names taken from the fallback catalog, greater than 0.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="provenance"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="provenance"/> has another origin.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="alias_count"/> is 0 or less.</exception>
     public CatalogSupplement(CatalogProvenance provenance, int alias_count)
     {
         ArgumentNullException.ThrowIfNull(provenance);
@@ -15,12 +22,27 @@ public sealed record CatalogSupplement
         AliasCount = alias_count;
     }
 
+    /// <summary>Gets the provenance of the fallback catalog.</summary>
     public CatalogProvenance Provenance { get; }
+    /// <summary>Gets the number of message names taken from the fallback catalog.</summary>
     public int AliasCount { get; }
 }
 
+/// <summary>Represents the message catalog bound to a hotel session, with its provenance and client build.</summary>
 public sealed record SessionCatalogBinding
 {
+    /// <summary>Initializes a new instance of the <see cref="SessionCatalogBinding"/> record with a read-only snapshot of the catalog.</summary>
+    /// <remarks>
+    /// An extracted catalog must match the source hash of its provenance, a build identity must match the
+    /// catalog fingerprints, and a supplement must have the same client type and client version as the provenance.
+    /// </remarks>
+    /// <param name="client">The client type of the session, which must be supported and match <paramref name="provenance"/>.</param>
+    /// <param name="catalog">The message catalog, which is <see langword="null"/> only when the origin is <see cref="CatalogOrigin.Unavailable"/>.</param>
+    /// <param name="provenance">The provenance of the catalog.</param>
+    /// <param name="build">The build identity of the catalog, or <see langword="null"/> when not known.</param>
+    /// <param name="supplement">The names added to the catalog from a fallback catalog, or <see langword="null"/> when there are none.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="provenance"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the client type, catalog, provenance, build identity or supplement do not match each other.</exception>
     public SessionCatalogBinding(
         ClientType client,
         MessageCatalog? catalog,
@@ -69,14 +91,22 @@ public sealed record SessionCatalogBinding
         Supplement = supplement;
     }
 
+    /// <summary>Gets the client type of the session.</summary>
     public ClientType Client { get; }
+    /// <summary>Gets a read-only snapshot of the message catalog, or <see langword="null"/> when no catalog is available.</summary>
     public MessageCatalog? Catalog { get; }
+    /// <summary>Gets the provenance of the catalog.</summary>
     public CatalogProvenance Provenance { get; }
+    /// <summary>Gets the build identity of the catalog, or <see langword="null"/> when not known.</summary>
     public ClientBuildIdentity? Build { get; }
+    /// <summary>Gets the names added to the catalog from a fallback catalog, or <see langword="null"/> when there are none.</summary>
     public CatalogSupplement? Supplement { get; }
 }
 
+/// <summary>Represents the lease on a bound session catalog, used to replace or clear that binding later.</summary>
+/// <param name="Value">The generation number of the binding, or 0 for an empty lease.</param>
 public readonly record struct SessionCatalogLease(long Value)
 {
+    /// <summary>Gets whether the lease is empty, which is the case for the <see langword="default"/> value.</summary>
     public bool IsEmpty => Value == 0;
 }

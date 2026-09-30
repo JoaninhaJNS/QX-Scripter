@@ -3,12 +3,17 @@ using System.Text.RegularExpressions;
 namespace Qx.Scripting;
 
 /// <summary>
-/// The directives in a script's leading comment block: <c>/// @name</c>, the name the script goes
-/// by, and <c>/// @group</c>, the library group it belongs to.
+/// Represents the directives in a script's leading comment block.
 /// </summary>
 /// <remarks>
+/// <para>
+/// <c>/// @name</c> gives the name the script goes by, and <c>/// @group</c> the library group it
+/// belongs to.
+/// </para>
+/// <para>
 /// Only the comment lines before the first line of code count, so a directive quoted further down
 /// in a string or a comment does not rename or regroup the script.
+/// </para>
 /// </remarks>
 /// <param name="Name">The declared name, or <see langword="null"/> when there is none.</param>
 /// <param name="Group">The declared library group, or <see langword="null"/> when there is none.</param>
@@ -17,6 +22,15 @@ public sealed partial record ScriptHeader(string? Name, string? Group)
     const string NameKey = "name";
     const string GroupKey = "group";
 
+    /// <summary>Reads the <c>/// @name</c> and <c>/// @group</c> directives from a script.</summary>
+    /// <remarks>
+    /// The leading block ends at the first line that is neither blank nor a <c>//</c> comment.
+    /// Directive keys are matched case-insensitively, values are trimmed, and the first occurrence of
+    /// each directive wins.
+    /// </remarks>
+    /// <param name="code">The script source.</param>
+    /// <returns>The header, with <see langword="null"/> for each directive that is missing.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="code"/> is <see langword="null"/>.</exception>
     public static ScriptHeader Parse(string code)
     {
         ArgumentNullException.ThrowIfNull(code);
@@ -32,7 +46,13 @@ public sealed partial record ScriptHeader(string? Name, string? Group)
         return new ScriptHeader(name, group);
     }
 
-    /// <summary>The script with its <c>/// @name</c> set to a name, added at the top when missing.</summary>
+    /// <summary>Sets the <c>/// @name</c> directive of a script, adding it at the top when missing.</summary>
+    /// <remarks>An existing directive is replaced in place; the rest of the script is left as it is.</remarks>
+    /// <param name="code">The script source.</param>
+    /// <param name="name">The new name. It is trimmed.</param>
+    /// <returns>The updated script source.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="code"/> or <paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
     public static string WithName(string code, string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -40,9 +60,16 @@ public sealed partial record ScriptHeader(string? Name, string? Group)
     }
 
     /// <summary>
-    /// The script with its <c>/// @group</c> set to a group, added at the top when missing, or
-    /// removed when the group is empty.
+    /// Sets the <c>/// @group</c> directive of a script, or removes it when the group is empty.
     /// </summary>
+    /// <remarks>
+    /// An existing directive is replaced in place, and removing it also removes its line. A missing
+    /// directive is added on the line after <c>/// @name</c>, or at the top when there is no name.
+    /// </remarks>
+    /// <param name="code">The script source.</param>
+    /// <param name="group">The new group, trimmed, or <see langword="null"/> or whitespace to remove the directive.</param>
+    /// <returns>The updated script source.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="code"/> is <see langword="null"/>.</exception>
     public static string WithGroup(string code, string? group) =>
         With(code, GroupKey, string.IsNullOrWhiteSpace(group) ? null : group.Trim());
 

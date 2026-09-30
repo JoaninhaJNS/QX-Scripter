@@ -3,6 +3,16 @@ using Qx.Model;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>
+/// Represents the <c>BuildersClubPlaceRoomItem</c> message, sent to place a Builders Club floor item in the room.
+/// </summary>
+/// <param name="PageId">The identifier of the catalog page with the offer.</param>
+/// <param name="OfferId">The identifier of the Builders Club offer.</param>
+/// <param name="ExtraData">The offer selection data.</param>
+/// <param name="X">The tile x coordinate.</param>
+/// <param name="Y">The tile y coordinate.</param>
+/// <param name="Direction">The item direction.</param>
+/// <param name="IsRetry">Whether the placement is flagged to the hotel as a retry.</param>
 public sealed record BuildersClubPlaceRoomItem(
     int PageId,
     int OfferId,
@@ -12,6 +22,8 @@ public sealed record BuildersClubPlaceRoomItem(
     int Direction,
     bool IsRetry = false) : IParserComposer<BuildersClubPlaceRoomItem>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BuildersClubPlaceRoomItem Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -32,6 +44,8 @@ public sealed record BuildersClubPlaceRoomItem(
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -51,6 +65,14 @@ public sealed record BuildersClubPlaceRoomItem(
     }
 }
 
+/// <summary>
+/// Represents the <c>BuildersClubPlaceWallItem</c> message, sent to place a Builders Club wall item in the room.
+/// </summary>
+/// <param name="PageId">The identifier of the catalog page with the offer.</param>
+/// <param name="OfferId">The identifier of the Builders Club offer.</param>
+/// <param name="ExtraData">The offer selection data.</param>
+/// <param name="WallLocation">The wall location as a string in the Flash client's format.</param>
+/// <param name="IsRetry">Whether the placement is flagged to the hotel as a retry.</param>
 public sealed record BuildersClubPlaceWallItem(
     int PageId,
     int OfferId,
@@ -58,6 +80,8 @@ public sealed record BuildersClubPlaceWallItem(
     string WallLocation,
     bool IsRetry = false) : IParserComposer<BuildersClubPlaceWallItem>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BuildersClubPlaceWallItem Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -74,6 +98,8 @@ public sealed record BuildersClubPlaceWallItem(
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

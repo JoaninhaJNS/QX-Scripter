@@ -8,19 +8,29 @@ using System.Runtime.ExceptionServices;
 
 namespace Qx.Game;
 
+/// <summary>Specifies the outcome of a catalog purchase.</summary>
 public enum CatalogPurchaseStatus
 {
+    /// <summary>A purchase the server accepted.</summary>
     Completed,
+    /// <summary>A purchase the server rejected with an error code.</summary>
     Failed,
+    /// <summary>A purchase the server did not allow the user to make.</summary>
     NotAllowed,
+    /// <summary>A purchase request that was sent without waiting for the server's answer.</summary>
     Dispatched
 }
 
+/// <summary>Represents the outcome of a catalog purchase.</summary>
+/// <param name="Status">The outcome of the purchase.</param>
+/// <param name="Offer">The purchased offer when the purchase completed; otherwise, <see langword="null"/>.</param>
+/// <param name="ErrorCode">The error code the server sent for a failed or refused purchase, otherwise 0.</param>
 public sealed record CatalogPurchaseOutcome(
     CatalogPurchaseStatus Status,
     PurchaseOffer? Offer,
     int ErrorCode)
 {
+    /// <summary>Gets whether the server accepted the purchase.</summary>
     public bool Succeeded => Status is CatalogPurchaseStatus.Completed;
 }
 
@@ -35,6 +45,12 @@ internal sealed record CatalogPurchaseUpdate(
     CatalogPurchaseState State,
     long PublicationEpoch);
 
+/// <summary>Manages the catalog cache and catalog purchases.</summary>
+/// <remarks>
+/// All members are safe to call from any thread. The cache and the last purchase outcome are
+/// cleared when the hotel connection closes and when a new session connects. The whole cache is
+/// also cleared when the server announces that the catalog was published.
+/// </remarks>
 public sealed partial class CatalogManager : GameStateManager
 {
     private readonly object _catalog_sync = new();
@@ -59,6 +75,7 @@ public sealed partial class CatalogManager : GameStateManager
     private bool _purchase_publishing;
     private int _purchase_delivery_thread_id;
 
+    /// <summary>Initializes a new instance of the <see cref="CatalogManager"/> class.</summary>
     public CatalogManager()
         : this(TimeProvider.System)
     {
@@ -71,6 +88,11 @@ public sealed partial class CatalogManager : GameStateManager
         _cache = new CatalogCache(time);
     }
 
+    /// <summary>Gets the last purchase outcome the server sent in the current session.</summary>
+    /// <remarks>
+    /// Holds <see cref="CatalogPurchaseStatus.Completed"/>, <see cref="CatalogPurchaseStatus.Failed"/>
+    /// or <see cref="CatalogPurchaseStatus.NotAllowed"/>, or <see langword="null"/> when no answer was received.
+    /// </remarks>
     public CatalogPurchaseOutcome? LastPurchase
     {
         get
@@ -98,12 +120,17 @@ public sealed partial class CatalogManager : GameStateManager
         }
     }
 
+    /// <summary>Occurs when the server answers a catalog purchase.</summary>
+    /// <remarks>The argument is the outcome, also stored in <see cref="LastPurchase"/>.</remarks>
     public event Action<CatalogPurchaseOutcome>? PurchaseAnswered;
+    /// <summary>Occurs when the server announces that the catalog was published.</summary>
+    /// <remarks>The argument is the server's message. The cache is cleared before the event is raised.</remarks>
     public event Action<CatalogPublished>? Published;
     internal event Action<CatalogInvalidationUpdate>? CacheInvalidated;
     internal event Action<CatalogInvalidationUpdate>? InvalidationPublished;
     internal event Action<CatalogPurchaseUpdate>? PurchaseOutcomePublished;
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         ResetPurchaseState(CurrentSession);
@@ -736,6 +763,20 @@ public sealed partial class CatalogManager : GameStateManager
         throw new InvalidOperationException(
             "Catalog purchase operations are unavailable until the application runtime is active.");
 
+    /// <summary>Sends a purchase message by name.</summary>
+    /// <remarks>
+    /// A <see cref="PurchaseFromCatalogRequest"/> sent under the catalog purchase message name is
+    /// validated first; any other message is sent as it is. The task completes once the message is
+    /// sent, with a <see cref="CatalogPurchaseStatus.Dispatched"/> outcome. The server's answer arrives
+    /// through <see cref="PurchaseAnswered"/>.
+    /// </remarks>
+    /// <typeparam name="T">The type of the message.</typeparam>
+    /// <param name="name">The name of the outgoing message.</param>
+    /// <param name="request">The message to send.</param>
+    /// <param name="timeout_ms">The timeout in milliseconds. It is not used, because the task does not wait for the answer.</param>
+    /// <param name="cancellation_token">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with a <see cref="CatalogPurchaseStatus.Dispatched"/> outcome.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public Task<CatalogPurchaseOutcome> PurchaseAsync<T>(
         string name,
         T request,
@@ -755,6 +796,21 @@ public sealed partial class CatalogManager : GameStateManager
             cancellation_token);
     }
 
+    /// <summary>Sends a purchase message by message key.</summary>
+    /// <remarks>
+    /// A <see cref="PurchaseFromCatalogRequest"/> sent under the catalog purchase key is validated
+    /// first; any other message is sent as it is. The task completes once the message is sent, with a
+    /// <see cref="CatalogPurchaseStatus.Dispatched"/> outcome. The server's answer arrives through
+    /// <see cref="PurchaseAnswered"/>.
+    /// </remarks>
+    /// <typeparam name="T">The type of the message.</typeparam>
+    /// <param name="key">The key of the outgoing message.</param>
+    /// <param name="request">The message to send.</param>
+    /// <param name="timeout_ms">The timeout in milliseconds. It is not used, because the task does not wait for the answer.</param>
+    /// <param name="cancellation_token">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with a <see cref="CatalogPurchaseStatus.Dispatched"/> outcome.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="key"/> is empty.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public Task<CatalogPurchaseOutcome> PurchaseAsync<T>(
         MessageKey key,
         T request,
@@ -773,6 +829,17 @@ public sealed partial class CatalogManager : GameStateManager
             cancellation_token);
     }
 
+    /// <summary>Sends a catalog purchase request.</summary>
+    /// <remarks>
+    /// The request is validated and sent. The task completes once it is sent, with a
+    /// <see cref="CatalogPurchaseStatus.Dispatched"/> outcome. The server's answer arrives through
+    /// <see cref="PurchaseAnswered"/>. Validation and send errors are reported through the returned task.
+    /// </remarks>
+    /// <param name="request">The purchase request.</param>
+    /// <param name="timeout_ms">The timeout in milliseconds. It is not used, because the task does not wait for the answer.</param>
+    /// <param name="cancellation_token">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with a <see cref="CatalogPurchaseStatus.Dispatched"/> outcome.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public Task<CatalogPurchaseOutcome> PurchaseAsync(
         PurchaseFromCatalogRequest request,
         int timeout_ms = 10000,
@@ -782,6 +849,7 @@ public sealed partial class CatalogManager : GameStateManager
             timeout_ms,
             cancellation_token);
 
+    /// <inheritdoc/>
     protected override void Reset()
     {
         ResetPurchaseState(CurrentSession);

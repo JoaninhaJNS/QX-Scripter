@@ -1,2398 +1,2396 @@
 ﻿namespace Qx.Protocol;
 
-/// <summary>
-/// Compile-checked message name constants generated from <c>Resources/messages.ini</c>.
-/// Each constant carries the exact spelling used by Flash.
-/// </summary>
+/// <summary>Provides the Flash message names as compile-checked constants.</summary>
+/// <remarks>Generated from <c>Resources/messages.ini</c>. Every constant is spelled exactly as in the Flash client.</remarks>
 public static class Msg
 {
-    /// <summary>Incoming message names (server to client).</summary>
+    /// <summary>Provides the incoming message names, sent from the server to the client.</summary>
     public static class In
     {
-        /// <summary>f:AcceptFriendResult</summary>
+        /// <summary>The incoming Flash message <c>AcceptFriendResult</c>.</summary>
         public const string AcceptFriendResult = "AcceptFriendResult";
-        /// <summary>f:AccountPreferences</summary>
+        /// <summary>The incoming Flash message <c>AccountPreferences</c>.</summary>
         public const string AccountPreferences = "AccountPreferences";
-        /// <summary>f:AccountSafetyLockStatusChange</summary>
+        /// <summary>The incoming Flash message <c>AccountSafetyLockStatusChange</c>.</summary>
         public const string AccountSafetyLockStatusChange = "AccountSafetyLockStatusChange";
-        /// <summary>f:Achievement</summary>
+        /// <summary>The incoming Flash message <c>Achievement</c>.</summary>
         public const string Achievement = "Achievement";
-        /// <summary>f:AchievementResolutionCompleted</summary>
+        /// <summary>The incoming Flash message <c>AchievementResolutionCompleted</c>.</summary>
         public const string AchievementResolutionCompleted = "AchievementResolutionCompleted";
-        /// <summary>f:AchievementResolutionProgress</summary>
+        /// <summary>The incoming Flash message <c>AchievementResolutionProgress</c>.</summary>
         public const string AchievementResolutionProgress = "AchievementResolutionProgress";
-        /// <summary>f:AchievementResolutions</summary>
+        /// <summary>The incoming Flash message <c>AchievementResolutions</c>.</summary>
         public const string AchievementResolutions = "AchievementResolutions";
-        /// <summary>f:Achievements</summary>
+        /// <summary>The incoming Flash message <c>Achievements</c>.</summary>
         public const string Achievements = "Achievements";
-        /// <summary>f:AchievementsScore</summary>
+        /// <summary>The incoming Flash message <c>AchievementsScore</c>.</summary>
         public const string AchievementsScore = "AchievementsScore";
-        /// <summary>f:ActivityPoints</summary>
+        /// <summary>The incoming Flash message <c>ActivityPoints</c>.</summary>
         public const string ActivityPoints = "ActivityPoints";
-        /// <summary>f:ApproveName</summary>
+        /// <summary>The incoming Flash message <c>ApproveName</c>.</summary>
         public const string ApproveName = "ApproveName";
-        /// <summary>f:AreaHide</summary>
+        /// <summary>The incoming Flash message <c>AreaHide</c>.</summary>
         public const string AreaHide = "AreaHide";
-        /// <summary>f:AuthenticationOk</summary>
+        /// <summary>The incoming Flash message <c>AuthenticationOk</c>.</summary>
         public const string AuthenticationOk = "AuthenticationOk";
-        /// <summary>f:AvailabilityStatus</summary>
+        /// <summary>The incoming Flash message <c>AvailabilityStatus</c>.</summary>
         public const string AvailabilityStatus = "AvailabilityStatus";
-        /// <summary>f:AvailabilityTime</summary>
+        /// <summary>The incoming Flash message <c>AvailabilityTime</c>.</summary>
         public const string AvailabilityTime = "AvailabilityTime";
-        /// <summary>f:AvatarEffect</summary>
+        /// <summary>The incoming Flash message <c>AvatarEffect</c>.</summary>
         public const string AvatarEffect = "AvatarEffect";
-        /// <summary>f:AvatarEffectActivated</summary>
+        /// <summary>The incoming Flash message <c>AvatarEffectActivated</c>.</summary>
         public const string AvatarEffectActivated = "AvatarEffectActivated";
-        /// <summary>f:AvatarEffectAdded</summary>
+        /// <summary>The incoming Flash message <c>AvatarEffectAdded</c>.</summary>
         public const string AvatarEffectAdded = "AvatarEffectAdded";
-        /// <summary>f:AvatarEffectExpired</summary>
+        /// <summary>The incoming Flash message <c>AvatarEffectExpired</c>.</summary>
         public const string AvatarEffectExpired = "AvatarEffectExpired";
-        /// <summary>f:AvatarEffectSelected</summary>
+        /// <summary>The incoming Flash message <c>AvatarEffectSelected</c>.</summary>
         public const string AvatarEffectSelected = "AvatarEffectSelected";
-        /// <summary>f:AvatarEffects</summary>
+        /// <summary>The incoming Flash message <c>AvatarEffects</c>.</summary>
         public const string AvatarEffects = "AvatarEffects";
-        /// <summary>f:BadgeInfo</summary>
+        /// <summary>The incoming Flash message <c>BadgeInfo</c>.</summary>
         public const string BadgeInfo = "BadgeInfo";
-        /// <summary>f:BadgeLeaderboardResult</summary>
+        /// <summary>The incoming Flash message <c>BadgeLeaderboardResult</c>.</summary>
         public const string BadgeLeaderboardResult = "BadgeLeaderboardResult";
-        /// <summary>f:BadgePointLimits</summary>
+        /// <summary>The incoming Flash message <c>BadgePointLimits</c>.</summary>
         public const string BadgePointLimits = "BadgePointLimits";
-        /// <summary>f:BadgeReceived</summary>
+        /// <summary>The incoming Flash message <c>BadgeReceived</c>.</summary>
         public const string BadgeReceived = "BadgeReceived";
-        /// <summary>f:Badges</summary>
+        /// <summary>The incoming Flash message <c>Badges</c>.</summary>
         public const string Badges = "Badges";
-        /// <summary>f:BanInfo</summary>
+        /// <summary>The incoming Flash message <c>BanInfo</c>.</summary>
         public const string BanInfo = "BanInfo";
-        /// <summary>f:BannedUsersFromRoom</summary>
+        /// <summary>The incoming Flash message <c>BannedUsersFromRoom</c>.</summary>
         public const string BannedUsersFromRoom = "BannedUsersFromRoom";
-        /// <summary>f:BlockList</summary>
+        /// <summary>The incoming Flash message <c>BlockList</c>.</summary>
         public const string BlockList = "BlockList";
-        /// <summary>f:BlockUserUpdate</summary>
+        /// <summary>The incoming Flash message <c>BlockUserUpdate</c>.</summary>
         public const string BlockUserUpdate = "BlockUserUpdate";
-        /// <summary>f:BonusRareInfo</summary>
+        /// <summary>The incoming Flash message <c>BonusRareInfo</c>.</summary>
         public const string BonusRareInfo = "BonusRareInfo";
-        /// <summary>f:BotAddedToInventory</summary>
+        /// <summary>The incoming Flash message <c>BotAddedToInventory</c>.</summary>
         public const string BotAddedToInventory = "BotAddedToInventory";
-        /// <summary>f:BotCommandConfiguration</summary>
+        /// <summary>The incoming Flash message <c>BotCommandConfiguration</c>.</summary>
         public const string BotCommandConfiguration = "BotCommandConfiguration";
-        /// <summary>f:BotError</summary>
+        /// <summary>The incoming Flash message <c>BotError</c>.</summary>
         public const string BotError = "BotError";
-        /// <summary>f:BotForceOpenContextMenu</summary>
+        /// <summary>The incoming Flash message <c>BotForceOpenContextMenu</c>.</summary>
         public const string BotForceOpenContextMenu = "BotForceOpenContextMenu";
-        /// <summary>f:BotInventory</summary>
+        /// <summary>The incoming Flash message <c>BotInventory</c>.</summary>
         public const string BotInventory = "BotInventory";
-        /// <summary>f:BotReceived</summary>
+        /// <summary>The incoming Flash message <c>BotReceived</c>.</summary>
         public const string BotReceived = "BotReceived";
-        /// <summary>f:BotRemovedFromInventory</summary>
+        /// <summary>The incoming Flash message <c>BotRemovedFromInventory</c>.</summary>
         public const string BotRemovedFromInventory = "BotRemovedFromInventory";
-        /// <summary>f:BotSkillListUpdate</summary>
+        /// <summary>The incoming Flash message <c>BotSkillListUpdate</c>.</summary>
         public const string BotSkillListUpdate = "BotSkillListUpdate";
-        /// <summary>f:BuildersClubFurniCount</summary>
+        /// <summary>The incoming Flash message <c>BuildersClubFurniCount</c>.</summary>
         public const string BuildersClubFurniCount = "BuildersClubFurniCount";
-        /// <summary>f:BuildersClubPlacementWarning</summary>
+        /// <summary>The incoming Flash message <c>BuildersClubPlacementWarning</c>.</summary>
         public const string BuildersClubPlacementWarning = "BuildersClubPlacementWarning";
-        /// <summary>f:BuildersClubSubscriptionStatus</summary>
+        /// <summary>The incoming Flash message <c>BuildersClubSubscriptionStatus</c>.</summary>
         public const string BuildersClubSubscriptionStatus = "BuildersClubSubscriptionStatus";
-        /// <summary>f:BundleDiscountRuleset</summary>
+        /// <summary>The incoming Flash message <c>BundleDiscountRuleset</c>.</summary>
         public const string BundleDiscountRuleset = "BundleDiscountRuleset";
-        /// <summary>f:CallForHelpDisabledNotify</summary>
+        /// <summary>The incoming Flash message <c>CallForHelpDisabledNotify</c>.</summary>
         public const string CallForHelpDisabledNotify = "CallForHelpDisabledNotify";
-        /// <summary>f:CallForHelpPendingCalls</summary>
+        /// <summary>The incoming Flash message <c>CallForHelpPendingCalls</c>.</summary>
         public const string CallForHelpPendingCalls = "CallForHelpPendingCalls";
-        /// <summary>f:CallForHelpPendingCallsDeleted</summary>
+        /// <summary>The incoming Flash message <c>CallForHelpPendingCallsDeleted</c>.</summary>
         public const string CallForHelpPendingCallsDeleted = "CallForHelpPendingCallsDeleted";
-        /// <summary>f:CallForHelpReply</summary>
+        /// <summary>The incoming Flash message <c>CallForHelpReply</c>.</summary>
         public const string CallForHelpReply = "CallForHelpReply";
-        /// <summary>f:CallForHelpResult</summary>
+        /// <summary>The incoming Flash message <c>CallForHelpResult</c>.</summary>
         public const string CallForHelpResult = "CallForHelpResult";
-        /// <summary>f:CameraPublishStatus</summary>
+        /// <summary>The incoming Flash message <c>CameraPublishStatus</c>.</summary>
         public const string CameraPublishStatus = "CameraPublishStatus";
-        /// <summary>f:CameraPurchaseOk</summary>
+        /// <summary>The incoming Flash message <c>CameraPurchaseOk</c>.</summary>
         public const string CameraPurchaseOk = "CameraPurchaseOk";
-        /// <summary>f:CameraSnapshot</summary>
+        /// <summary>The incoming Flash message <c>CameraSnapshot</c>.</summary>
         public const string CameraSnapshot = "CameraSnapshot";
-        /// <summary>f:CameraStorageUrl</summary>
+        /// <summary>The incoming Flash message <c>CameraStorageUrl</c>.</summary>
         public const string CameraStorageUrl = "CameraStorageUrl";
-        /// <summary>f:CampaignCalendarData</summary>
+        /// <summary>The incoming Flash message <c>CampaignCalendarData</c>.</summary>
         public const string CampaignCalendarData = "CampaignCalendarData";
-        /// <summary>f:CampaignCalendarDoorOpened</summary>
+        /// <summary>The incoming Flash message <c>CampaignCalendarDoorOpened</c>.</summary>
         public const string CampaignCalendarDoorOpened = "CampaignCalendarDoorOpened";
-        /// <summary>f:CanCreateRoom</summary>
+        /// <summary>The incoming Flash message <c>CanCreateRoom</c>.</summary>
         public const string CanCreateRoom = "CanCreateRoom";
-        /// <summary>f:CancelMysteryBoxWait</summary>
+        /// <summary>The incoming Flash message <c>CancelMysteryBoxWait</c>.</summary>
         public const string CancelMysteryBoxWait = "CancelMysteryBoxWait";
-        /// <summary>f:CantConnect</summary>
+        /// <summary>The incoming Flash message <c>CantConnect</c>.</summary>
         public const string CantConnect = "CantConnect";
-        /// <summary>f:CarryObject</summary>
+        /// <summary>The incoming Flash message <c>CarryObject</c>.</summary>
         public const string CarryObject = "CarryObject";
-        /// <summary>f:CatalogIndex</summary>
+        /// <summary>The incoming Flash message <c>CatalogIndex</c>.</summary>
         public const string CatalogIndex = "CatalogIndex";
-        /// <summary>f:CatalogPage</summary>
+        /// <summary>The incoming Flash message <c>CatalogPage</c>.</summary>
         public const string CatalogPage = "CatalogPage";
-        /// <summary>f:CatalogPageExpiration</summary>
+        /// <summary>The incoming Flash message <c>CatalogPageExpiration</c>.</summary>
         public const string CatalogPageExpiration = "CatalogPageExpiration";
-        /// <summary>f:CatalogPageWithEarliestExpiry</summary>
+        /// <summary>The incoming Flash message <c>CatalogPageWithEarliestExpiry</c>.</summary>
         public const string CatalogPageWithEarliestExpiry = "CatalogPageWithEarliestExpiry";
-        /// <summary>f:CatalogPublished</summary>
+        /// <summary>The incoming Flash message <c>CatalogPublished</c>.</summary>
         public const string CatalogPublished = "CatalogPublished";
-        /// <summary>f:CategoriesWithVisitorCount</summary>
+        /// <summary>The incoming Flash message <c>CategoriesWithVisitorCount</c>.</summary>
         public const string CategoriesWithVisitorCount = "CategoriesWithVisitorCount";
-        /// <summary>f:CfhChatLog</summary>
+        /// <summary>The incoming Flash message <c>CfhChatLog</c>.</summary>
         public const string CfhChatLog = "CfhChatLog";
-        /// <summary>f:CfhSanction</summary>
+        /// <summary>The incoming Flash message <c>CfhSanction</c>.</summary>
         public const string CfhSanction = "CfhSanction";
-        /// <summary>f:CfhTopicsInit</summary>
+        /// <summary>The incoming Flash message <c>CfhTopicsInit</c>.</summary>
         public const string CfhTopicsInit = "CfhTopicsInit";
-        /// <summary>f:ChangeEmailResult</summary>
+        /// <summary>The incoming Flash message <c>ChangeEmailResult</c>.</summary>
         public const string ChangeEmailResult = "ChangeEmailResult";
-        /// <summary>f:ChangeUserNameResult</summary>
+        /// <summary>The incoming Flash message <c>ChangeUserNameResult</c>.</summary>
         public const string ChangeUserNameResult = "ChangeUserNameResult";
-        /// <summary>f:Chat</summary>
+        /// <summary>The incoming Flash message <c>Chat</c>.</summary>
         public const string Chat = "Chat";
-        /// <summary>f:ChatReviewSessionDetached</summary>
+        /// <summary>The incoming Flash message <c>ChatReviewSessionDetached</c>.</summary>
         public const string ChatReviewSessionDetached = "ChatReviewSessionDetached";
-        /// <summary>f:ChatReviewSessionOfferedToGuide</summary>
+        /// <summary>The incoming Flash message <c>ChatReviewSessionOfferedToGuide</c>.</summary>
         public const string ChatReviewSessionOfferedToGuide = "ChatReviewSessionOfferedToGuide";
-        /// <summary>f:ChatReviewSessionResults</summary>
+        /// <summary>The incoming Flash message <c>ChatReviewSessionResults</c>.</summary>
         public const string ChatReviewSessionResults = "ChatReviewSessionResults";
-        /// <summary>f:ChatReviewSessionStarted</summary>
+        /// <summary>The incoming Flash message <c>ChatReviewSessionStarted</c>.</summary>
         public const string ChatReviewSessionStarted = "ChatReviewSessionStarted";
-        /// <summary>f:ChatReviewSessionVotingStatus</summary>
+        /// <summary>The incoming Flash message <c>ChatReviewSessionVotingStatus</c>.</summary>
         public const string ChatReviewSessionVotingStatus = "ChatReviewSessionVotingStatus";
-        /// <summary>f:CheckUserNameResult</summary>
+        /// <summary>The incoming Flash message <c>CheckUserNameResult</c>.</summary>
         public const string CheckUserNameResult = "CheckUserNameResult";
-        /// <summary>f:ChestPreferencesUpdateSuccess</summary>
+        /// <summary>The incoming Flash message <c>ChestPreferencesUpdateSuccess</c>.</summary>
         public const string ChestPreferencesUpdateSuccess = "ChestPreferencesUpdateSuccess";
-        /// <summary>f:CitizenshipVipOfferPromoEnabled</summary>
+        /// <summary>The incoming Flash message <c>CitizenshipVipOfferPromoEnabled</c>.</summary>
         public const string CitizenshipVipOfferPromoEnabled = "CitizenshipVipOfferPromoEnabled";
-        /// <summary>f:ClaimProductResult</summary>
+        /// <summary>The incoming Flash message <c>ClaimProductResult</c>.</summary>
         public const string ClaimProductResult = "ClaimProductResult";
-        /// <summary>f:CloseConnection</summary>
+        /// <summary>The incoming Flash message <c>CloseConnection</c>.</summary>
         public const string CloseConnection = "CloseConnection";
-        /// <summary>f:ClubGiftInfo</summary>
+        /// <summary>The incoming Flash message <c>ClubGiftInfo</c>.</summary>
         public const string ClubGiftInfo = "ClubGiftInfo";
-        /// <summary>f:ClubGiftNotification</summary>
+        /// <summary>The incoming Flash message <c>ClubGiftNotification</c>.</summary>
         public const string ClubGiftNotification = "ClubGiftNotification";
-        /// <summary>f:ClubGiftSelected</summary>
+        /// <summary>The incoming Flash message <c>ClubGiftSelected</c>.</summary>
         public const string ClubGiftSelected = "ClubGiftSelected";
-        /// <summary>f:CoinsChestContents</summary>
+        /// <summary>The incoming Flash message <c>CoinsChestContents</c>.</summary>
         public const string CoinsChestContents = "CoinsChestContents";
-        /// <summary>f:CollapsedCategories</summary>
+        /// <summary>The incoming Flash message <c>CollapsedCategories</c>.</summary>
         public const string CollapsedCategories = "CollapsedCategories";
-        /// <summary>f:CollectableMintableItemTypes</summary>
+        /// <summary>The incoming Flash message <c>CollectableMintableItemTypes</c>.</summary>
         public const string CollectableMintableItemTypes = "CollectableMintableItemTypes";
-        /// <summary>f:CollectibleMintTokenCount</summary>
+        /// <summary>The incoming Flash message <c>CollectibleMintTokenCount</c>.</summary>
         public const string CollectibleMintTokenCount = "CollectibleMintTokenCount";
-        /// <summary>f:CollectibleMintTokenOffers</summary>
+        /// <summary>The incoming Flash message <c>CollectibleMintTokenOffers</c>.</summary>
         public const string CollectibleMintTokenOffers = "CollectibleMintTokenOffers";
-        /// <summary>f:CollectibleMintableItemResult</summary>
+        /// <summary>The incoming Flash message <c>CollectibleMintableItemResult</c>.</summary>
         public const string CollectibleMintableItemResult = "CollectibleMintableItemResult";
-        /// <summary>f:CollectibleMintingEnabled</summary>
+        /// <summary>The incoming Flash message <c>CollectibleMintingEnabled</c>.</summary>
         public const string CollectibleMintingEnabled = "CollectibleMintingEnabled";
-        /// <summary>f:CollectibleWalletAddresses</summary>
+        /// <summary>The incoming Flash message <c>CollectibleWalletAddresses</c>.</summary>
         public const string CollectibleWalletAddresses = "CollectibleWalletAddresses";
-        /// <summary>f:CommunityGoalEarnedPrizes</summary>
+        /// <summary>The incoming Flash message <c>CommunityGoalEarnedPrizes</c>.</summary>
         public const string CommunityGoalEarnedPrizes = "CommunityGoalEarnedPrizes";
-        /// <summary>f:CommunityGoalHallOfFame</summary>
+        /// <summary>The incoming Flash message <c>CommunityGoalHallOfFame</c>.</summary>
         public const string CommunityGoalHallOfFame = "CommunityGoalHallOfFame";
-        /// <summary>f:CommunityGoalProgress</summary>
+        /// <summary>The incoming Flash message <c>CommunityGoalProgress</c>.</summary>
         public const string CommunityGoalProgress = "CommunityGoalProgress";
-        /// <summary>f:CommunityVoteReceived</summary>
+        /// <summary>The incoming Flash message <c>CommunityVoteReceived</c>.</summary>
         public const string CommunityVoteReceived = "CommunityVoteReceived";
-        /// <summary>f:CompetitionEntrySubmitResult</summary>
+        /// <summary>The incoming Flash message <c>CompetitionEntrySubmitResult</c>.</summary>
         public const string CompetitionEntrySubmitResult = "CompetitionEntrySubmitResult";
-        /// <summary>f:CompetitionRoomsData</summary>
+        /// <summary>The incoming Flash message <c>CompetitionRoomsData</c>.</summary>
         public const string CompetitionRoomsData = "CompetitionRoomsData";
-        /// <summary>f:CompetitionStatus</summary>
+        /// <summary>The incoming Flash message <c>CompetitionStatus</c>.</summary>
         public const string CompetitionStatus = "CompetitionStatus";
-        /// <summary>f:CompetitionVotingInfo</summary>
+        /// <summary>The incoming Flash message <c>CompetitionVotingInfo</c>.</summary>
         public const string CompetitionVotingInfo = "CompetitionVotingInfo";
-        /// <summary>f:CompleteDiffieHandshake</summary>
+        /// <summary>The incoming Flash message <c>CompleteDiffieHandshake</c>.</summary>
         public const string CompleteDiffieHandshake = "CompleteDiffieHandshake";
-        /// <summary>f:ConcurrentUsersGoalProgress</summary>
+        /// <summary>The incoming Flash message <c>ConcurrentUsersGoalProgress</c>.</summary>
         public const string ConcurrentUsersGoalProgress = "ConcurrentUsersGoalProgress";
-        /// <summary>f:ConfigurationItemStates</summary>
+        /// <summary>The incoming Flash message <c>ConfigurationItemStates</c>.</summary>
         public const string ConfigurationItemStates = "ConfigurationItemStates";
-        /// <summary>f:ConfirmBreedingRequest</summary>
+        /// <summary>The incoming Flash message <c>ConfirmBreedingRequest</c>.</summary>
         public const string ConfirmBreedingRequest = "ConfirmBreedingRequest";
-        /// <summary>f:ConfirmBreedingResult</summary>
+        /// <summary>The incoming Flash message <c>ConfirmBreedingResult</c>.</summary>
         public const string ConfirmBreedingResult = "ConfirmBreedingResult";
-        /// <summary>f:ConsoleMessageHistory</summary>
+        /// <summary>The incoming Flash message <c>ConsoleMessageHistory</c>.</summary>
         public const string ConsoleMessageHistory = "ConsoleMessageHistory";
-        /// <summary>f:ConvertedRoomId</summary>
+        /// <summary>The incoming Flash message <c>ConvertedRoomId</c>.</summary>
         public const string ConvertedRoomId = "ConvertedRoomId";
-        /// <summary>f:CraftableProducts</summary>
+        /// <summary>The incoming Flash message <c>CraftableProducts</c>.</summary>
         public const string CraftableProducts = "CraftableProducts";
-        /// <summary>f:CraftingRecipe</summary>
+        /// <summary>The incoming Flash message <c>CraftingRecipe</c>.</summary>
         public const string CraftingRecipe = "CraftingRecipe";
-        /// <summary>f:CraftingRecipesAvailable</summary>
+        /// <summary>The incoming Flash message <c>CraftingRecipesAvailable</c>.</summary>
         public const string CraftingRecipesAvailable = "CraftingRecipesAvailable";
-        /// <summary>f:CraftingResult</summary>
+        /// <summary>The incoming Flash message <c>CraftingResult</c>.</summary>
         public const string CraftingResult = "CraftingResult";
-        /// <summary>f:CreditBalance</summary>
+        /// <summary>The incoming Flash message <c>CreditBalance</c>.</summary>
         public const string CreditBalance = "CreditBalance";
-        /// <summary>f:CreditVaultStatus</summary>
+        /// <summary>The incoming Flash message <c>CreditVaultStatus</c>.</summary>
         public const string CreditVaultStatus = "CreditVaultStatus";
-        /// <summary>f:CurrentTimingCode</summary>
+        /// <summary>The incoming Flash message <c>CurrentTimingCode</c>.</summary>
         public const string CurrentTimingCode = "CurrentTimingCode";
-        /// <summary>f:CustomStackingHeightUpdate</summary>
+        /// <summary>The incoming Flash message <c>CustomStackingHeightUpdate</c>.</summary>
         public const string CustomStackingHeightUpdate = "CustomStackingHeightUpdate";
-        /// <summary>f:CustomUserNotification</summary>
+        /// <summary>The incoming Flash message <c>CustomUserNotification</c>.</summary>
         public const string CustomUserNotification = "CustomUserNotification";
-        /// <summary>f:DailyTasksActiveList</summary>
+        /// <summary>The incoming Flash message <c>DailyTasksActiveList</c>.</summary>
         public const string DailyTasksActiveList = "DailyTasksActiveList";
-        /// <summary>f:DailyTasksTaskUpdate</summary>
+        /// <summary>The incoming Flash message <c>DailyTasksTaskUpdate</c>.</summary>
         public const string DailyTasksTaskUpdate = "DailyTasksTaskUpdate";
-        /// <summary>f:DailyTasksTasksAdded</summary>
+        /// <summary>The incoming Flash message <c>DailyTasksTasksAdded</c>.</summary>
         public const string DailyTasksTasksAdded = "DailyTasksTasksAdded";
-        /// <summary>f:Dance</summary>
+        /// <summary>The incoming Flash message <c>Dance</c>.</summary>
         public const string Dance = "Dance";
-        /// <summary>f:DiceValue</summary>
+        /// <summary>The incoming Flash message <c>DiceValue</c>.</summary>
         public const string DiceValue = "DiceValue";
-        /// <summary>f:DirectSMSClubBuyAvailable</summary>
+        /// <summary>The incoming Flash message <c>DirectSMSClubBuyAvailable</c>.</summary>
         public const string DirectSMSClubBuyAvailable = "DirectSMSClubBuyAvailable";
-        /// <summary>f:DisconnectReason</summary>
+        /// <summary>The incoming Flash message <c>DisconnectReason</c>.</summary>
         public const string DisconnectReason = "DisconnectReason";
-        /// <summary>f:DiscordPreferences</summary>
+        /// <summary>The incoming Flash message <c>DiscordPreferences</c>.</summary>
         public const string DiscordPreferences = "DiscordPreferences";
-        /// <summary>f:Doorbell</summary>
+        /// <summary>The incoming Flash message <c>Doorbell</c>.</summary>
         public const string Doorbell = "Doorbell";
-        /// <summary>f:ElementPointer</summary>
+        /// <summary>The incoming Flash message <c>ElementPointer</c>.</summary>
         public const string ElementPointer = "ElementPointer";
-        /// <summary>f:EmailStatus</summary>
+        /// <summary>The incoming Flash message <c>EmailStatus</c>.</summary>
         public const string EmailStatus = "EmailStatus";
-        /// <summary>f:EmeraldBalance</summary>
+        /// <summary>The incoming Flash message <c>EmeraldBalance</c>.</summary>
         public const string EmeraldBalance = "EmeraldBalance";
-        /// <summary>f:EpicPopup</summary>
+        /// <summary>The incoming Flash message <c>EpicPopup</c>.</summary>
         public const string EpicPopup = "EpicPopup";
-        /// <summary>f:ErrorReport</summary>
+        /// <summary>The incoming Flash message <c>ErrorReport</c>.</summary>
         public const string ErrorReport = "ErrorReport";
-        /// <summary>f:Expression</summary>
+        /// <summary>The incoming Flash message <c>Expression</c>.</summary>
         public const string Expression = "Expression";
-        /// <summary>f:ExtendedProfile</summary>
+        /// <summary>The incoming Flash message <c>ExtendedProfile</c>.</summary>
         public const string ExtendedProfile = "ExtendedProfile";
-        /// <summary>f:ExtendedProfileChanged</summary>
+        /// <summary>The incoming Flash message <c>ExtendedProfileChanged</c>.</summary>
         public const string ExtendedProfileChanged = "ExtendedProfileChanged";
-        /// <summary>f:FaqCategories</summary>
+        /// <summary>The incoming Flash message <c>FaqCategories</c>.</summary>
         public const string FaqCategories = "FaqCategories";
-        /// <summary>f:FaqCategory</summary>
+        /// <summary>The incoming Flash message <c>FaqCategory</c>.</summary>
         public const string FaqCategory = "FaqCategory";
-        /// <summary>f:FaqClientFaqs</summary>
+        /// <summary>The incoming Flash message <c>FaqClientFaqs</c>.</summary>
         public const string FaqClientFaqs = "FaqClientFaqs";
-        /// <summary>f:FaqSearchResults</summary>
+        /// <summary>The incoming Flash message <c>FaqSearchResults</c>.</summary>
         public const string FaqSearchResults = "FaqSearchResults";
-        /// <summary>f:FaqText</summary>
+        /// <summary>The incoming Flash message <c>FaqText</c>.</summary>
         public const string FaqText = "FaqText";
-        /// <summary>f:FavouriteMembershipUpdate f:FavoriteMembershipUpdate</summary>
+        /// <summary>The incoming Flash message <c>FavoriteMembershipUpdate</c>, also named <c>FavouriteMembershipUpdate</c>.</summary>
         public const string FavoriteMembershipUpdate = "FavoriteMembershipUpdate";
-        /// <summary>f:FavouriteChanged</summary>
+        /// <summary>The incoming Flash message <c>FavouriteChanged</c>.</summary>
         public const string FavouriteChanged = "FavouriteChanged";
-        /// <summary>f:FavouriteMembershipUpdate f:FavoriteMembershipUpdate</summary>
+        /// <summary>The incoming Flash message <c>FavouriteMembershipUpdate</c>, also named <c>FavoriteMembershipUpdate</c>.</summary>
         public const string FavouriteMembershipUpdate = "FavouriteMembershipUpdate";
-        /// <summary>f:Favourites</summary>
+        /// <summary>The incoming Flash message <c>Favourites</c>.</summary>
         public const string Favourites = "Favourites";
-        /// <summary>f:FigureSetIdAdded</summary>
+        /// <summary>The incoming Flash message <c>FigureSetIdAdded</c>.</summary>
         public const string FigureSetIdAdded = "FigureSetIdAdded";
-        /// <summary>f:FigureSetIdRemoved</summary>
+        /// <summary>The incoming Flash message <c>FigureSetIdRemoved</c>.</summary>
         public const string FigureSetIdRemoved = "FigureSetIdRemoved";
-        /// <summary>f:FigureSetIds</summary>
+        /// <summary>The incoming Flash message <c>FigureSetIds</c>.</summary>
         public const string FigureSetIds = "FigureSetIds";
-        /// <summary>f:FigureUpdate</summary>
+        /// <summary>The incoming Flash message <c>FigureUpdate</c>.</summary>
         public const string FigureUpdate = "FigureUpdate";
-        /// <summary>f:FindFriendsProcessResult</summary>
+        /// <summary>The incoming Flash message <c>FindFriendsProcessResult</c>.</summary>
         public const string FindFriendsProcessResult = "FindFriendsProcessResult";
-        /// <summary>f:FlatAccessDenied</summary>
+        /// <summary>The incoming Flash message <c>FlatAccessDenied</c>.</summary>
         public const string FlatAccessDenied = "FlatAccessDenied";
-        /// <summary>f:FlatAccessible</summary>
+        /// <summary>The incoming Flash message <c>FlatAccessible</c>.</summary>
         public const string FlatAccessible = "FlatAccessible";
-        /// <summary>f:FlatControllerAdded</summary>
+        /// <summary>The incoming Flash message <c>FlatControllerAdded</c>.</summary>
         public const string FlatControllerAdded = "FlatControllerAdded";
-        /// <summary>f:FlatControllerRemoved</summary>
+        /// <summary>The incoming Flash message <c>FlatControllerRemoved</c>.</summary>
         public const string FlatControllerRemoved = "FlatControllerRemoved";
-        /// <summary>f:FlatControllers</summary>
+        /// <summary>The incoming Flash message <c>FlatControllers</c>.</summary>
         public const string FlatControllers = "FlatControllers";
-        /// <summary>f:FlatCreated</summary>
+        /// <summary>The incoming Flash message <c>FlatCreated</c>.</summary>
         public const string FlatCreated = "FlatCreated";
-        /// <summary>f:FloodControl</summary>
+        /// <summary>The incoming Flash message <c>FloodControl</c>.</summary>
         public const string FloodControl = "FloodControl";
-        /// <summary>f:FloorHeightmap</summary>
+        /// <summary>The incoming Flash message <c>FloorHeightmap</c>.</summary>
         public const string FloorHeightmap = "FloorHeightmap";
-        /// <summary>f:FollowFriendFailed</summary>
+        /// <summary>The incoming Flash message <c>FollowFriendFailed</c>.</summary>
         public const string FollowFriendFailed = "FollowFriendFailed";
-        /// <summary>f:ForumData</summary>
+        /// <summary>The incoming Flash message <c>ForumData</c>.</summary>
         public const string ForumData = "ForumData";
-        /// <summary>f:ForumThreads</summary>
+        /// <summary>The incoming Flash message <c>ForumThreads</c>.</summary>
         public const string ForumThreads = "ForumThreads";
-        /// <summary>f:ForumsList</summary>
+        /// <summary>The incoming Flash message <c>ForumsList</c>.</summary>
         public const string ForumsList = "ForumsList";
-        /// <summary>f:FriendFurniCancelLock</summary>
+        /// <summary>The incoming Flash message <c>FriendFurniCancelLock</c>.</summary>
         public const string FriendFurniCancelLock = "FriendFurniCancelLock";
-        /// <summary>f:FriendFurniOtherLockConfirmed</summary>
+        /// <summary>The incoming Flash message <c>FriendFurniOtherLockConfirmed</c>.</summary>
         public const string FriendFurniOtherLockConfirmed = "FriendFurniOtherLockConfirmed";
-        /// <summary>f:FriendFurniStartConfirmation</summary>
+        /// <summary>The incoming Flash message <c>FriendFurniStartConfirmation</c>.</summary>
         public const string FriendFurniStartConfirmation = "FriendFurniStartConfirmation";
-        /// <summary>f:FriendsListFragment f:FriendListFragment</summary>
+        /// <summary>The incoming Flash message <c>FriendListFragment</c>, also named <c>FriendsListFragment</c>.</summary>
         public const string FriendListFragment = "FriendListFragment";
-        /// <summary>f:FriendListUpdate</summary>
+        /// <summary>The incoming Flash message <c>FriendListUpdate</c>.</summary>
         public const string FriendListUpdate = "FriendListUpdate";
-        /// <summary>f:FriendNotification</summary>
+        /// <summary>The incoming Flash message <c>FriendNotification</c>.</summary>
         public const string FriendNotification = "FriendNotification";
-        /// <summary>f:FriendRequests</summary>
+        /// <summary>The incoming Flash message <c>FriendRequests</c>.</summary>
         public const string FriendRequests = "FriendRequests";
-        /// <summary>f:FriendsListFragment f:FriendListFragment</summary>
+        /// <summary>The incoming Flash message <c>FriendsListFragment</c>, also named <c>FriendListFragment</c>.</summary>
         public const string FriendsListFragment = "FriendsListFragment";
-        /// <summary>f:FurniList</summary>
+        /// <summary>The incoming Flash message <c>FurniList</c>.</summary>
         public const string FurniList = "FurniList";
-        /// <summary>f:FurniListAddOrUpdate</summary>
+        /// <summary>The incoming Flash message <c>FurniListAddOrUpdate</c>.</summary>
         public const string FurniListAddOrUpdate = "FurniListAddOrUpdate";
-        /// <summary>f:FurniListInvalidate</summary>
+        /// <summary>The incoming Flash message <c>FurniListInvalidate</c>.</summary>
         public const string FurniListInvalidate = "FurniListInvalidate";
-        /// <summary>f:FurniListRemove</summary>
+        /// <summary>The incoming Flash message <c>FurniListRemove</c>.</summary>
         public const string FurniListRemove = "FurniListRemove";
-        /// <summary>f:FurniListRemoveMultiple</summary>
+        /// <summary>The incoming Flash message <c>FurniListRemoveMultiple</c>.</summary>
         public const string FurniListRemoveMultiple = "FurniListRemoveMultiple";
-        /// <summary>f:FurniRentOrBuyoutOffer</summary>
+        /// <summary>The incoming Flash message <c>FurniRentOrBuyoutOffer</c>.</summary>
         public const string FurniRentOrBuyoutOffer = "FurniRentOrBuyoutOffer";
-        /// <summary>f:FurnitureAliases</summary>
+        /// <summary>The incoming Flash message <c>FurnitureAliases</c>.</summary>
         public const string FurnitureAliases = "FurnitureAliases";
-        /// <summary>f:Game2AccountGameStatus</summary>
+        /// <summary>The incoming Flash message <c>Game2AccountGameStatus</c>.</summary>
         public const string Game2AccountGameStatus = "Game2AccountGameStatus";
-        /// <summary>f:Game2ArenaEntered</summary>
+        /// <summary>The incoming Flash message <c>Game2ArenaEntered</c>.</summary>
         public const string Game2ArenaEntered = "Game2ArenaEntered";
-        /// <summary>f:Game2EnterArena</summary>
+        /// <summary>The incoming Flash message <c>Game2EnterArena</c>.</summary>
         public const string Game2EnterArena = "Game2EnterArena";
-        /// <summary>f:Game2EnterArenaFailed</summary>
+        /// <summary>The incoming Flash message <c>Game2EnterArenaFailed</c>.</summary>
         public const string Game2EnterArenaFailed = "Game2EnterArenaFailed";
-        /// <summary>f:Game2FriendsLeaderboard</summary>
+        /// <summary>The incoming Flash message <c>Game2FriendsLeaderboard</c>.</summary>
         public const string Game2FriendsLeaderboard = "Game2FriendsLeaderboard";
-        /// <summary>f:Game2FullGameStatus</summary>
+        /// <summary>The incoming Flash message <c>Game2FullGameStatus</c>.</summary>
         public const string Game2FullGameStatus = "Game2FullGameStatus";
-        /// <summary>f:Game2GameCancelled</summary>
+        /// <summary>The incoming Flash message <c>Game2GameCancelled</c>.</summary>
         public const string Game2GameCancelled = "Game2GameCancelled";
-        /// <summary>f:Game2GameChatFromPlayer</summary>
+        /// <summary>The incoming Flash message <c>Game2GameChatFromPlayer</c>.</summary>
         public const string Game2GameChatFromPlayer = "Game2GameChatFromPlayer";
-        /// <summary>f:Game2GameCreated</summary>
+        /// <summary>The incoming Flash message <c>Game2GameCreated</c>.</summary>
         public const string Game2GameCreated = "Game2GameCreated";
-        /// <summary>f:Game2GameDirectoryStatus</summary>
+        /// <summary>The incoming Flash message <c>Game2GameDirectoryStatus</c>.</summary>
         public const string Game2GameDirectoryStatus = "Game2GameDirectoryStatus";
-        /// <summary>f:Game2GameEnding</summary>
+        /// <summary>The incoming Flash message <c>Game2GameEnding</c>.</summary>
         public const string Game2GameEnding = "Game2GameEnding";
-        /// <summary>f:Game2GameLongData</summary>
+        /// <summary>The incoming Flash message <c>Game2GameLongData</c>.</summary>
         public const string Game2GameLongData = "Game2GameLongData";
-        /// <summary>f:Game2GameNotFound</summary>
+        /// <summary>The incoming Flash message <c>Game2GameNotFound</c>.</summary>
         public const string Game2GameNotFound = "Game2GameNotFound";
-        /// <summary>f:Game2GameRejoin</summary>
+        /// <summary>The incoming Flash message <c>Game2GameRejoin</c>.</summary>
         public const string Game2GameRejoin = "Game2GameRejoin";
-        /// <summary>f:Game2GameStarted</summary>
+        /// <summary>The incoming Flash message <c>Game2GameStarted</c>.</summary>
         public const string Game2GameStarted = "Game2GameStarted";
-        /// <summary>f:Game2GameStatus</summary>
+        /// <summary>The incoming Flash message <c>Game2GameStatus</c>.</summary>
         public const string Game2GameStatus = "Game2GameStatus";
-        /// <summary>f:Game2InArenaQueue</summary>
+        /// <summary>The incoming Flash message <c>Game2InArenaQueue</c>.</summary>
         public const string Game2InArenaQueue = "Game2InArenaQueue";
-        /// <summary>f:Game2JoiningGameFailed</summary>
+        /// <summary>The incoming Flash message <c>Game2JoiningGameFailed</c>.</summary>
         public const string Game2JoiningGameFailed = "Game2JoiningGameFailed";
-        /// <summary>f:Game2PlayerExitedGameArena</summary>
+        /// <summary>The incoming Flash message <c>Game2PlayerExitedGameArena</c>.</summary>
         public const string Game2PlayerExitedGameArena = "Game2PlayerExitedGameArena";
-        /// <summary>f:Game2PlayerRematches</summary>
+        /// <summary>The incoming Flash message <c>Game2PlayerRematches</c>.</summary>
         public const string Game2PlayerRematches = "Game2PlayerRematches";
-        /// <summary>f:Game2StageEnding</summary>
+        /// <summary>The incoming Flash message <c>Game2StageEnding</c>.</summary>
         public const string Game2StageEnding = "Game2StageEnding";
-        /// <summary>f:Game2StageLoad</summary>
+        /// <summary>The incoming Flash message <c>Game2StageLoad</c>.</summary>
         public const string Game2StageLoad = "Game2StageLoad";
-        /// <summary>f:Game2StageRunning</summary>
+        /// <summary>The incoming Flash message <c>Game2StageRunning</c>.</summary>
         public const string Game2StageRunning = "Game2StageRunning";
-        /// <summary>f:Game2StageStarting</summary>
+        /// <summary>The incoming Flash message <c>Game2StageStarting</c>.</summary>
         public const string Game2StageStarting = "Game2StageStarting";
-        /// <summary>f:Game2StageStillLoading</summary>
+        /// <summary>The incoming Flash message <c>Game2StageStillLoading</c>.</summary>
         public const string Game2StageStillLoading = "Game2StageStillLoading";
-        /// <summary>f:Game2StartCounter</summary>
+        /// <summary>The incoming Flash message <c>Game2StartCounter</c>.</summary>
         public const string Game2StartCounter = "Game2StartCounter";
-        /// <summary>f:Game2StartingGameFailed</summary>
+        /// <summary>The incoming Flash message <c>Game2StartingGameFailed</c>.</summary>
         public const string Game2StartingGameFailed = "Game2StartingGameFailed";
-        /// <summary>f:Game2StopCounter</summary>
+        /// <summary>The incoming Flash message <c>Game2StopCounter</c>.</summary>
         public const string Game2StopCounter = "Game2StopCounter";
-        /// <summary>f:Game2TotalGroupLeaderboard</summary>
+        /// <summary>The incoming Flash message <c>Game2TotalGroupLeaderboard</c>.</summary>
         public const string Game2TotalGroupLeaderboard = "Game2TotalGroupLeaderboard";
-        /// <summary>f:Game2TotalLeaderboard</summary>
+        /// <summary>The incoming Flash message <c>Game2TotalLeaderboard</c>.</summary>
         public const string Game2TotalLeaderboard = "Game2TotalLeaderboard";
-        /// <summary>f:Game2UserBlocked</summary>
+        /// <summary>The incoming Flash message <c>Game2UserBlocked</c>.</summary>
         public const string Game2UserBlocked = "Game2UserBlocked";
-        /// <summary>f:Game2UserJoinedGame</summary>
+        /// <summary>The incoming Flash message <c>Game2UserJoinedGame</c>.</summary>
         public const string Game2UserJoinedGame = "Game2UserJoinedGame";
-        /// <summary>f:Game2UserLeftGame</summary>
+        /// <summary>The incoming Flash message <c>Game2UserLeftGame</c>.</summary>
         public const string Game2UserLeftGame = "Game2UserLeftGame";
-        /// <summary>f:Game2WeeklyFriendsLeaderboard</summary>
+        /// <summary>The incoming Flash message <c>Game2WeeklyFriendsLeaderboard</c>.</summary>
         public const string Game2WeeklyFriendsLeaderboard = "Game2WeeklyFriendsLeaderboard";
-        /// <summary>f:Game2WeeklyGroupLeaderboard</summary>
+        /// <summary>The incoming Flash message <c>Game2WeeklyGroupLeaderboard</c>.</summary>
         public const string Game2WeeklyGroupLeaderboard = "Game2WeeklyGroupLeaderboard";
-        /// <summary>f:Game2WeeklyLeaderboard</summary>
+        /// <summary>The incoming Flash message <c>Game2WeeklyLeaderboard</c>.</summary>
         public const string Game2WeeklyLeaderboard = "Game2WeeklyLeaderboard";
-        /// <summary>f:GamePlayerValue</summary>
+        /// <summary>The incoming Flash message <c>GamePlayerValue</c>.</summary>
         public const string GamePlayerValue = "GamePlayerValue";
-        /// <summary>f:GenericError</summary>
+        /// <summary>The incoming Flash message <c>GenericError</c>.</summary>
         public const string GenericError = "GenericError";
-        /// <summary>f:GetCustomFilterResult</summary>
+        /// <summary>The incoming Flash message <c>GetCustomFilterResult</c>.</summary>
         public const string GetCustomFilterResult = "GetCustomFilterResult";
-        /// <summary>f:GetForumsList</summary>
+        /// <summary>The incoming Flash message <c>GetForumsList</c>.</summary>
         public const string GetForumsList = "GetForumsList";
-        /// <summary>f:GetGuestRoomResult</summary>
+        /// <summary>The incoming Flash message <c>GetGuestRoomResult</c>.</summary>
         public const string GetGuestRoomResult = "GetGuestRoomResult";
-        /// <summary>f:GiftReceiverNotFound</summary>
+        /// <summary>The incoming Flash message <c>GiftReceiverNotFound</c>.</summary>
         public const string GiftReceiverNotFound = "GiftReceiverNotFound";
-        /// <summary>f:GiftWrappingConfiguration</summary>
+        /// <summary>The incoming Flash message <c>GiftWrappingConfiguration</c>.</summary>
         public const string GiftWrappingConfiguration = "GiftWrappingConfiguration";
-        /// <summary>f:GoToBreedingNestFailure</summary>
+        /// <summary>The incoming Flash message <c>GoToBreedingNestFailure</c>.</summary>
         public const string GoToBreedingNestFailure = "GoToBreedingNestFailure";
-        /// <summary>f:GotMysteryBoxPrize</summary>
+        /// <summary>The incoming Flash message <c>GotMysteryBoxPrize</c>.</summary>
         public const string GotMysteryBoxPrize = "GotMysteryBoxPrize";
-        /// <summary>f:GroupDetailsChanged</summary>
+        /// <summary>The incoming Flash message <c>GroupDetailsChanged</c>.</summary>
         public const string GroupDetailsChanged = "GroupDetailsChanged";
-        /// <summary>f:GroupMembershipRequested</summary>
+        /// <summary>The incoming Flash message <c>GroupMembershipRequested</c>.</summary>
         public const string GroupMembershipRequested = "GroupMembershipRequested";
-        /// <summary>f:GuestRoomSearchResult</summary>
+        /// <summary>The incoming Flash message <c>GuestRoomSearchResult</c>.</summary>
         public const string GuestRoomSearchResult = "GuestRoomSearchResult";
-        /// <summary>f:GuideOnDutyStatus</summary>
+        /// <summary>The incoming Flash message <c>GuideOnDutyStatus</c>.</summary>
         public const string GuideOnDutyStatus = "GuideOnDutyStatus";
-        /// <summary>f:GuideReportingStatus</summary>
+        /// <summary>The incoming Flash message <c>GuideReportingStatus</c>.</summary>
         public const string GuideReportingStatus = "GuideReportingStatus";
-        /// <summary>f:GuideSessionAttached</summary>
+        /// <summary>The incoming Flash message <c>GuideSessionAttached</c>.</summary>
         public const string GuideSessionAttached = "GuideSessionAttached";
-        /// <summary>f:GuideSessionDetached</summary>
+        /// <summary>The incoming Flash message <c>GuideSessionDetached</c>.</summary>
         public const string GuideSessionDetached = "GuideSessionDetached";
-        /// <summary>f:GuideSessionEnded</summary>
+        /// <summary>The incoming Flash message <c>GuideSessionEnded</c>.</summary>
         public const string GuideSessionEnded = "GuideSessionEnded";
-        /// <summary>f:GuideSessionError</summary>
+        /// <summary>The incoming Flash message <c>GuideSessionError</c>.</summary>
         public const string GuideSessionError = "GuideSessionError";
-        /// <summary>f:GuideSessionInvitedToGuideRoom</summary>
+        /// <summary>The incoming Flash message <c>GuideSessionInvitedToGuideRoom</c>.</summary>
         public const string GuideSessionInvitedToGuideRoom = "GuideSessionInvitedToGuideRoom";
-        /// <summary>f:GuideSessionMessage</summary>
+        /// <summary>The incoming Flash message <c>GuideSessionMessage</c>.</summary>
         public const string GuideSessionMessage = "GuideSessionMessage";
-        /// <summary>f:GuideSessionPartnerIsTyping</summary>
+        /// <summary>The incoming Flash message <c>GuideSessionPartnerIsTyping</c>.</summary>
         public const string GuideSessionPartnerIsTyping = "GuideSessionPartnerIsTyping";
-        /// <summary>f:GuideSessionRequesterRoom</summary>
+        /// <summary>The incoming Flash message <c>GuideSessionRequesterRoom</c>.</summary>
         public const string GuideSessionRequesterRoom = "GuideSessionRequesterRoom";
-        /// <summary>f:GuideSessionStarted</summary>
+        /// <summary>The incoming Flash message <c>GuideSessionStarted</c>.</summary>
         public const string GuideSessionStarted = "GuideSessionStarted";
-        /// <summary>f:GuideTicketCreationResult</summary>
+        /// <summary>The incoming Flash message <c>GuideTicketCreationResult</c>.</summary>
         public const string GuideTicketCreationResult = "GuideTicketCreationResult";
-        /// <summary>f:GuideTicketResolution</summary>
+        /// <summary>The incoming Flash message <c>GuideTicketResolution</c>.</summary>
         public const string GuideTicketResolution = "GuideTicketResolution";
-        /// <summary>f:GuildCreated</summary>
+        /// <summary>The incoming Flash message <c>GuildCreated</c>.</summary>
         public const string GuildCreated = "GuildCreated";
-        /// <summary>f:GuildCreationInfo</summary>
+        /// <summary>The incoming Flash message <c>GuildCreationInfo</c>.</summary>
         public const string GuildCreationInfo = "GuildCreationInfo";
-        /// <summary>f:GuildEditFailed</summary>
+        /// <summary>The incoming Flash message <c>GuildEditFailed</c>.</summary>
         public const string GuildEditFailed = "GuildEditFailed";
-        /// <summary>f:GuildEditInfo</summary>
+        /// <summary>The incoming Flash message <c>GuildEditInfo</c>.</summary>
         public const string GuildEditInfo = "GuildEditInfo";
-        /// <summary>f:GuildEditorData</summary>
+        /// <summary>The incoming Flash message <c>GuildEditorData</c>.</summary>
         public const string GuildEditorData = "GuildEditorData";
-        /// <summary>f:GuildFurniContextmenuInfo</summary>
+        /// <summary>The incoming Flash message <c>GuildFurniContextmenuInfo</c>.</summary>
         public const string GuildFurniContextmenuInfo = "GuildFurniContextmenuInfo";
-        /// <summary>f:GuildMemberFurniCountInHq</summary>
+        /// <summary>The incoming Flash message <c>GuildMemberFurniCountInHq</c>.</summary>
         public const string GuildMemberFurniCountInHq = "GuildMemberFurniCountInHq";
-        /// <summary>f:GuildMemberMgmtFailed</summary>
+        /// <summary>The incoming Flash message <c>GuildMemberMgmtFailed</c>.</summary>
         public const string GuildMemberMgmtFailed = "GuildMemberMgmtFailed";
-        /// <summary>f:GuildMembers</summary>
+        /// <summary>The incoming Flash message <c>GuildMembers</c>.</summary>
         public const string GuildMembers = "GuildMembers";
-        /// <summary>f:GuildMembershipRejected</summary>
+        /// <summary>The incoming Flash message <c>GuildMembershipRejected</c>.</summary>
         public const string GuildMembershipRejected = "GuildMembershipRejected";
-        /// <summary>f:GuildMembershipUpdated</summary>
+        /// <summary>The incoming Flash message <c>GuildMembershipUpdated</c>.</summary>
         public const string GuildMembershipUpdated = "GuildMembershipUpdated";
-        /// <summary>f:GuildMemberships</summary>
+        /// <summary>The incoming Flash message <c>GuildMemberships</c>.</summary>
         public const string GuildMemberships = "GuildMemberships";
-        /// <summary>f:HabbiconInfo</summary>
+        /// <summary>The incoming Flash message <c>HabbiconInfo</c>.</summary>
         public const string HabbiconInfo = "HabbiconInfo";
-        /// <summary>f:HabbiconShopData</summary>
+        /// <summary>The incoming Flash message <c>HabbiconShopData</c>.</summary>
         public const string HabbiconShopData = "HabbiconShopData";
-        /// <summary>f:HabboAchievementNotification</summary>
+        /// <summary>The incoming Flash message <c>HabboAchievementNotification</c>.</summary>
         public const string HabboAchievementNotification = "HabboAchievementNotification";
-        /// <summary>f:HabboActivityPointNotification</summary>
+        /// <summary>The incoming Flash message <c>HabboActivityPointNotification</c>.</summary>
         public const string HabboActivityPointNotification = "HabboActivityPointNotification";
-        /// <summary>f:HabboBroadcast</summary>
+        /// <summary>The incoming Flash message <c>HabboBroadcast</c>.</summary>
         public const string HabboBroadcast = "HabboBroadcast";
-        /// <summary>f:HabboClubExtendOffer</summary>
+        /// <summary>The incoming Flash message <c>HabboClubExtendOffer</c>.</summary>
         public const string HabboClubExtendOffer = "HabboClubExtendOffer";
-        /// <summary>f:HabboClubOffers</summary>
+        /// <summary>The incoming Flash message <c>HabboClubOffers</c>.</summary>
         public const string HabboClubOffers = "HabboClubOffers";
-        /// <summary>f:HabboGroupBadges</summary>
+        /// <summary>The incoming Flash message <c>HabboGroupBadges</c>.</summary>
         public const string HabboGroupBadges = "HabboGroupBadges";
-        /// <summary>f:HabboGroupDeactivated</summary>
+        /// <summary>The incoming Flash message <c>HabboGroupDeactivated</c>.</summary>
         public const string HabboGroupDeactivated = "HabboGroupDeactivated";
-        /// <summary>f:HabboGroupDetails</summary>
+        /// <summary>The incoming Flash message <c>HabboGroupDetails</c>.</summary>
         public const string HabboGroupDetails = "HabboGroupDetails";
-        /// <summary>f:HabboGroupJoinFailed</summary>
+        /// <summary>The incoming Flash message <c>HabboGroupJoinFailed</c>.</summary>
         public const string HabboGroupJoinFailed = "HabboGroupJoinFailed";
-        /// <summary>f:HabboSearchResult</summary>
+        /// <summary>The incoming Flash message <c>HabboSearchResult</c>.</summary>
         public const string HabboSearchResult = "HabboSearchResult";
-        /// <summary>f:HabboUserBadges</summary>
+        /// <summary>The incoming Flash message <c>HabboUserBadges</c>.</summary>
         public const string HabboUserBadges = "HabboUserBadges";
-        /// <summary>f:HandItemReceived</summary>
+        /// <summary>The incoming Flash message <c>HandItemReceived</c>.</summary>
         public const string HandItemReceived = "HandItemReceived";
-        /// <summary>f:HanditemConfiguration</summary>
+        /// <summary>The incoming Flash message <c>HanditemConfiguration</c>.</summary>
         public const string HanditemConfiguration = "HanditemConfiguration";
-        /// <summary>f:HasClaimedProductResponse</summary>
+        /// <summary>The incoming Flash message <c>HasClaimedProductResponse</c>.</summary>
         public const string HasClaimedProductResponse = "HasClaimedProductResponse";
-        /// <summary>f:HeightMap</summary>
+        /// <summary>The incoming Flash message <c>HeightMap</c>.</summary>
         public const string HeightMap = "HeightMap";
-        /// <summary>f:HeightMapUpdate</summary>
+        /// <summary>The incoming Flash message <c>HeightMapUpdate</c>.</summary>
         public const string HeightMapUpdate = "HeightMapUpdate";
-        /// <summary>f:HeightMap</summary>
+        /// <summary>An older spelling of <see cref="HeightMap"/>.</summary>
         public const string Heightmap = "Heightmap";
-        /// <summary>f:HotLooks</summary>
+        /// <summary>The incoming Flash message <c>HotLooks</c>.</summary>
         public const string HotLooks = "HotLooks";
-        /// <summary>f:IdentityAccounts</summary>
+        /// <summary>The incoming Flash message <c>IdentityAccounts</c>.</summary>
         public const string IdentityAccounts = "IdentityAccounts";
-        /// <summary>f:IgnoreResult</summary>
+        /// <summary>The incoming Flash message <c>IgnoreResult</c>.</summary>
         public const string IgnoreResult = "IgnoreResult";
-        /// <summary>f:IgnoredUsers</summary>
+        /// <summary>The incoming Flash message <c>IgnoredUsers</c>.</summary>
         public const string IgnoredUsers = "IgnoredUsers";
-        /// <summary>f:InClientLink</summary>
+        /// <summary>The incoming Flash message <c>InClientLink</c>.</summary>
         public const string InClientLink = "InClientLink";
-        /// <summary>f:IncomeRewardClaimResponse</summary>
+        /// <summary>The incoming Flash message <c>IncomeRewardClaimResponse</c>.</summary>
         public const string IncomeRewardClaimResponse = "IncomeRewardClaimResponse";
-        /// <summary>f:IncomeRewardNotification</summary>
+        /// <summary>The incoming Flash message <c>IncomeRewardNotification</c>.</summary>
         public const string IncomeRewardNotification = "IncomeRewardNotification";
-        /// <summary>f:IncomeRewardStatus</summary>
+        /// <summary>The incoming Flash message <c>IncomeRewardStatus</c>.</summary>
         public const string IncomeRewardStatus = "IncomeRewardStatus";
-        /// <summary>f:InfoFeedEnable</summary>
+        /// <summary>The incoming Flash message <c>InfoFeedEnable</c>.</summary>
         public const string InfoFeedEnable = "InfoFeedEnable";
-        /// <summary>f:InfoHotelClosed</summary>
+        /// <summary>The incoming Flash message <c>InfoHotelClosed</c>.</summary>
         public const string InfoHotelClosed = "InfoHotelClosed";
-        /// <summary>f:InfoHotelClosing</summary>
+        /// <summary>The incoming Flash message <c>InfoHotelClosing</c>.</summary>
         public const string InfoHotelClosing = "InfoHotelClosing";
-        /// <summary>f:InitCamera</summary>
+        /// <summary>The incoming Flash message <c>InitCamera</c>.</summary>
         public const string InitCamera = "InitCamera";
-        /// <summary>f:InitDiffieHandshake</summary>
+        /// <summary>The incoming Flash message <c>InitDiffieHandshake</c>.</summary>
         public const string InitDiffieHandshake = "InitDiffieHandshake";
-        /// <summary>f:InstantMessageError</summary>
+        /// <summary>The incoming Flash message <c>InstantMessageError</c>.</summary>
         public const string InstantMessageError = "InstantMessageError";
-        /// <summary>f:Interstitial</summary>
+        /// <summary>The incoming Flash message <c>Interstitial</c>.</summary>
         public const string Interstitial = "Interstitial";
-        /// <summary>f:IsBadgeRequestFulfilled</summary>
+        /// <summary>The incoming Flash message <c>IsBadgeRequestFulfilled</c>.</summary>
         public const string IsBadgeRequestFulfilled = "IsBadgeRequestFulfilled";
-        /// <summary>f:IsFirstLoginOfDay</summary>
+        /// <summary>The incoming Flash message <c>IsFirstLoginOfDay</c>.</summary>
         public const string IsFirstLoginOfDay = "IsFirstLoginOfDay";
-        /// <summary>f:IsOfferGiftable</summary>
+        /// <summary>The incoming Flash message <c>IsOfferGiftable</c>.</summary>
         public const string IsOfferGiftable = "IsOfferGiftable";
-        /// <summary>f:IsUserPartOfCompetition</summary>
+        /// <summary>The incoming Flash message <c>IsUserPartOfCompetition</c>.</summary>
         public const string IsUserPartOfCompetition = "IsUserPartOfCompetition";
-        /// <summary>f:IssueCloseNotification</summary>
+        /// <summary>The incoming Flash message <c>IssueCloseNotification</c>.</summary>
         public const string IssueCloseNotification = "IssueCloseNotification";
-        /// <summary>f:IssueDeleted</summary>
+        /// <summary>The incoming Flash message <c>IssueDeleted</c>.</summary>
         public const string IssueDeleted = "IssueDeleted";
-        /// <summary>f:IssueInfo</summary>
+        /// <summary>The incoming Flash message <c>IssueInfo</c>.</summary>
         public const string IssueInfo = "IssueInfo";
-        /// <summary>f:IssuePickFailed</summary>
+        /// <summary>The incoming Flash message <c>IssuePickFailed</c>.</summary>
         public const string IssuePickFailed = "IssuePickFailed";
-        /// <summary>f:ItemAdd</summary>
+        /// <summary>The incoming Flash message <c>ItemAdd</c>.</summary>
         public const string ItemAdd = "ItemAdd";
-        /// <summary>f:ItemDataUpdate</summary>
+        /// <summary>The incoming Flash message <c>ItemDataUpdate</c>.</summary>
         public const string ItemDataUpdate = "ItemDataUpdate";
-        /// <summary>f:ItemRemove</summary>
+        /// <summary>The incoming Flash message <c>ItemRemove</c>.</summary>
         public const string ItemRemove = "ItemRemove";
-        /// <summary>f:ItemRemoveMultiple</summary>
+        /// <summary>The incoming Flash message <c>ItemRemoveMultiple</c>.</summary>
         public const string ItemRemoveMultiple = "ItemRemoveMultiple";
-        /// <summary>f:ItemStateUpdate</summary>
+        /// <summary>The incoming Flash message <c>ItemStateUpdate</c>.</summary>
         public const string ItemStateUpdate = "ItemStateUpdate";
-        /// <summary>f:ItemUpdate</summary>
+        /// <summary>The incoming Flash message <c>ItemUpdate</c>.</summary>
         public const string ItemUpdate = "ItemUpdate";
-        /// <summary>f:Items</summary>
+        /// <summary>The incoming Flash message <c>Items</c>.</summary>
         public const string Items = "Items";
-        /// <summary>f:ItemsChestContentsChunk</summary>
+        /// <summary>The incoming Flash message <c>ItemsChestContentsChunk</c>.</summary>
         public const string ItemsChestContentsChunk = "ItemsChestContentsChunk";
-        /// <summary>f:ItemsChestContentsUpdated</summary>
+        /// <summary>The incoming Flash message <c>ItemsChestContentsUpdated</c>.</summary>
         public const string ItemsChestContentsUpdated = "ItemsChestContentsUpdated";
-        /// <summary>f:ItemsStateUpdate</summary>
+        /// <summary>The incoming Flash message <c>ItemsStateUpdate</c>.</summary>
         public const string ItemsStateUpdate = "ItemsStateUpdate";
-        /// <summary>f:JukeboxPlayListFull</summary>
+        /// <summary>The incoming Flash message <c>JukeboxPlayListFull</c>.</summary>
         public const string JukeboxPlayListFull = "JukeboxPlayListFull";
-        /// <summary>f:JukeboxSongDisks</summary>
+        /// <summary>The incoming Flash message <c>JukeboxSongDisks</c>.</summary>
         public const string JukeboxSongDisks = "JukeboxSongDisks";
-        /// <summary>f:LatencyPingResponse</summary>
+        /// <summary>The incoming Flash message <c>LatencyPingResponse</c>.</summary>
         public const string LatencyPingResponse = "LatencyPingResponse";
-        /// <summary>f:LimitedEditionSoldOut</summary>
+        /// <summary>The incoming Flash message <c>LimitedEditionSoldOut</c>.</summary>
         public const string LimitedEditionSoldOut = "LimitedEditionSoldOut";
-        /// <summary>f:LimitedOfferAppearingNext</summary>
+        /// <summary>The incoming Flash message <c>LimitedOfferAppearingNext</c>.</summary>
         public const string LimitedOfferAppearingNext = "LimitedOfferAppearingNext";
-        /// <summary>f:LoginFailedHotelClosed</summary>
+        /// <summary>The incoming Flash message <c>LoginFailedHotelClosed</c>.</summary>
         public const string LoginFailedHotelClosed = "LoginFailedHotelClosed";
-        /// <summary>f:LtdRaffleEntered</summary>
+        /// <summary>The incoming Flash message <c>LtdRaffleEntered</c>.</summary>
         public const string LtdRaffleEntered = "LtdRaffleEntered";
-        /// <summary>f:LtdRaffleResult</summary>
+        /// <summary>The incoming Flash message <c>LtdRaffleResult</c>.</summary>
         public const string LtdRaffleResult = "LtdRaffleResult";
-        /// <summary>f:MOTDNotification</summary>
+        /// <summary>The incoming Flash message <c>MOTDNotification</c>.</summary>
         public const string MOTDNotification = "MOTDNotification";
-        /// <summary>f:MaintenanceStatus</summary>
+        /// <summary>The incoming Flash message <c>MaintenanceStatus</c>.</summary>
         public const string MaintenanceStatus = "MaintenanceStatus";
-        /// <summary>f:MarketPlaceOffers</summary>
+        /// <summary>The incoming Flash message <c>MarketPlaceOffers</c>.</summary>
         public const string MarketPlaceOffers = "MarketPlaceOffers";
-        /// <summary>f:MarketPlaceOwnOffers</summary>
+        /// <summary>The incoming Flash message <c>MarketPlaceOwnOffers</c>.</summary>
         public const string MarketPlaceOwnOffers = "MarketPlaceOwnOffers";
-        /// <summary>f:MarketplaceBuyOfferResult</summary>
+        /// <summary>The incoming Flash message <c>MarketplaceBuyOfferResult</c>.</summary>
         public const string MarketplaceBuyOfferResult = "MarketplaceBuyOfferResult";
-        /// <summary>f:MarketplaceCanMakeOfferResult</summary>
+        /// <summary>The incoming Flash message <c>MarketplaceCanMakeOfferResult</c>.</summary>
         public const string MarketplaceCanMakeOfferResult = "MarketplaceCanMakeOfferResult";
-        /// <summary>f:MarketplaceCancelAllOffersResult</summary>
+        /// <summary>The incoming Flash message <c>MarketplaceCancelAllOffersResult</c>.</summary>
         public const string MarketplaceCancelAllOffersResult = "MarketplaceCancelAllOffersResult";
-        /// <summary>f:MarketplaceCancelOfferResult</summary>
+        /// <summary>The incoming Flash message <c>MarketplaceCancelOfferResult</c>.</summary>
         public const string MarketplaceCancelOfferResult = "MarketplaceCancelOfferResult";
-        /// <summary>f:MarketplaceClearOwnHistoryResult</summary>
+        /// <summary>The incoming Flash message <c>MarketplaceClearOwnHistoryResult</c>.</summary>
         public const string MarketplaceClearOwnHistoryResult = "MarketplaceClearOwnHistoryResult";
-        /// <summary>f:MarketplaceConfiguration</summary>
+        /// <summary>The incoming Flash message <c>MarketplaceConfiguration</c>.</summary>
         public const string MarketplaceConfiguration = "MarketplaceConfiguration";
-        /// <summary>f:MarketplaceItemStats</summary>
+        /// <summary>The incoming Flash message <c>MarketplaceItemStats</c>.</summary>
         public const string MarketplaceItemStats = "MarketplaceItemStats";
-        /// <summary>f:MarketplaceMakeOfferResult</summary>
+        /// <summary>The incoming Flash message <c>MarketplaceMakeOfferResult</c>.</summary>
         public const string MarketplaceMakeOfferResult = "MarketplaceMakeOfferResult";
-        /// <summary>f:MessengerError</summary>
+        /// <summary>The incoming Flash message <c>MessengerError</c>.</summary>
         public const string MessengerError = "MessengerError";
-        /// <summary>f:MessengerInit</summary>
+        /// <summary>The incoming Flash message <c>MessengerInit</c>.</summary>
         public const string MessengerInit = "MessengerInit";
-        /// <summary>f:MiniMailNew</summary>
+        /// <summary>The incoming Flash message <c>MiniMailNew</c>.</summary>
         public const string MiniMailNew = "MiniMailNew";
-        /// <summary>f:MiniMailUnreadCount</summary>
+        /// <summary>The incoming Flash message <c>MiniMailUnreadCount</c>.</summary>
         public const string MiniMailUnreadCount = "MiniMailUnreadCount";
-        /// <summary>f:ModerationCaution</summary>
+        /// <summary>The incoming Flash message <c>ModerationCaution</c>.</summary>
         public const string ModerationCaution = "ModerationCaution";
-        /// <summary>f:Moderator</summary>
+        /// <summary>The incoming Flash message <c>Moderator</c>.</summary>
         public const string Moderator = "Moderator";
-        /// <summary>f:ModeratorActionResult</summary>
+        /// <summary>The incoming Flash message <c>ModeratorActionResult</c>.</summary>
         public const string ModeratorActionResult = "ModeratorActionResult";
-        /// <summary>f:ModeratorCaution</summary>
+        /// <summary>The incoming Flash message <c>ModeratorCaution</c>.</summary>
         public const string ModeratorCaution = "ModeratorCaution";
-        /// <summary>f:ModeratorInit</summary>
+        /// <summary>The incoming Flash message <c>ModeratorInit</c>.</summary>
         public const string ModeratorInit = "ModeratorInit";
-        /// <summary>f:ModeratorRoomInfo</summary>
+        /// <summary>The incoming Flash message <c>ModeratorRoomInfo</c>.</summary>
         public const string ModeratorRoomInfo = "ModeratorRoomInfo";
-        /// <summary>f:ModeratorToolPreferences</summary>
+        /// <summary>The incoming Flash message <c>ModeratorToolPreferences</c>.</summary>
         public const string ModeratorToolPreferences = "ModeratorToolPreferences";
-        /// <summary>f:ModeratorUserInfo</summary>
+        /// <summary>The incoming Flash message <c>ModeratorUserInfo</c>.</summary>
         public const string ModeratorUserInfo = "ModeratorUserInfo";
-        /// <summary>f:ModifyCustomFilterResult</summary>
+        /// <summary>The incoming Flash message <c>ModifyCustomFilterResult</c>.</summary>
         public const string ModifyCustomFilterResult = "ModifyCustomFilterResult";
-        /// <summary>f:MOTDNotification</summary>
+        /// <summary>An older spelling of <see cref="MOTDNotification"/>.</summary>
         public const string Motdnotification = "Motdnotification";
-        /// <summary>f:MuteAllInRoom</summary>
+        /// <summary>The incoming Flash message <c>MuteAllInRoom</c>.</summary>
         public const string MuteAllInRoom = "MuteAllInRoom";
-        /// <summary>f:MyCfhReportStatus</summary>
+        /// <summary>The incoming Flash message <c>MyCfhReportStatus</c>.</summary>
         public const string MyCfhReportStatus = "MyCfhReportStatus";
-        /// <summary>f:SanctionStatus f:MySanctionStatus</summary>
+        /// <summary>The incoming Flash message <c>MySanctionStatus</c>, also named <c>SanctionStatus</c>.</summary>
         public const string MySanctionStatus = "MySanctionStatus";
-        /// <summary>f:MysteryBoxKeys</summary>
+        /// <summary>The incoming Flash message <c>MysteryBoxKeys</c>.</summary>
         public const string MysteryBoxKeys = "MysteryBoxKeys";
-        /// <summary>f:NavigatorLiftedRooms</summary>
+        /// <summary>The incoming Flash message <c>NavigatorLiftedRooms</c>.</summary>
         public const string NavigatorLiftedRooms = "NavigatorLiftedRooms";
-        /// <summary>f:NavigatorMetaData</summary>
+        /// <summary>The incoming Flash message <c>NavigatorMetaData</c>.</summary>
         public const string NavigatorMetaData = "NavigatorMetaData";
-        /// <summary>f:NavigatorSavedSearches</summary>
+        /// <summary>The incoming Flash message <c>NavigatorSavedSearches</c>.</summary>
         public const string NavigatorSavedSearches = "NavigatorSavedSearches";
-        /// <summary>f:NavigatorSearchResultBlocks</summary>
+        /// <summary>The incoming Flash message <c>NavigatorSearchResultBlocks</c>.</summary>
         public const string NavigatorSearchResultBlocks = "NavigatorSearchResultBlocks";
-        /// <summary>f:NavigatorSettings</summary>
+        /// <summary>The incoming Flash message <c>NavigatorSettings</c>.</summary>
         public const string NavigatorSettings = "NavigatorSettings";
-        /// <summary>f:NestBreedingSuccess</summary>
+        /// <summary>The incoming Flash message <c>NestBreedingSuccess</c>.</summary>
         public const string NestBreedingSuccess = "NestBreedingSuccess";
-        /// <summary>f:NewConsoleMessage</summary>
+        /// <summary>The incoming Flash message <c>NewConsoleMessage</c>.</summary>
         public const string NewConsoleMessage = "NewConsoleMessage";
-        /// <summary>f:NewFriendRequest</summary>
+        /// <summary>The incoming Flash message <c>NewFriendRequest</c>.</summary>
         public const string NewFriendRequest = "NewFriendRequest";
-        /// <summary>f:NewNavigatorPreferences</summary>
+        /// <summary>The incoming Flash message <c>NewNavigatorPreferences</c>.</summary>
         public const string NewNavigatorPreferences = "NewNavigatorPreferences";
-        /// <summary>f:NewUserExperienceGiftOffer</summary>
+        /// <summary>The incoming Flash message <c>NewUserExperienceGiftOffer</c>.</summary>
         public const string NewUserExperienceGiftOffer = "NewUserExperienceGiftOffer";
-        /// <summary>f:NewUserExperienceNotComplete</summary>
+        /// <summary>The incoming Flash message <c>NewUserExperienceNotComplete</c>.</summary>
         public const string NewUserExperienceNotComplete = "NewUserExperienceNotComplete";
-        /// <summary>f:NftBonusItemClaimResult</summary>
+        /// <summary>The incoming Flash message <c>NftBonusItemClaimResult</c>.</summary>
         public const string NftBonusItemClaimResult = "NftBonusItemClaimResult";
-        /// <summary>f:NftClaimResult</summary>
+        /// <summary>The incoming Flash message <c>NftClaimResult</c>.</summary>
         public const string NftClaimResult = "NftClaimResult";
-        /// <summary>f:NftClaims</summary>
+        /// <summary>The incoming Flash message <c>NftClaims</c>.</summary>
         public const string NftClaims = "NftClaims";
-        /// <summary>f:NftCollections</summary>
+        /// <summary>The incoming Flash message <c>NftCollections</c>.</summary>
         public const string NftCollections = "NftCollections";
-        /// <summary>f:NftCollectionsScore</summary>
+        /// <summary>The incoming Flash message <c>NftCollectionsScore</c>.</summary>
         public const string NftCollectionsScore = "NftCollectionsScore";
-        /// <summary>f:NftEmeraldConvertResult</summary>
+        /// <summary>The incoming Flash message <c>NftEmeraldConvertResult</c>.</summary>
         public const string NftEmeraldConvertResult = "NftEmeraldConvertResult";
-        /// <summary>f:NftRewardItemClaimResult</summary>
+        /// <summary>The incoming Flash message <c>NftRewardItemClaimResult</c>.</summary>
         public const string NftRewardItemClaimResult = "NftRewardItemClaimResult";
-        /// <summary>f:NftStoreOffers</summary>
+        /// <summary>The incoming Flash message <c>NftStoreOffers</c>.</summary>
         public const string NftStoreOffers = "NftStoreOffers";
-        /// <summary>f:NftStorePurchase</summary>
+        /// <summary>The incoming Flash message <c>NftStorePurchase</c>.</summary>
         public const string NftStorePurchase = "NftStorePurchase";
-        /// <summary>f:NftTransferAssetsResult</summary>
+        /// <summary>The incoming Flash message <c>NftTransferAssetsResult</c>.</summary>
         public const string NftTransferAssetsResult = "NftTransferAssetsResult";
-        /// <summary>f:NftTransferFee</summary>
+        /// <summary>The incoming Flash message <c>NftTransferFee</c>.</summary>
         public const string NftTransferFee = "NftTransferFee";
-        /// <summary>f:NoOwnedRoomsAlert</summary>
+        /// <summary>The incoming Flash message <c>NoOwnedRoomsAlert</c>.</summary>
         public const string NoOwnedRoomsAlert = "NoOwnedRoomsAlert";
-        /// <summary>f:NoSuchFlat</summary>
+        /// <summary>The incoming Flash message <c>NoSuchFlat</c>.</summary>
         public const string NoSuchFlat = "NoSuchFlat";
-        /// <summary>f:NoobnessLevel</summary>
+        /// <summary>The incoming Flash message <c>NoobnessLevel</c>.</summary>
         public const string NoobnessLevel = "NoobnessLevel";
-        /// <summary>f:NotEnoughBalance</summary>
+        /// <summary>The incoming Flash message <c>NotEnoughBalance</c>.</summary>
         public const string NotEnoughBalance = "NotEnoughBalance";
-        /// <summary>f:NotificationDialog</summary>
+        /// <summary>The incoming Flash message <c>NotificationDialog</c>.</summary>
         public const string NotificationDialog = "NotificationDialog";
-        /// <summary>f:NowPlaying</summary>
+        /// <summary>The incoming Flash message <c>NowPlaying</c>.</summary>
         public const string NowPlaying = "NowPlaying";
-        /// <summary>f:ObjectAdd</summary>
+        /// <summary>The incoming Flash message <c>ObjectAdd</c>.</summary>
         public const string ObjectAdd = "ObjectAdd";
-        /// <summary>f:ObjectDataUpdate</summary>
+        /// <summary>The incoming Flash message <c>ObjectDataUpdate</c>.</summary>
         public const string ObjectDataUpdate = "ObjectDataUpdate";
-        /// <summary>f:ObjectRemove</summary>
+        /// <summary>The incoming Flash message <c>ObjectRemove</c>.</summary>
         public const string ObjectRemove = "ObjectRemove";
-        /// <summary>f:ObjectRemoveConfirm</summary>
+        /// <summary>The incoming Flash message <c>ObjectRemoveConfirm</c>.</summary>
         public const string ObjectRemoveConfirm = "ObjectRemoveConfirm";
-        /// <summary>f:ObjectRemoveMultiple</summary>
+        /// <summary>The incoming Flash message <c>ObjectRemoveMultiple</c>.</summary>
         public const string ObjectRemoveMultiple = "ObjectRemoveMultiple";
-        /// <summary>f:ObjectUpdate</summary>
+        /// <summary>The incoming Flash message <c>ObjectUpdate</c>.</summary>
         public const string ObjectUpdate = "ObjectUpdate";
-        /// <summary>f:Objects</summary>
+        /// <summary>The incoming Flash message <c>Objects</c>.</summary>
         public const string Objects = "Objects";
-        /// <summary>f:ObjectsDataUpdate</summary>
+        /// <summary>The incoming Flash message <c>ObjectsDataUpdate</c>.</summary>
         public const string ObjectsDataUpdate = "ObjectsDataUpdate";
-        /// <summary>f:OfferRewardDelivered</summary>
+        /// <summary>The incoming Flash message <c>OfferRewardDelivered</c>.</summary>
         public const string OfferRewardDelivered = "OfferRewardDelivered";
-        /// <summary>f:OfficialRooms</summary>
+        /// <summary>The incoming Flash message <c>OfficialRooms</c>.</summary>
         public const string OfficialRooms = "OfficialRooms";
-        /// <summary>f:OfficialSongId</summary>
+        /// <summary>The incoming Flash message <c>OfficialSongId</c>.</summary>
         public const string OfficialSongId = "OfficialSongId";
-        /// <summary>f:OneWayDoorStatus</summary>
+        /// <summary>The incoming Flash message <c>OneWayDoorStatus</c>.</summary>
         public const string OneWayDoorStatus = "OneWayDoorStatus";
-        /// <summary>f:Open</summary>
+        /// <summary>The incoming Flash message <c>Open</c>.</summary>
         public const string Open = "Open";
-        /// <summary>f:OpenChest</summary>
+        /// <summary>The incoming Flash message <c>OpenChest</c>.</summary>
         public const string OpenChest = "OpenChest";
-        /// <summary>f:OpenConnection</summary>
+        /// <summary>The incoming Flash message <c>OpenConnection</c>.</summary>
         public const string OpenConnection = "OpenConnection";
-        /// <summary>f:OpenPetPackageRequested</summary>
+        /// <summary>The incoming Flash message <c>OpenPetPackageRequested</c>.</summary>
         public const string OpenPetPackageRequested = "OpenPetPackageRequested";
-        /// <summary>f:OpenPetPackageResult</summary>
+        /// <summary>The incoming Flash message <c>OpenPetPackageResult</c>.</summary>
         public const string OpenPetPackageResult = "OpenPetPackageResult";
-        /// <summary>f:PerkAllowances</summary>
+        /// <summary>The incoming Flash message <c>PerkAllowances</c>.</summary>
         public const string PerkAllowances = "PerkAllowances";
-        /// <summary>f:PetAddedToInventory</summary>
+        /// <summary>The incoming Flash message <c>PetAddedToInventory</c>.</summary>
         public const string PetAddedToInventory = "PetAddedToInventory";
-        /// <summary>f:PetBreeding</summary>
+        /// <summary>The incoming Flash message <c>PetBreeding</c>.</summary>
         public const string PetBreeding = "PetBreeding";
-        /// <summary>f:PetBreedingResult</summary>
+        /// <summary>The incoming Flash message <c>PetBreedingResult</c>.</summary>
         public const string PetBreedingResult = "PetBreedingResult";
-        /// <summary>f:PetCommands</summary>
+        /// <summary>The incoming Flash message <c>PetCommands</c>.</summary>
         public const string PetCommands = "PetCommands";
-        /// <summary>f:PetExperience</summary>
+        /// <summary>The incoming Flash message <c>PetExperience</c>.</summary>
         public const string PetExperience = "PetExperience";
-        /// <summary>f:PetFigureUpdate</summary>
+        /// <summary>The incoming Flash message <c>PetFigureUpdate</c>.</summary>
         public const string PetFigureUpdate = "PetFigureUpdate";
-        /// <summary>f:PetInfo</summary>
+        /// <summary>The incoming Flash message <c>PetInfo</c>.</summary>
         public const string PetInfo = "PetInfo";
-        /// <summary>f:PetInventory</summary>
+        /// <summary>The incoming Flash message <c>PetInventory</c>.</summary>
         public const string PetInventory = "PetInventory";
-        /// <summary>f:PetLevelNotification</summary>
+        /// <summary>The incoming Flash message <c>PetLevelNotification</c>.</summary>
         public const string PetLevelNotification = "PetLevelNotification";
-        /// <summary>f:PetLevelUpdate</summary>
+        /// <summary>The incoming Flash message <c>PetLevelUpdate</c>.</summary>
         public const string PetLevelUpdate = "PetLevelUpdate";
-        /// <summary>f:PetPlacingError</summary>
+        /// <summary>The incoming Flash message <c>PetPlacingError</c>.</summary>
         public const string PetPlacingError = "PetPlacingError";
-        /// <summary>f:PetReceived</summary>
+        /// <summary>The incoming Flash message <c>PetReceived</c>.</summary>
         public const string PetReceived = "PetReceived";
-        /// <summary>f:PetRemovedFromInventory</summary>
+        /// <summary>The incoming Flash message <c>PetRemovedFromInventory</c>.</summary>
         public const string PetRemovedFromInventory = "PetRemovedFromInventory";
-        /// <summary>f:PetRespectFailed</summary>
+        /// <summary>The incoming Flash message <c>PetRespectFailed</c>.</summary>
         public const string PetRespectFailed = "PetRespectFailed";
-        /// <summary>f:PetRespectNotification</summary>
+        /// <summary>The incoming Flash message <c>PetRespectNotification</c>.</summary>
         public const string PetRespectNotification = "PetRespectNotification";
-        /// <summary>f:PetStatusUpdate</summary>
+        /// <summary>The incoming Flash message <c>PetStatusUpdate</c>.</summary>
         public const string PetStatusUpdate = "PetStatusUpdate";
-        /// <summary>f:PetSupplementedNotification</summary>
+        /// <summary>The incoming Flash message <c>PetSupplementedNotification</c>.</summary>
         public const string PetSupplementedNotification = "PetSupplementedNotification";
-        /// <summary>f:PhoneCollectionState</summary>
+        /// <summary>The incoming Flash message <c>PhoneCollectionState</c>.</summary>
         public const string PhoneCollectionState = "PhoneCollectionState";
-        /// <summary>f:Ping</summary>
+        /// <summary>The incoming Flash message <c>Ping</c>.</summary>
         public const string Ping = "Ping";
-        /// <summary>f:PlayList</summary>
+        /// <summary>The incoming Flash message <c>PlayList</c>.</summary>
         public const string PlayList = "PlayList";
-        /// <summary>f:PlayListSongAdded</summary>
+        /// <summary>The incoming Flash message <c>PlayListSongAdded</c>.</summary>
         public const string PlayListSongAdded = "PlayListSongAdded";
-        /// <summary>f:PollContents</summary>
+        /// <summary>The incoming Flash message <c>PollContents</c>.</summary>
         public const string PollContents = "PollContents";
-        /// <summary>f:PollError</summary>
+        /// <summary>The incoming Flash message <c>PollError</c>.</summary>
         public const string PollError = "PollError";
-        /// <summary>f:PollOffer</summary>
+        /// <summary>The incoming Flash message <c>PollOffer</c>.</summary>
         public const string PollOffer = "PollOffer";
-        /// <summary>f:PopularRoomTagsResult</summary>
+        /// <summary>The incoming Flash message <c>PopularRoomTagsResult</c>.</summary>
         public const string PopularRoomTagsResult = "PopularRoomTagsResult";
-        /// <summary>f:PostItPlaced</summary>
+        /// <summary>The incoming Flash message <c>PostItPlaced</c>.</summary>
         public const string PostItPlaced = "PostItPlaced";
-        /// <summary>f:PostMessage</summary>
+        /// <summary>The incoming Flash message <c>PostMessage</c>.</summary>
         public const string PostMessage = "PostMessage";
-        /// <summary>f:PostThread</summary>
+        /// <summary>The incoming Flash message <c>PostThread</c>.</summary>
         public const string PostThread = "PostThread";
-        /// <summary>f:PresentOpened</summary>
+        /// <summary>The incoming Flash message <c>PresentOpened</c>.</summary>
         public const string PresentOpened = "PresentOpened";
-        /// <summary>f:ProductOffer</summary>
+        /// <summary>The incoming Flash message <c>ProductOffer</c>.</summary>
         public const string ProductOffer = "ProductOffer";
-        /// <summary>f:PromoArticles</summary>
+        /// <summary>The incoming Flash message <c>PromoArticles</c>.</summary>
         public const string PromoArticles = "PromoArticles";
-        /// <summary>f:PurchaseError</summary>
+        /// <summary>The incoming Flash message <c>PurchaseError</c>.</summary>
         public const string PurchaseError = "PurchaseError";
-        /// <summary>f:PurchaseNotAllowed</summary>
+        /// <summary>The incoming Flash message <c>PurchaseNotAllowed</c>.</summary>
         public const string PurchaseNotAllowed = "PurchaseNotAllowed";
-        /// <summary>f:PurchaseOk</summary>
+        /// <summary>The incoming Flash message <c>PurchaseOk</c>.</summary>
         public const string PurchaseOk = "PurchaseOk";
-        /// <summary>f:Quest</summary>
+        /// <summary>The incoming Flash message <c>Quest</c>.</summary>
         public const string Quest = "Quest";
-        /// <summary>f:QuestCancelled</summary>
+        /// <summary>The incoming Flash message <c>QuestCancelled</c>.</summary>
         public const string QuestCancelled = "QuestCancelled";
-        /// <summary>f:QuestCompleted</summary>
+        /// <summary>The incoming Flash message <c>QuestCompleted</c>.</summary>
         public const string QuestCompleted = "QuestCompleted";
-        /// <summary>f:QuestDaily</summary>
+        /// <summary>The incoming Flash message <c>QuestDaily</c>.</summary>
         public const string QuestDaily = "QuestDaily";
-        /// <summary>f:Question</summary>
+        /// <summary>The incoming Flash message <c>Question</c>.</summary>
         public const string Question = "Question";
-        /// <summary>f:QuestionAnswered</summary>
+        /// <summary>The incoming Flash message <c>QuestionAnswered</c>.</summary>
         public const string QuestionAnswered = "QuestionAnswered";
-        /// <summary>f:QuestionFinished</summary>
+        /// <summary>The incoming Flash message <c>QuestionFinished</c>.</summary>
         public const string QuestionFinished = "QuestionFinished";
-        /// <summary>f:Quests</summary>
+        /// <summary>The incoming Flash message <c>Quests</c>.</summary>
         public const string Quests = "Quests";
-        /// <summary>f:QuizData</summary>
+        /// <summary>The incoming Flash message <c>QuizData</c>.</summary>
         public const string QuizData = "QuizData";
-        /// <summary>f:QuizResults</summary>
+        /// <summary>The incoming Flash message <c>QuizResults</c>.</summary>
         public const string QuizResults = "QuizResults";
-        /// <summary>f:RecyclerFinished</summary>
+        /// <summary>The incoming Flash message <c>RecyclerFinished</c>.</summary>
         public const string RecyclerFinished = "RecyclerFinished";
-        /// <summary>f:RecyclerPrizes</summary>
+        /// <summary>The incoming Flash message <c>RecyclerPrizes</c>.</summary>
         public const string RecyclerPrizes = "RecyclerPrizes";
-        /// <summary>f:RecyclerStatus</summary>
+        /// <summary>The incoming Flash message <c>RecyclerStatus</c>.</summary>
         public const string RecyclerStatus = "RecyclerStatus";
-        /// <summary>f:RedeemNftLootBoxResult</summary>
+        /// <summary>The incoming Flash message <c>RedeemNftLootBoxResult</c>.</summary>
         public const string RedeemNftLootBoxResult = "RedeemNftLootBoxResult";
-        /// <summary>f:RedeemNftLootBoxState</summary>
+        /// <summary>The incoming Flash message <c>RedeemNftLootBoxState</c>.</summary>
         public const string RedeemNftLootBoxState = "RedeemNftLootBoxState";
-        /// <summary>f:RelationshipStatusInfo</summary>
+        /// <summary>The incoming Flash message <c>RelationshipStatusInfo</c>.</summary>
         public const string RelationshipStatusInfo = "RelationshipStatusInfo";
-        /// <summary>f:RemainingMutePeriod</summary>
+        /// <summary>The incoming Flash message <c>RemainingMutePeriod</c>.</summary>
         public const string RemainingMutePeriod = "RemainingMutePeriod";
-        /// <summary>f:RentableSpaceRentFailed</summary>
+        /// <summary>The incoming Flash message <c>RentableSpaceRentFailed</c>.</summary>
         public const string RentableSpaceRentFailed = "RentableSpaceRentFailed";
-        /// <summary>f:RentableSpaceRentOk</summary>
+        /// <summary>The incoming Flash message <c>RentableSpaceRentOk</c>.</summary>
         public const string RentableSpaceRentOk = "RentableSpaceRentOk";
-        /// <summary>f:RentableSpaceStatus</summary>
+        /// <summary>The incoming Flash message <c>RentableSpaceStatus</c>.</summary>
         public const string RentableSpaceStatus = "RentableSpaceStatus";
-        /// <summary>f:RequestSpamWallPostIt</summary>
+        /// <summary>The incoming Flash message <c>RequestSpamWallPostIt</c>.</summary>
         public const string RequestSpamWallPostIt = "RequestSpamWallPostIt";
-        /// <summary>f:RespectNotification</summary>
+        /// <summary>The incoming Flash message <c>RespectNotification</c>.</summary>
         public const string RespectNotification = "RespectNotification";
-        /// <summary>f:RestoreClient</summary>
+        /// <summary>The incoming Flash message <c>RestoreClient</c>.</summary>
         public const string RestoreClient = "RestoreClient";
-        /// <summary>f:RewardTrackClaimResult</summary>
+        /// <summary>The incoming Flash message <c>RewardTrackClaimResult</c>.</summary>
         public const string RewardTrackClaimResult = "RewardTrackClaimResult";
-        /// <summary>f:RewardTrackPremiumPurchaseResult</summary>
+        /// <summary>The incoming Flash message <c>RewardTrackPremiumPurchaseResult</c>.</summary>
         public const string RewardTrackPremiumPurchaseResult = "RewardTrackPremiumPurchaseResult";
-        /// <summary>f:RewardTrackProgress</summary>
+        /// <summary>The incoming Flash message <c>RewardTrackProgress</c>.</summary>
         public const string RewardTrackProgress = "RewardTrackProgress";
-        /// <summary>f:RewardTracks</summary>
+        /// <summary>The incoming Flash message <c>RewardTracks</c>.</summary>
         public const string RewardTracks = "RewardTracks";
-        /// <summary>f:Room</summary>
+        /// <summary>The incoming Flash message <c>Room</c>.</summary>
         public const string Room = "Room";
-        /// <summary>f:RoomAdError</summary>
+        /// <summary>The incoming Flash message <c>RoomAdError</c>.</summary>
         public const string RoomAdError = "RoomAdError";
-        /// <summary>f:RoomAdPurchaseInfo</summary>
+        /// <summary>The incoming Flash message <c>RoomAdPurchaseInfo</c>.</summary>
         public const string RoomAdPurchaseInfo = "RoomAdPurchaseInfo";
-        /// <summary>f:RoomChatLog</summary>
+        /// <summary>The incoming Flash message <c>RoomChatLog</c>.</summary>
         public const string RoomChatLog = "RoomChatLog";
-        /// <summary>f:RoomChatSettings</summary>
+        /// <summary>The incoming Flash message <c>RoomChatSettings</c>.</summary>
         public const string RoomChatSettings = "RoomChatSettings";
-        /// <summary>f:RoomDimmerPresets</summary>
+        /// <summary>The incoming Flash message <c>RoomDimmerPresets</c>.</summary>
         public const string RoomDimmerPresets = "RoomDimmerPresets";
-        /// <summary>f:RoomEntryInfo</summary>
+        /// <summary>The incoming Flash message <c>RoomEntryInfo</c>.</summary>
         public const string RoomEntryInfo = "RoomEntryInfo";
-        /// <summary>f:RoomEntryTile</summary>
+        /// <summary>The incoming Flash message <c>RoomEntryTile</c>.</summary>
         public const string RoomEntryTile = "RoomEntryTile";
-        /// <summary>f:RoomEventCancel</summary>
+        /// <summary>The incoming Flash message <c>RoomEventCancel</c>.</summary>
         public const string RoomEventCancel = "RoomEventCancel";
-        /// <summary>f:RoomEventEventInfo</summary>
+        /// <summary>The incoming Flash message <c>RoomEventEventInfo</c>.</summary>
         public const string RoomEventEventInfo = "RoomEventEventInfo";
-        /// <summary>f:RoomFilterSettings</summary>
+        /// <summary>The incoming Flash message <c>RoomFilterSettings</c>.</summary>
         public const string RoomFilterSettings = "RoomFilterSettings";
-        /// <summary>f:RoomForward</summary>
+        /// <summary>The incoming Flash message <c>RoomForward</c>.</summary>
         public const string RoomForward = "RoomForward";
-        /// <summary>f:RoomInfoUpdated</summary>
+        /// <summary>The incoming Flash message <c>RoomInfoUpdated</c>.</summary>
         public const string RoomInfoUpdated = "RoomInfoUpdated";
-        /// <summary>f:RoomInvite</summary>
+        /// <summary>The incoming Flash message <c>RoomInvite</c>.</summary>
         public const string RoomInvite = "RoomInvite";
-        /// <summary>f:RoomInviteError</summary>
+        /// <summary>The incoming Flash message <c>RoomInviteError</c>.</summary>
         public const string RoomInviteError = "RoomInviteError";
-        /// <summary>f:RoomMessageNotification</summary>
+        /// <summary>The incoming Flash message <c>RoomMessageNotification</c>.</summary>
         public const string RoomMessageNotification = "RoomMessageNotification";
-        /// <summary>f:RoomOccupiedTiles</summary>
+        /// <summary>The incoming Flash message <c>RoomOccupiedTiles</c>.</summary>
         public const string RoomOccupiedTiles = "RoomOccupiedTiles";
-        /// <summary>f:RoomProperty</summary>
+        /// <summary>The incoming Flash message <c>RoomProperty</c>.</summary>
         public const string RoomProperty = "RoomProperty";
-        /// <summary>f:RoomQueueStatus</summary>
+        /// <summary>The incoming Flash message <c>RoomQueueStatus</c>.</summary>
         public const string RoomQueueStatus = "RoomQueueStatus";
-        /// <summary>f:RoomRating</summary>
+        /// <summary>The incoming Flash message <c>RoomRating</c>.</summary>
         public const string RoomRating = "RoomRating";
-        /// <summary>f:RoomReady</summary>
+        /// <summary>The incoming Flash message <c>RoomReady</c>.</summary>
         public const string RoomReady = "RoomReady";
-        /// <summary>f:RoomSettingsData</summary>
+        /// <summary>The incoming Flash message <c>RoomSettingsData</c>.</summary>
         public const string RoomSettingsData = "RoomSettingsData";
-        /// <summary>f:RoomSettingsError</summary>
+        /// <summary>The incoming Flash message <c>RoomSettingsError</c>.</summary>
         public const string RoomSettingsError = "RoomSettingsError";
-        /// <summary>f:RoomSettingsSaveError</summary>
+        /// <summary>The incoming Flash message <c>RoomSettingsSaveError</c>.</summary>
         public const string RoomSettingsSaveError = "RoomSettingsSaveError";
-        /// <summary>f:RoomSettingsSaved</summary>
+        /// <summary>The incoming Flash message <c>RoomSettingsSaved</c>.</summary>
         public const string RoomSettingsSaved = "RoomSettingsSaved";
-        /// <summary>f:RoomThumbnailUpdateResult</summary>
+        /// <summary>The incoming Flash message <c>RoomThumbnailUpdateResult</c>.</summary>
         public const string RoomThumbnailUpdateResult = "RoomThumbnailUpdateResult";
-        /// <summary>f:RoomUseHabbicon</summary>
+        /// <summary>The incoming Flash message <c>RoomUseHabbicon</c>.</summary>
         public const string RoomUseHabbicon = "RoomUseHabbicon";
-        /// <summary>f:RoomVisits</summary>
+        /// <summary>The incoming Flash message <c>RoomVisits</c>.</summary>
         public const string RoomVisits = "RoomVisits";
-        /// <summary>f:RoomVisualizationSettings</summary>
+        /// <summary>The incoming Flash message <c>RoomVisualizationSettings</c>.</summary>
         public const string RoomVisualizationSettings = "RoomVisualizationSettings";
-        /// <summary>f:SanctionStatus f:MySanctionStatus</summary>
+        /// <summary>The incoming Flash message <c>SanctionStatus</c>, also named <c>MySanctionStatus</c>.</summary>
         public const string SanctionStatus = "SanctionStatus";
-        /// <summary>f:ScrSendKickbackInfo</summary>
+        /// <summary>The incoming Flash message <c>ScrSendKickbackInfo</c>.</summary>
         public const string ScrSendKickbackInfo = "ScrSendKickbackInfo";
-        /// <summary>f:ScrSendUserInfo</summary>
+        /// <summary>The incoming Flash message <c>ScrSendUserInfo</c>.</summary>
         public const string ScrSendUserInfo = "ScrSendUserInfo";
-        /// <summary>f:SeasonalCalendarDailyOffer</summary>
+        /// <summary>The incoming Flash message <c>SeasonalCalendarDailyOffer</c>.</summary>
         public const string SeasonalCalendarDailyOffer = "SeasonalCalendarDailyOffer";
-        /// <summary>f:SeasonalQuests</summary>
+        /// <summary>The incoming Flash message <c>SeasonalQuests</c>.</summary>
         public const string SeasonalQuests = "SeasonalQuests";
-        /// <summary>f:SecondsUntil</summary>
+        /// <summary>The incoming Flash message <c>SecondsUntil</c>.</summary>
         public const string SecondsUntil = "SecondsUntil";
-        /// <summary>f:SelectInitialRoom</summary>
+        /// <summary>The incoming Flash message <c>SelectInitialRoom</c>.</summary>
         public const string SelectInitialRoom = "SelectInitialRoom";
-        /// <summary>f:SelfDonationResult</summary>
+        /// <summary>The incoming Flash message <c>SelfDonationResult</c>.</summary>
         public const string SelfDonationResult = "SelfDonationResult";
-        /// <summary>f:SellablePetPalettes</summary>
+        /// <summary>The incoming Flash message <c>SellablePetPalettes</c>.</summary>
         public const string SellablePetPalettes = "SellablePetPalettes";
-        /// <summary>f:Shout</summary>
+        /// <summary>The incoming Flash message <c>Shout</c>.</summary>
         public const string Shout = "Shout";
-        /// <summary>f:ShowEnforceRoomCategoryDialog</summary>
+        /// <summary>The incoming Flash message <c>ShowEnforceRoomCategoryDialog</c>.</summary>
         public const string ShowEnforceRoomCategoryDialog = "ShowEnforceRoomCategoryDialog";
-        /// <summary>f:ShowMysteryBoxWait</summary>
+        /// <summary>The incoming Flash message <c>ShowMysteryBoxWait</c>.</summary>
         public const string ShowMysteryBoxWait = "ShowMysteryBoxWait";
-        /// <summary>f:SilverBalance</summary>
+        /// <summary>The incoming Flash message <c>SilverBalance</c>.</summary>
         public const string SilverBalance = "SilverBalance";
-        /// <summary>f:Sleep</summary>
+        /// <summary>The incoming Flash message <c>Sleep</c>.</summary>
         public const string Sleep = "Sleep";
-        /// <summary>f:SlideObjectBundle</summary>
+        /// <summary>The incoming Flash message <c>SlideObjectBundle</c>.</summary>
         public const string SlideObjectBundle = "SlideObjectBundle";
-        /// <summary>f:SnowWarGameTokens</summary>
+        /// <summary>The incoming Flash message <c>SnowWarGameTokens</c>.</summary>
         public const string SnowWarGameTokens = "SnowWarGameTokens";
-        /// <summary>f:SpecialRoomEffect</summary>
+        /// <summary>The incoming Flash message <c>SpecialRoomEffect</c>.</summary>
         public const string SpecialRoomEffect = "SpecialRoomEffect";
-        /// <summary>f:SpecialSystemChat</summary>
+        /// <summary>The incoming Flash message <c>SpecialSystemChat</c>.</summary>
         public const string SpecialSystemChat = "SpecialSystemChat";
-        /// <summary>f:TalentLevelUp</summary>
+        /// <summary>The incoming Flash message <c>TalentLevelUp</c>.</summary>
         public const string TalentLevelUp = "TalentLevelUp";
-        /// <summary>f:TalentTrack</summary>
+        /// <summary>The incoming Flash message <c>TalentTrack</c>.</summary>
         public const string TalentTrack = "TalentTrack";
-        /// <summary>f:TalentTrackLevel</summary>
+        /// <summary>The incoming Flash message <c>TalentTrackLevel</c>.</summary>
         public const string TalentTrackLevel = "TalentTrackLevel";
-        /// <summary>f:TargetedOffer</summary>
+        /// <summary>The incoming Flash message <c>TargetedOffer</c>.</summary>
         public const string TargetedOffer = "TargetedOffer";
-        /// <summary>f:TargetedOfferNotFound</summary>
+        /// <summary>The incoming Flash message <c>TargetedOfferNotFound</c>.</summary>
         public const string TargetedOfferNotFound = "TargetedOfferNotFound";
-        /// <summary>f:ThreadMessages</summary>
+        /// <summary>The incoming Flash message <c>ThreadMessages</c>.</summary>
         public const string ThreadMessages = "ThreadMessages";
-        /// <summary>f:ThumbnailStatus</summary>
+        /// <summary>The incoming Flash message <c>ThumbnailStatus</c>.</summary>
         public const string ThumbnailStatus = "ThumbnailStatus";
-        /// <summary>f:TradeNftAssetInventory</summary>
+        /// <summary>The incoming Flash message <c>TradeNftAssetInventory</c>.</summary>
         public const string TradeNftAssetInventory = "TradeNftAssetInventory";
-        /// <summary>f:TradeNftAssets</summary>
+        /// <summary>The incoming Flash message <c>TradeNftAssets</c>.</summary>
         public const string TradeNftAssets = "TradeNftAssets";
-        /// <summary>f:TradeOpenFailed</summary>
+        /// <summary>The incoming Flash message <c>TradeOpenFailed</c>.</summary>
         public const string TradeOpenFailed = "TradeOpenFailed";
-        /// <summary>f:TradeSilverFee</summary>
+        /// <summary>The incoming Flash message <c>TradeSilverFee</c>.</summary>
         public const string TradeSilverFee = "TradeSilverFee";
-        /// <summary>f:TradeSilverSet</summary>
+        /// <summary>The incoming Flash message <c>TradeSilverSet</c>.</summary>
         public const string TradeSilverSet = "TradeSilverSet";
-        /// <summary>f:TradingAccept</summary>
+        /// <summary>The incoming Flash message <c>TradingAccept</c>.</summary>
         public const string TradingAccept = "TradingAccept";
-        /// <summary>f:TradingClose</summary>
+        /// <summary>The incoming Flash message <c>TradingClose</c>.</summary>
         public const string TradingClose = "TradingClose";
-        /// <summary>f:TradingCompleted</summary>
+        /// <summary>The incoming Flash message <c>TradingCompleted</c>.</summary>
         public const string TradingCompleted = "TradingCompleted";
-        /// <summary>f:TradingConfirmation</summary>
+        /// <summary>The incoming Flash message <c>TradingConfirmation</c>.</summary>
         public const string TradingConfirmation = "TradingConfirmation";
-        /// <summary>f:TradingItemList</summary>
+        /// <summary>The incoming Flash message <c>TradingItemList</c>.</summary>
         public const string TradingItemList = "TradingItemList";
-        /// <summary>f:TradingNotOpen</summary>
+        /// <summary>The incoming Flash message <c>TradingNotOpen</c>.</summary>
         public const string TradingNotOpen = "TradingNotOpen";
-        /// <summary>f:TradingOpen</summary>
+        /// <summary>The incoming Flash message <c>TradingOpen</c>.</summary>
         public const string TradingOpen = "TradingOpen";
-        /// <summary>f:TradingOtherNotAllowed</summary>
+        /// <summary>The incoming Flash message <c>TradingOtherNotAllowed</c>.</summary>
         public const string TradingOtherNotAllowed = "TradingOtherNotAllowed";
-        /// <summary>f:TradingYouAreNotAllowed</summary>
+        /// <summary>The incoming Flash message <c>TradingYouAreNotAllowed</c>.</summary>
         public const string TradingYouAreNotAllowed = "TradingYouAreNotAllowed";
-        /// <summary>f:TraxSongInfo</summary>
+        /// <summary>The incoming Flash message <c>TraxSongInfo</c>.</summary>
         public const string TraxSongInfo = "TraxSongInfo";
-        /// <summary>f:TreasureHuntFail</summary>
+        /// <summary>The incoming Flash message <c>TreasureHuntFail</c>.</summary>
         public const string TreasureHuntFail = "TreasureHuntFail";
-        /// <summary>f:TreasureHuntFirstWinner</summary>
+        /// <summary>The incoming Flash message <c>TreasureHuntFirstWinner</c>.</summary>
         public const string TreasureHuntFirstWinner = "TreasureHuntFirstWinner";
-        /// <summary>f:TreasureHuntUpdate</summary>
+        /// <summary>The incoming Flash message <c>TreasureHuntUpdate</c>.</summary>
         public const string TreasureHuntUpdate = "TreasureHuntUpdate";
-        /// <summary>f:TryPhoneNumberResult</summary>
+        /// <summary>The incoming Flash message <c>TryPhoneNumberResult</c>.</summary>
         public const string TryPhoneNumberResult = "TryPhoneNumberResult";
-        /// <summary>f:TryVerificationCodeResult</summary>
+        /// <summary>The incoming Flash message <c>TryVerificationCodeResult</c>.</summary>
         public const string TryVerificationCodeResult = "TryVerificationCodeResult";
-        /// <summary>f:UniqueMachineId</summary>
+        /// <summary>The incoming Flash message <c>UniqueMachineId</c>.</summary>
         public const string UniqueMachineId = "UniqueMachineId";
-        /// <summary>f:UnreadForumsCount</summary>
+        /// <summary>The incoming Flash message <c>UnreadForumsCount</c>.</summary>
         public const string UnreadForumsCount = "UnreadForumsCount";
-        /// <summary>f:UnseenItems</summary>
+        /// <summary>The incoming Flash message <c>UnseenItems</c>.</summary>
         public const string UnseenItems = "UnseenItems";
-        /// <summary>f:UpdateMessage</summary>
+        /// <summary>The incoming Flash message <c>UpdateMessage</c>.</summary>
         public const string UpdateMessage = "UpdateMessage";
-        /// <summary>f:UpdateThread</summary>
+        /// <summary>The incoming Flash message <c>UpdateThread</c>.</summary>
         public const string UpdateThread = "UpdateThread";
-        /// <summary>f:UpgradeChestResult</summary>
+        /// <summary>The incoming Flash message <c>UpgradeChestResult</c>.</summary>
         public const string UpgradeChestResult = "UpgradeChestResult";
-        /// <summary>f:UseObject</summary>
+        /// <summary>The incoming Flash message <c>UseObject</c>.</summary>
         public const string UseObject = "UseObject";
-        /// <summary>f:UserBanned</summary>
+        /// <summary>The incoming Flash message <c>UserBanned</c>.</summary>
         public const string UserBanned = "UserBanned";
-        /// <summary>f:UserChange</summary>
+        /// <summary>The incoming Flash message <c>UserChange</c>.</summary>
         public const string UserChange = "UserChange";
-        /// <summary>f:UserChatLog</summary>
+        /// <summary>The incoming Flash message <c>UserChatLog</c>.</summary>
         public const string UserChatLog = "UserChatLog";
-        /// <summary>f:UserClassification</summary>
+        /// <summary>The incoming Flash message <c>UserClassification</c>.</summary>
         public const string UserClassification = "UserClassification";
-        /// <summary>f:UserEventCats</summary>
+        /// <summary>The incoming Flash message <c>UserEventCats</c>.</summary>
         public const string UserEventCats = "UserEventCats";
-        /// <summary>f:UserFlatCats</summary>
+        /// <summary>The incoming Flash message <c>UserFlatCats</c>.</summary>
         public const string UserFlatCats = "UserFlatCats";
-        /// <summary>f:UserGameAchievements</summary>
+        /// <summary>The incoming Flash message <c>UserGameAchievements</c>.</summary>
         public const string UserGameAchievements = "UserGameAchievements";
-        /// <summary>f:UserHabbiconStatusChanged</summary>
+        /// <summary>The incoming Flash message <c>UserHabbiconStatusChanged</c>.</summary>
         public const string UserHabbiconStatusChanged = "UserHabbiconStatusChanged";
-        /// <summary>f:UserHabbicons</summary>
+        /// <summary>The incoming Flash message <c>UserHabbicons</c>.</summary>
         public const string UserHabbicons = "UserHabbicons";
-        /// <summary>f:UserNameChanged</summary>
+        /// <summary>The incoming Flash message <c>UserNameChanged</c>.</summary>
         public const string UserNameChanged = "UserNameChanged";
-        /// <summary>f:UserNftChatStyles</summary>
+        /// <summary>The incoming Flash message <c>UserNftChatStyles</c>.</summary>
         public const string UserNftChatStyles = "UserNftChatStyles";
-        /// <summary>f:UserNftWardrobe</summary>
+        /// <summary>The incoming Flash message <c>UserNftWardrobe</c>.</summary>
         public const string UserNftWardrobe = "UserNftWardrobe";
-        /// <summary>f:UserNftWardrobeSelection</summary>
+        /// <summary>The incoming Flash message <c>UserNftWardrobeSelection</c>.</summary>
         public const string UserNftWardrobeSelection = "UserNftWardrobeSelection";
-        /// <summary>f:UserObject</summary>
+        /// <summary>The incoming Flash message <c>UserObject</c>.</summary>
         public const string UserObject = "UserObject";
-        /// <summary>f:UserPurchasableChatStyleChanged</summary>
+        /// <summary>The incoming Flash message <c>UserPurchasableChatStyleChanged</c>.</summary>
         public const string UserPurchasableChatStyleChanged = "UserPurchasableChatStyleChanged";
-        /// <summary>f:UserPurchasableChatStyles</summary>
+        /// <summary>The incoming Flash message <c>UserPurchasableChatStyles</c>.</summary>
         public const string UserPurchasableChatStyles = "UserPurchasableChatStyles";
-        /// <summary>f:UserRemove</summary>
+        /// <summary>The incoming Flash message <c>UserRemove</c>.</summary>
         public const string UserRemove = "UserRemove";
-        /// <summary>f:UserRights</summary>
+        /// <summary>The incoming Flash message <c>UserRights</c>.</summary>
         public const string UserRights = "UserRights";
-        /// <summary>f:UserSongDisksInventory</summary>
+        /// <summary>The incoming Flash message <c>UserSongDisksInventory</c>.</summary>
         public const string UserSongDisksInventory = "UserSongDisksInventory";
-        /// <summary>f:UserTyping</summary>
+        /// <summary>The incoming Flash message <c>UserTyping</c>.</summary>
         public const string UserTyping = "UserTyping";
-        /// <summary>f:UserUnbannedFromRoom</summary>
+        /// <summary>The incoming Flash message <c>UserUnbannedFromRoom</c>.</summary>
         public const string UserUnbannedFromRoom = "UserUnbannedFromRoom";
-        /// <summary>f:UserUpdate</summary>
+        /// <summary>The incoming Flash message <c>UserUpdate</c>.</summary>
         public const string UserUpdate = "UserUpdate";
-        /// <summary>f:Users</summary>
+        /// <summary>The incoming Flash message <c>Users</c>.</summary>
         public const string Users = "Users";
-        /// <summary>f:VariableFxConfigs</summary>
+        /// <summary>The incoming Flash message <c>VariableFxConfigs</c>.</summary>
         public const string VariableFxConfigs = "VariableFxConfigs";
-        /// <summary>f:VariableFxConfigsRemoved</summary>
+        /// <summary>The incoming Flash message <c>VariableFxConfigsRemoved</c>.</summary>
         public const string VariableFxConfigsRemoved = "VariableFxConfigsRemoved";
-        /// <summary>f:VariableFxStatus</summary>
+        /// <summary>The incoming Flash message <c>VariableFxStatus</c>.</summary>
         public const string VariableFxStatus = "VariableFxStatus";
-        /// <summary>f:VariableFxStatusRemoved</summary>
+        /// <summary>The incoming Flash message <c>VariableFxStatusRemoved</c>.</summary>
         public const string VariableFxStatusRemoved = "VariableFxStatusRemoved";
-        /// <summary>f:VoucherRedeemError</summary>
+        /// <summary>The incoming Flash message <c>VoucherRedeemError</c>.</summary>
         public const string VoucherRedeemError = "VoucherRedeemError";
-        /// <summary>f:VoucherRedeemOk</summary>
+        /// <summary>The incoming Flash message <c>VoucherRedeemOk</c>.</summary>
         public const string VoucherRedeemOk = "VoucherRedeemOk";
-        /// <summary>f:Wardrobe</summary>
+        /// <summary>The incoming Flash message <c>Wardrobe</c>.</summary>
         public const string Wardrobe = "Wardrobe";
-        /// <summary>f:WeeklyCompetitiveFriendsLeaderboard</summary>
+        /// <summary>The incoming Flash message <c>WeeklyCompetitiveFriendsLeaderboard</c>.</summary>
         public const string WeeklyCompetitiveFriendsLeaderboard = "WeeklyCompetitiveFriendsLeaderboard";
-        /// <summary>f:WeeklyCompetitiveLeaderboard</summary>
+        /// <summary>The incoming Flash message <c>WeeklyCompetitiveLeaderboard</c>.</summary>
         public const string WeeklyCompetitiveLeaderboard = "WeeklyCompetitiveLeaderboard";
-        /// <summary>f:WeeklyGameReward</summary>
+        /// <summary>The incoming Flash message <c>WeeklyGameReward</c>.</summary>
         public const string WeeklyGameReward = "WeeklyGameReward";
-        /// <summary>f:WeeklyGameRewardWinners</summary>
+        /// <summary>The incoming Flash message <c>WeeklyGameRewardWinners</c>.</summary>
         public const string WeeklyGameRewardWinners = "WeeklyGameRewardWinners";
-        /// <summary>f:Whisper</summary>
+        /// <summary>The incoming Flash message <c>Whisper</c>.</summary>
         public const string Whisper = "Whisper";
-        /// <summary>f:WiredAllVariableHolders</summary>
+        /// <summary>The incoming Flash message <c>WiredAllVariableHolders</c>.</summary>
         public const string WiredAllVariableHolders = "WiredAllVariableHolders";
-        /// <summary>f:WiredAllVariablesDiffs</summary>
+        /// <summary>The incoming Flash message <c>WiredAllVariablesDiffs</c>.</summary>
         public const string WiredAllVariablesDiffs = "WiredAllVariablesDiffs";
-        /// <summary>f:WiredAllVariablesHash</summary>
+        /// <summary>The incoming Flash message <c>WiredAllVariablesHash</c>.</summary>
         public const string WiredAllVariablesHash = "WiredAllVariablesHash";
-        /// <summary>f:WiredClickSettings</summary>
+        /// <summary>The incoming Flash message <c>WiredClickSettings</c>.</summary>
         public const string WiredClickSettings = "WiredClickSettings";
-        /// <summary>f:WiredClickUserResponse</summary>
+        /// <summary>The incoming Flash message <c>WiredClickUserResponse</c>.</summary>
         public const string WiredClickUserResponse = "WiredClickUserResponse";
-        /// <summary>f:WiredContractContents</summary>
+        /// <summary>The incoming Flash message <c>WiredContractContents</c>.</summary>
         public const string WiredContractContents = "WiredContractContents";
-        /// <summary>f:WiredContractUpdateResult</summary>
+        /// <summary>The incoming Flash message <c>WiredContractUpdateResult</c>.</summary>
         public const string WiredContractUpdateResult = "WiredContractUpdateResult";
-        /// <summary>f:WiredEnvironment</summary>
+        /// <summary>The incoming Flash message <c>WiredEnvironment</c>.</summary>
         public const string WiredEnvironment = "WiredEnvironment";
-        /// <summary>f:WiredErrorLogs</summary>
+        /// <summary>The incoming Flash message <c>WiredErrorLogs</c>.</summary>
         public const string WiredErrorLogs = "WiredErrorLogs";
-        /// <summary>f:WiredFurniAction</summary>
+        /// <summary>The incoming Flash message <c>WiredFurniAction</c>.</summary>
         public const string WiredFurniAction = "WiredFurniAction";
-        /// <summary>f:WiredFurniAddon</summary>
+        /// <summary>The incoming Flash message <c>WiredFurniAddon</c>.</summary>
         public const string WiredFurniAddon = "WiredFurniAddon";
-        /// <summary>f:WiredFurniCondition</summary>
+        /// <summary>The incoming Flash message <c>WiredFurniCondition</c>.</summary>
         public const string WiredFurniCondition = "WiredFurniCondition";
-        /// <summary>f:WiredFurniSelector</summary>
+        /// <summary>The incoming Flash message <c>WiredFurniSelector</c>.</summary>
         public const string WiredFurniSelector = "WiredFurniSelector";
-        /// <summary>f:WiredFurniTrigger</summary>
+        /// <summary>The incoming Flash message <c>WiredFurniTrigger</c>.</summary>
         public const string WiredFurniTrigger = "WiredFurniTrigger";
-        /// <summary>f:WiredFurniVariable</summary>
+        /// <summary>The incoming Flash message <c>WiredFurniVariable</c>.</summary>
         public const string WiredFurniVariable = "WiredFurniVariable";
-        /// <summary>f:WiredMenuError</summary>
+        /// <summary>The incoming Flash message <c>WiredMenuError</c>.</summary>
         public const string WiredMenuError = "WiredMenuError";
-        /// <summary>f:WiredMovements</summary>
+        /// <summary>The incoming Flash message <c>WiredMovements</c>.</summary>
         public const string WiredMovements = "WiredMovements";
-        /// <summary>f:WiredOpenContract</summary>
+        /// <summary>The incoming Flash message <c>WiredOpenContract</c>.</summary>
         public const string WiredOpenContract = "WiredOpenContract";
-        /// <summary>f:WiredPermissions</summary>
+        /// <summary>The incoming Flash message <c>WiredPermissions</c>.</summary>
         public const string WiredPermissions = "WiredPermissions";
-        /// <summary>f:WiredRewardResult</summary>
+        /// <summary>The incoming Flash message <c>WiredRewardResult</c>.</summary>
         public const string WiredRewardResult = "WiredRewardResult";
-        /// <summary>f:WiredRoomLogs</summary>
+        /// <summary>The incoming Flash message <c>WiredRoomLogs</c>.</summary>
         public const string WiredRoomLogs = "WiredRoomLogs";
-        /// <summary>f:WiredRoomSettings</summary>
+        /// <summary>The incoming Flash message <c>WiredRoomSettings</c>.</summary>
         public const string WiredRoomSettings = "WiredRoomSettings";
-        /// <summary>f:WiredRoomStats</summary>
+        /// <summary>The incoming Flash message <c>WiredRoomStats</c>.</summary>
         public const string WiredRoomStats = "WiredRoomStats";
-        /// <summary>f:WiredSaveSuccess</summary>
+        /// <summary>The incoming Flash message <c>WiredSaveSuccess</c>.</summary>
         public const string WiredSaveSuccess = "WiredSaveSuccess";
-        /// <summary>f:WiredSetUserPermanentVariableResult</summary>
+        /// <summary>The incoming Flash message <c>WiredSetUserPermanentVariableResult</c>.</summary>
         public const string WiredSetUserPermanentVariableResult = "WiredSetUserPermanentVariableResult";
-        /// <summary>f:WiredTradeCancelled</summary>
+        /// <summary>The incoming Flash message <c>WiredTradeCancelled</c>.</summary>
         public const string WiredTradeCancelled = "WiredTradeCancelled";
-        /// <summary>f:WiredTradeCompleted</summary>
+        /// <summary>The incoming Flash message <c>WiredTradeCompleted</c>.</summary>
         public const string WiredTradeCompleted = "WiredTradeCompleted";
-        /// <summary>f:WiredTradeInitiate</summary>
+        /// <summary>The incoming Flash message <c>WiredTradeInitiate</c>.</summary>
         public const string WiredTradeInitiate = "WiredTradeInitiate";
-        /// <summary>f:WiredTradeItemsUpdate</summary>
+        /// <summary>The incoming Flash message <c>WiredTradeItemsUpdate</c>.</summary>
         public const string WiredTradeItemsUpdate = "WiredTradeItemsUpdate";
-        /// <summary>f:WiredTradeTransactionNotification</summary>
+        /// <summary>The incoming Flash message <c>WiredTradeTransactionNotification</c>.</summary>
         public const string WiredTradeTransactionNotification = "WiredTradeTransactionNotification";
-        /// <summary>f:WiredTransactionFail</summary>
+        /// <summary>The incoming Flash message <c>WiredTransactionFail</c>.</summary>
         public const string WiredTransactionFail = "WiredTransactionFail";
-        /// <summary>f:WiredTransactionLogDetails</summary>
+        /// <summary>The incoming Flash message <c>WiredTransactionLogDetails</c>.</summary>
         public const string WiredTransactionLogDetails = "WiredTransactionLogDetails";
-        /// <summary>f:WiredTransactionLogList</summary>
+        /// <summary>The incoming Flash message <c>WiredTransactionLogList</c>.</summary>
         public const string WiredTransactionLogList = "WiredTransactionLogList";
-        /// <summary>f:WiredTransactionSuccess</summary>
+        /// <summary>The incoming Flash message <c>WiredTransactionSuccess</c>.</summary>
         public const string WiredTransactionSuccess = "WiredTransactionSuccess";
-        /// <summary>f:WiredUserPermanentVariables</summary>
+        /// <summary>The incoming Flash message <c>WiredUserPermanentVariables</c>.</summary>
         public const string WiredUserPermanentVariables = "WiredUserPermanentVariables";
-        /// <summary>f:WiredUserVariablesList</summary>
+        /// <summary>The incoming Flash message <c>WiredUserVariablesList</c>.</summary>
         public const string WiredUserVariablesList = "WiredUserVariablesList";
-        /// <summary>f:WiredValidationError</summary>
+        /// <summary>The incoming Flash message <c>WiredValidationError</c>.</summary>
         public const string WiredValidationError = "WiredValidationError";
-        /// <summary>f:WiredVariablesForObject</summary>
+        /// <summary>The incoming Flash message <c>WiredVariablesForObject</c>.</summary>
         public const string WiredVariablesForObject = "WiredVariablesForObject";
-        /// <summary>f:YouAreController</summary>
+        /// <summary>The incoming Flash message <c>YouAreController</c>.</summary>
         public const string YouAreController = "YouAreController";
-        /// <summary>f:YouAreNotController</summary>
+        /// <summary>The incoming Flash message <c>YouAreNotController</c>.</summary>
         public const string YouAreNotController = "YouAreNotController";
-        /// <summary>f:YouAreNotSpectator</summary>
+        /// <summary>The incoming Flash message <c>YouAreNotSpectator</c>.</summary>
         public const string YouAreNotSpectator = "YouAreNotSpectator";
-        /// <summary>f:YouAreOwner</summary>
+        /// <summary>The incoming Flash message <c>YouAreOwner</c>.</summary>
         public const string YouAreOwner = "YouAreOwner";
-        /// <summary>f:YouArePlayingGame</summary>
+        /// <summary>The incoming Flash message <c>YouArePlayingGame</c>.</summary>
         public const string YouArePlayingGame = "YouArePlayingGame";
-        /// <summary>f:YouAreSpectator</summary>
+        /// <summary>The incoming Flash message <c>YouAreSpectator</c>.</summary>
         public const string YouAreSpectator = "YouAreSpectator";
-        /// <summary>f:YoutubeControlVideo</summary>
+        /// <summary>The incoming Flash message <c>YoutubeControlVideo</c>.</summary>
         public const string YoutubeControlVideo = "YoutubeControlVideo";
-        /// <summary>f:YoutubeDisplayPlaylists</summary>
+        /// <summary>The incoming Flash message <c>YoutubeDisplayPlaylists</c>.</summary>
         public const string YoutubeDisplayPlaylists = "YoutubeDisplayPlaylists";
-        /// <summary>f:YoutubeDisplayVideo</summary>
+        /// <summary>The incoming Flash message <c>YoutubeDisplayVideo</c>.</summary>
         public const string YoutubeDisplayVideo = "YoutubeDisplayVideo";
     }
 
-    /// <summary>Outgoing message names (client to server).</summary>
+    /// <summary>Provides the outgoing message names, sent from the client to the server.</summary>
     public static class Out
     {
-        /// <summary>f:AcceptFriend</summary>
+        /// <summary>The outgoing Flash message <c>AcceptFriend</c>.</summary>
         public const string AcceptFriend = "AcceptFriend";
-        /// <summary>f:AcceptQuest</summary>
+        /// <summary>The outgoing Flash message <c>AcceptQuest</c>.</summary>
         public const string AcceptQuest = "AcceptQuest";
-        /// <summary>f:AcceptTrading</summary>
+        /// <summary>The outgoing Flash message <c>AcceptTrading</c>.</summary>
         public const string AcceptTrading = "AcceptTrading";
-        /// <summary>f:ActivateQuest</summary>
+        /// <summary>The outgoing Flash message <c>ActivateQuest</c>.</summary>
         public const string ActivateQuest = "ActivateQuest";
-        /// <summary>f:AddAdminRightsToMember</summary>
+        /// <summary>The outgoing Flash message <c>AddAdminRightsToMember</c>.</summary>
         public const string AddAdminRightsToMember = "AddAdminRightsToMember";
-        /// <summary>f:AddFavouriteRoom</summary>
+        /// <summary>The outgoing Flash message <c>AddFavouriteRoom</c>.</summary>
         public const string AddFavouriteRoom = "AddFavouriteRoom";
-        /// <summary>f:AddItemToTrade</summary>
+        /// <summary>The outgoing Flash message <c>AddItemToTrade</c>.</summary>
         public const string AddItemToTrade = "AddItemToTrade";
-        /// <summary>f:AddItemsToTrade</summary>
+        /// <summary>The outgoing Flash message <c>AddItemsToTrade</c>.</summary>
         public const string AddItemsToTrade = "AddItemsToTrade";
-        /// <summary>f:AddJukeboxDisk</summary>
+        /// <summary>The outgoing Flash message <c>AddJukeboxDisk</c>.</summary>
         public const string AddJukeboxDisk = "AddJukeboxDisk";
-        /// <summary>f:AddNftToTrade</summary>
+        /// <summary>The outgoing Flash message <c>AddNftToTrade</c>.</summary>
         public const string AddNftToTrade = "AddNftToTrade";
-        /// <summary>f:AddSpamWallPostIt</summary>
+        /// <summary>The outgoing Flash message <c>AddSpamWallPostIt</c>.</summary>
         public const string AddSpamWallPostIt = "AddSpamWallPostIt";
-        /// <summary>f:AddToCustomFilter</summary>
+        /// <summary>The outgoing Flash message <c>AddToCustomFilter</c>.</summary>
         public const string AddToCustomFilter = "AddToCustomFilter";
-        /// <summary>f:AmbassadorAlert</summary>
+        /// <summary>The outgoing Flash message <c>AmbassadorAlert</c>.</summary>
         public const string AmbassadorAlert = "AmbassadorAlert";
-        /// <summary>f:AppealCfh</summary>
+        /// <summary>The outgoing Flash message <c>AppealCfh</c>.</summary>
         public const string AppealCfh = "AppealCfh";
-        /// <summary>f:ApplySnapshot</summary>
+        /// <summary>The outgoing Flash message <c>ApplySnapshot</c>.</summary>
         public const string ApplySnapshot = "ApplySnapshot";
-        /// <summary>f:ApproveAllMembershipRequests</summary>
+        /// <summary>The outgoing Flash message <c>ApproveAllMembershipRequests</c>.</summary>
         public const string ApproveAllMembershipRequests = "ApproveAllMembershipRequests";
-        /// <summary>f:ApproveMembershipRequest</summary>
+        /// <summary>The outgoing Flash message <c>ApproveMembershipRequest</c>.</summary>
         public const string ApproveMembershipRequest = "ApproveMembershipRequest";
-        /// <summary>f:ApproveName</summary>
+        /// <summary>The outgoing Flash message <c>ApproveName</c>.</summary>
         public const string ApproveName = "ApproveName";
-        /// <summary>f:AssignRights</summary>
+        /// <summary>The outgoing Flash message <c>AssignRights</c>.</summary>
         public const string AssignRights = "AssignRights";
-        /// <summary>f:AvatarEffectActivated</summary>
+        /// <summary>The outgoing Flash message <c>AvatarEffectActivated</c>.</summary>
         public const string AvatarEffectActivated = "AvatarEffectActivated";
-        /// <summary>f:AvatarEffectSelected</summary>
+        /// <summary>The outgoing Flash message <c>AvatarEffectSelected</c>.</summary>
         public const string AvatarEffectSelected = "AvatarEffectSelected";
-        /// <summary>f:AvatarExpression</summary>
+        /// <summary>The outgoing Flash message <c>AvatarExpression</c>.</summary>
         public const string AvatarExpression = "AvatarExpression";
-        /// <summary>f:BanUserWithDuration</summary>
+        /// <summary>The outgoing Flash message <c>BanUserWithDuration</c>.</summary>
         public const string BanUserWithDuration = "BanUserWithDuration";
-        /// <summary>f:BlockListInit</summary>
+        /// <summary>The outgoing Flash message <c>BlockListInit</c>.</summary>
         public const string BlockListInit = "BlockListInit";
-        /// <summary>f:BlockUser</summary>
+        /// <summary>The outgoing Flash message <c>BlockUser</c>.</summary>
         public const string BlockUser = "BlockUser";
-        /// <summary>f:BreedPets</summary>
+        /// <summary>The outgoing Flash message <c>BreedPets</c>.</summary>
         public const string BreedPets = "BreedPets";
-        /// <summary>f:BuildersClubPlaceRoomItem</summary>
+        /// <summary>The outgoing Flash message <c>BuildersClubPlaceRoomItem</c>.</summary>
         public const string BuildersClubPlaceRoomItem = "BuildersClubPlaceRoomItem";
-        /// <summary>f:BuildersClubPlaceWallItem</summary>
+        /// <summary>The outgoing Flash message <c>BuildersClubPlaceWallItem</c>.</summary>
         public const string BuildersClubPlaceWallItem = "BuildersClubPlaceWallItem";
-        /// <summary>f:BuildersClubQueryFurniCount</summary>
+        /// <summary>The outgoing Flash message <c>BuildersClubQueryFurniCount</c>.</summary>
         public const string BuildersClubQueryFurniCount = "BuildersClubQueryFurniCount";
-        /// <summary>f:BuyHabbicon</summary>
+        /// <summary>The outgoing Flash message <c>BuyHabbicon</c>.</summary>
         public const string BuyHabbicon = "BuyHabbicon";
-        /// <summary>f:BuyHabbiconCollection</summary>
+        /// <summary>The outgoing Flash message <c>BuyHabbiconCollection</c>.</summary>
         public const string BuyHabbiconCollection = "BuyHabbiconCollection";
-        /// <summary>f:BuyMarketplaceOffer</summary>
+        /// <summary>The outgoing Flash message <c>BuyMarketplaceOffer</c>.</summary>
         public const string BuyMarketplaceOffer = "BuyMarketplaceOffer";
-        /// <summary>f:BuyMarketplaceTokens</summary>
+        /// <summary>The outgoing Flash message <c>BuyMarketplaceTokens</c>.</summary>
         public const string BuyMarketplaceTokens = "BuyMarketplaceTokens";
-        /// <summary>f:CallForHelp</summary>
+        /// <summary>The outgoing Flash message <c>CallForHelp</c>.</summary>
         public const string CallForHelp = "CallForHelp";
-        /// <summary>f:CallForHelpFromForumMessage</summary>
+        /// <summary>The outgoing Flash message <c>CallForHelpFromForumMessage</c>.</summary>
         public const string CallForHelpFromForumMessage = "CallForHelpFromForumMessage";
-        /// <summary>f:CallForHelpFromForumThread</summary>
+        /// <summary>The outgoing Flash message <c>CallForHelpFromForumThread</c>.</summary>
         public const string CallForHelpFromForumThread = "CallForHelpFromForumThread";
-        /// <summary>f:CallForHelpFromIm</summary>
+        /// <summary>The outgoing Flash message <c>CallForHelpFromIm</c>.</summary>
         public const string CallForHelpFromIm = "CallForHelpFromIm";
-        /// <summary>f:CallForHelpFromPhoto</summary>
+        /// <summary>The outgoing Flash message <c>CallForHelpFromPhoto</c>.</summary>
         public const string CallForHelpFromPhoto = "CallForHelpFromPhoto";
-        /// <summary>f:CallForHelpFromSelfie</summary>
+        /// <summary>The outgoing Flash message <c>CallForHelpFromSelfie</c>.</summary>
         public const string CallForHelpFromSelfie = "CallForHelpFromSelfie";
-        /// <summary>f:CanCreateRoom</summary>
+        /// <summary>The outgoing Flash message <c>CanCreateRoom</c>.</summary>
         public const string CanCreateRoom = "CanCreateRoom";
-        /// <summary>f:Cancel</summary>
+        /// <summary>The outgoing Flash message <c>Cancel</c>.</summary>
         public const string Cancel = "Cancel";
-        /// <summary>f:CancelAllMarketplaceOffers</summary>
+        /// <summary>The outgoing Flash message <c>CancelAllMarketplaceOffers</c>.</summary>
         public const string CancelAllMarketplaceOffers = "CancelAllMarketplaceOffers";
-        /// <summary>f:CancelEvent</summary>
+        /// <summary>The outgoing Flash message <c>CancelEvent</c>.</summary>
         public const string CancelEvent = "CancelEvent";
-        /// <summary>f:CancelMarketplaceOffer</summary>
+        /// <summary>The outgoing Flash message <c>CancelMarketplaceOffer</c>.</summary>
         public const string CancelMarketplaceOffer = "CancelMarketplaceOffer";
-        /// <summary>f:CancelPetBreeding</summary>
+        /// <summary>The outgoing Flash message <c>CancelPetBreeding</c>.</summary>
         public const string CancelPetBreeding = "CancelPetBreeding";
-        /// <summary>f:CancelQuest</summary>
+        /// <summary>The outgoing Flash message <c>CancelQuest</c>.</summary>
         public const string CancelQuest = "CancelQuest";
-        /// <summary>f:CancelTyping</summary>
+        /// <summary>The outgoing Flash message <c>CancelTyping</c>.</summary>
         public const string CancelTyping = "CancelTyping";
-        /// <summary>f:ChangeEmail</summary>
+        /// <summary>The outgoing Flash message <c>ChangeEmail</c>.</summary>
         public const string ChangeEmail = "ChangeEmail";
-        /// <summary>f:ChangeMotto</summary>
+        /// <summary>The outgoing Flash message <c>ChangeMotto</c>.</summary>
         public const string ChangeMotto = "ChangeMotto";
-        /// <summary>f:ChangePosture</summary>
+        /// <summary>The outgoing Flash message <c>ChangePosture</c>.</summary>
         public const string ChangePosture = "ChangePosture";
-        /// <summary>f:ChangeQueue</summary>
+        /// <summary>The outgoing Flash message <c>ChangeQueue</c>.</summary>
         public const string ChangeQueue = "ChangeQueue";
-        /// <summary>f:ChangeUserName</summary>
+        /// <summary>The outgoing Flash message <c>ChangeUserName</c>.</summary>
         public const string ChangeUserName = "ChangeUserName";
-        /// <summary>f:ChangeUserNameInRoom</summary>
+        /// <summary>The outgoing Flash message <c>ChangeUserNameInRoom</c>.</summary>
         public const string ChangeUserNameInRoom = "ChangeUserNameInRoom";
-        /// <summary>f:Chat</summary>
+        /// <summary>The outgoing Flash message <c>Chat</c>.</summary>
         public const string Chat = "Chat";
-        /// <summary>f:ChatReviewGuideDecidesOnOffer</summary>
+        /// <summary>The outgoing Flash message <c>ChatReviewGuideDecidesOnOffer</c>.</summary>
         public const string ChatReviewGuideDecidesOnOffer = "ChatReviewGuideDecidesOnOffer";
-        /// <summary>f:ChatReviewGuideDetached</summary>
+        /// <summary>The outgoing Flash message <c>ChatReviewGuideDetached</c>.</summary>
         public const string ChatReviewGuideDetached = "ChatReviewGuideDetached";
-        /// <summary>f:ChatReviewGuideVote</summary>
+        /// <summary>The outgoing Flash message <c>ChatReviewGuideVote</c>.</summary>
         public const string ChatReviewGuideVote = "ChatReviewGuideVote";
-        /// <summary>f:ChatReviewSessionCreate</summary>
+        /// <summary>The outgoing Flash message <c>ChatReviewSessionCreate</c>.</summary>
         public const string ChatReviewSessionCreate = "ChatReviewSessionCreate";
-        /// <summary>f:CheckUserName</summary>
+        /// <summary>The outgoing Flash message <c>CheckUserName</c>.</summary>
         public const string CheckUserName = "CheckUserName";
-        /// <summary>f:ClaimDailyTask</summary>
+        /// <summary>The outgoing Flash message <c>ClaimDailyTask</c>.</summary>
         public const string ClaimDailyTask = "ClaimDailyTask";
-        /// <summary>f:ClaimHabbicon</summary>
+        /// <summary>The outgoing Flash message <c>ClaimHabbicon</c>.</summary>
         public const string ClaimHabbicon = "ClaimHabbicon";
-        /// <summary>f:ClaimNftClaims</summary>
+        /// <summary>The outgoing Flash message <c>ClaimNftClaims</c>.</summary>
         public const string ClaimNftClaims = "ClaimNftClaims";
-        /// <summary>f:ClaimProduct</summary>
+        /// <summary>The outgoing Flash message <c>ClaimProduct</c>.</summary>
         public const string ClaimProduct = "ClaimProduct";
-        /// <summary>f:ClaimRewardTrackPrize</summary>
+        /// <summary>The outgoing Flash message <c>ClaimRewardTrackPrize</c>.</summary>
         public const string ClaimRewardTrackPrize = "ClaimRewardTrackPrize";
-        /// <summary>f:ClearMarketplaceOwnHistory</summary>
+        /// <summary>The outgoing Flash message <c>ClearMarketplaceOwnHistory</c>.</summary>
         public const string ClearMarketplaceOwnHistory = "ClearMarketplaceOwnHistory";
-        /// <summary>f:ClickCharacter</summary>
+        /// <summary>The outgoing Flash message <c>ClickCharacter</c>.</summary>
         public const string ClickCharacter = "ClickCharacter";
-        /// <summary>f:ClickFurni</summary>
+        /// <summary>The outgoing Flash message <c>ClickFurni</c>.</summary>
         public const string ClickFurni = "ClickFurni";
-        /// <summary>f:ClientHello</summary>
+        /// <summary>The outgoing Flash message <c>ClientHello</c>.</summary>
         public const string ClientHello = "ClientHello";
-        /// <summary>f:CloseChest</summary>
+        /// <summary>The outgoing Flash message <c>CloseChest</c>.</summary>
         public const string CloseChest = "CloseChest";
-        /// <summary>f:CloseIssueDefaultAction</summary>
+        /// <summary>The outgoing Flash message <c>CloseIssueDefaultAction</c>.</summary>
         public const string CloseIssueDefaultAction = "CloseIssueDefaultAction";
-        /// <summary>f:CloseIssues</summary>
+        /// <summary>The outgoing Flash message <c>CloseIssues</c>.</summary>
         public const string CloseIssues = "CloseIssues";
-        /// <summary>f:CloseTrading</summary>
+        /// <summary>The outgoing Flash message <c>CloseTrading</c>.</summary>
         public const string CloseTrading = "CloseTrading";
-        /// <summary>f:CommandBot</summary>
+        /// <summary>The outgoing Flash message <c>CommandBot</c>.</summary>
         public const string CommandBot = "CommandBot";
-        /// <summary>f:CommunityGoalVote</summary>
+        /// <summary>The outgoing Flash message <c>CommunityGoalVote</c>.</summary>
         public const string CommunityGoalVote = "CommunityGoalVote";
-        /// <summary>f:CompetitionRoomsSearch</summary>
+        /// <summary>The outgoing Flash message <c>CompetitionRoomsSearch</c>.</summary>
         public const string CompetitionRoomsSearch = "CompetitionRoomsSearch";
-        /// <summary>f:CompleteDiffieHandshake</summary>
+        /// <summary>The outgoing Flash message <c>CompleteDiffieHandshake</c>.</summary>
         public const string CompleteDiffieHandshake = "CompleteDiffieHandshake";
-        /// <summary>f:CompostPlant</summary>
+        /// <summary>The outgoing Flash message <c>CompostPlant</c>.</summary>
         public const string CompostPlant = "CompostPlant";
-        /// <summary>f:ConfirmAcceptTrading</summary>
+        /// <summary>The outgoing Flash message <c>ConfirmAcceptTrading</c>.</summary>
         public const string ConfirmAcceptTrading = "ConfirmAcceptTrading";
-        /// <summary>f:ConfirmDeclineTrading</summary>
+        /// <summary>The outgoing Flash message <c>ConfirmDeclineTrading</c>.</summary>
         public const string ConfirmDeclineTrading = "ConfirmDeclineTrading";
-        /// <summary>f:ConfirmPetBreeding</summary>
+        /// <summary>The outgoing Flash message <c>ConfirmPetBreeding</c>.</summary>
         public const string ConfirmPetBreeding = "ConfirmPetBreeding";
-        /// <summary>f:ControlYoutubeDisplayPlayback</summary>
+        /// <summary>The outgoing Flash message <c>ControlYoutubeDisplayPlayback</c>.</summary>
         public const string ControlYoutubeDisplayPlayback = "ControlYoutubeDisplayPlayback";
-        /// <summary>f:ConvertGlobalRoomId</summary>
+        /// <summary>The outgoing Flash message <c>ConvertGlobalRoomId</c>.</summary>
         public const string ConvertGlobalRoomId = "ConvertGlobalRoomId";
-        /// <summary>f:Craft</summary>
+        /// <summary>The outgoing Flash message <c>Craft</c>.</summary>
         public const string Craft = "Craft";
-        /// <summary>f:CraftSecret</summary>
+        /// <summary>The outgoing Flash message <c>CraftSecret</c>.</summary>
         public const string CraftSecret = "CraftSecret";
-        /// <summary>f:CreateFlat</summary>
+        /// <summary>The outgoing Flash message <c>CreateFlat</c>.</summary>
         public const string CreateFlat = "CreateFlat";
-        /// <summary>f:CreateGuild</summary>
+        /// <summary>The outgoing Flash message <c>CreateGuild</c>.</summary>
         public const string CreateGuild = "CreateGuild";
-        /// <summary>f:CreditFurniRedeem</summary>
+        /// <summary>The outgoing Flash message <c>CreditFurniRedeem</c>.</summary>
         public const string CreditFurniRedeem = "CreditFurniRedeem";
-        /// <summary>f:CreditVaultStatus</summary>
+        /// <summary>The outgoing Flash message <c>CreditVaultStatus</c>.</summary>
         public const string CreditVaultStatus = "CreditVaultStatus";
-        /// <summary>f:CustomizeAvatarWithFurni</summary>
+        /// <summary>The outgoing Flash message <c>CustomizeAvatarWithFurni</c>.</summary>
         public const string CustomizeAvatarWithFurni = "CustomizeAvatarWithFurni";
-        /// <summary>f:CustomizePetWithFurni</summary>
+        /// <summary>The outgoing Flash message <c>CustomizePetWithFurni</c>.</summary>
         public const string CustomizePetWithFurni = "CustomizePetWithFurni";
-        /// <summary>f:Dance</summary>
+        /// <summary>The outgoing Flash message <c>Dance</c>.</summary>
         public const string Dance = "Dance";
-        /// <summary>f:DeactivateGuild</summary>
+        /// <summary>The outgoing Flash message <c>DeactivateGuild</c>.</summary>
         public const string DeactivateGuild = "DeactivateGuild";
-        /// <summary>f:DeclineFriend</summary>
+        /// <summary>The outgoing Flash message <c>DeclineFriend</c>.</summary>
         public const string DeclineFriend = "DeclineFriend";
-        /// <summary>f:DefaultSanction</summary>
+        /// <summary>The outgoing Flash message <c>DefaultSanction</c>.</summary>
         public const string DefaultSanction = "DefaultSanction";
-        /// <summary>f:DeleteFavouriteRoom</summary>
+        /// <summary>The outgoing Flash message <c>DeleteFavouriteRoom</c>.</summary>
         public const string DeleteFavouriteRoom = "DeleteFavouriteRoom";
-        /// <summary>f:DeletePendingCallsForHelp</summary>
+        /// <summary>The outgoing Flash message <c>DeletePendingCallsForHelp</c>.</summary>
         public const string DeletePendingCallsForHelp = "DeletePendingCallsForHelp";
-        /// <summary>f:DeleteRoom</summary>
+        /// <summary>The outgoing Flash message <c>DeleteRoom</c>.</summary>
         public const string DeleteRoom = "DeleteRoom";
-        /// <summary>f:DeselectFavouriteHabboGroup</summary>
+        /// <summary>The outgoing Flash message <c>DeselectFavouriteHabboGroup</c>.</summary>
         public const string DeselectFavouriteHabboGroup = "DeselectFavouriteHabboGroup";
-        /// <summary>f:DiceOff</summary>
+        /// <summary>The outgoing Flash message <c>DiceOff</c>.</summary>
         public const string DiceOff = "DiceOff";
-        /// <summary>f:Disconnect</summary>
+        /// <summary>The outgoing Flash message <c>Disconnect</c>.</summary>
         public const string Disconnect = "Disconnect";
-        /// <summary>f:DropCarryItem</summary>
+        /// <summary>The outgoing Flash message <c>DropCarryItem</c>.</summary>
         public const string DropCarryItem = "DropCarryItem";
-        /// <summary>f:Edit</summary>
+        /// <summary>The outgoing Flash message <c>Edit</c>.</summary>
         public const string Edit = "Edit";
-        /// <summary>f:EditEvent</summary>
+        /// <summary>The outgoing Flash message <c>EditEvent</c>.</summary>
         public const string EditEvent = "EditEvent";
-        /// <summary>f:EnterOneWayDoor</summary>
+        /// <summary>The outgoing Flash message <c>EnterOneWayDoor</c>.</summary>
         public const string EnterOneWayDoor = "EnterOneWayDoor";
-        /// <summary>f:EventLog</summary>
+        /// <summary>The outgoing Flash message <c>EventLog</c>.</summary>
         public const string EventLog = "EventLog";
-        /// <summary>f:ExtendRentOrBuyoutFurni</summary>
+        /// <summary>The outgoing Flash message <c>ExtendRentOrBuyoutFurni</c>.</summary>
         public const string ExtendRentOrBuyoutFurni = "ExtendRentOrBuyoutFurni";
-        /// <summary>f:ExtendRentOrBuyoutStripItem</summary>
+        /// <summary>The outgoing Flash message <c>ExtendRentOrBuyoutStripItem</c>.</summary>
         public const string ExtendRentOrBuyoutStripItem = "ExtendRentOrBuyoutStripItem";
-        /// <summary>f:FavoriteHabbicon</summary>
+        /// <summary>The outgoing Flash message <c>FavoriteHabbicon</c>.</summary>
         public const string FavoriteHabbicon = "FavoriteHabbicon";
-        /// <summary>f:FindNewFriends</summary>
+        /// <summary>The outgoing Flash message <c>FindNewFriends</c>.</summary>
         public const string FindNewFriends = "FindNewFriends";
-        /// <summary>f:FollowFriend</summary>
+        /// <summary>The outgoing Flash message <c>FollowFriend</c>.</summary>
         public const string FollowFriend = "FollowFriend";
-        /// <summary>f:ForwardToACompetitionRoom</summary>
+        /// <summary>The outgoing Flash message <c>ForwardToACompetitionRoom</c>.</summary>
         public const string ForwardToACompetitionRoom = "ForwardToACompetitionRoom";
-        /// <summary>f:ForwardToARandomPromotedRoom</summary>
+        /// <summary>The outgoing Flash message <c>ForwardToARandomPromotedRoom</c>.</summary>
         public const string ForwardToARandomPromotedRoom = "ForwardToARandomPromotedRoom";
-        /// <summary>f:ForwardToASubmittableRoom</summary>
+        /// <summary>The outgoing Flash message <c>ForwardToASubmittableRoom</c>.</summary>
         public const string ForwardToASubmittableRoom = "ForwardToASubmittableRoom";
-        /// <summary>f:ForwardToACompetitionRoom</summary>
+        /// <summary>An older spelling of <see cref="ForwardToACompetitionRoom"/>.</summary>
         public const string ForwardToAcompetitionRoom = "ForwardToAcompetitionRoom";
-        /// <summary>f:ForwardToARandomPromotedRoom</summary>
+        /// <summary>An older spelling of <see cref="ForwardToARandomPromotedRoom"/>.</summary>
         public const string ForwardToArandomPromotedRoom = "ForwardToArandomPromotedRoom";
-        /// <summary>f:ForwardToASubmittableRoom</summary>
+        /// <summary>An older spelling of <see cref="ForwardToASubmittableRoom"/>.</summary>
         public const string ForwardToAsubmittableRoom = "ForwardToAsubmittableRoom";
-        /// <summary>f:ForwardToRandomCompetitionRoom</summary>
+        /// <summary>The outgoing Flash message <c>ForwardToRandomCompetitionRoom</c>.</summary>
         public const string ForwardToRandomCompetitionRoom = "ForwardToRandomCompetitionRoom";
-        /// <summary>f:ForwardToSomeRoom</summary>
+        /// <summary>The outgoing Flash message <c>ForwardToSomeRoom</c>.</summary>
         public const string ForwardToSomeRoom = "ForwardToSomeRoom";
-        /// <summary>f:FriendFurniConfirmLock</summary>
+        /// <summary>The outgoing Flash message <c>FriendFurniConfirmLock</c>.</summary>
         public const string FriendFurniConfirmLock = "FriendFurniConfirmLock";
-        /// <summary>f:FriendListUpdate</summary>
+        /// <summary>The outgoing Flash message <c>FriendListUpdate</c>.</summary>
         public const string FriendListUpdate = "FriendListUpdate";
-        /// <summary>f:FriendRequestQuestComplete</summary>
+        /// <summary>The outgoing Flash message <c>FriendRequestQuestComplete</c>.</summary>
         public const string FriendRequestQuestComplete = "FriendRequestQuestComplete";
-        /// <summary>f:Game2CheckGameDirectoryStatus</summary>
+        /// <summary>The outgoing Flash message <c>Game2CheckGameDirectoryStatus</c>.</summary>
         public const string Game2CheckGameDirectoryStatus = "Game2CheckGameDirectoryStatus";
-        /// <summary>f:Game2ExitGame</summary>
+        /// <summary>The outgoing Flash message <c>Game2ExitGame</c>.</summary>
         public const string Game2ExitGame = "Game2ExitGame";
-        /// <summary>f:Game2GameChat</summary>
+        /// <summary>The outgoing Flash message <c>Game2GameChat</c>.</summary>
         public const string Game2GameChat = "Game2GameChat";
-        /// <summary>f:Game2GetAccountGameStatus</summary>
+        /// <summary>The outgoing Flash message <c>Game2GetAccountGameStatus</c>.</summary>
         public const string Game2GetAccountGameStatus = "Game2GetAccountGameStatus";
-        /// <summary>f:Game2GetFriendsLeaderboard</summary>
+        /// <summary>The outgoing Flash message <c>Game2GetFriendsLeaderboard</c>.</summary>
         public const string Game2GetFriendsLeaderboard = "Game2GetFriendsLeaderboard";
-        /// <summary>f:Game2GetTotalGroupLeaderboard</summary>
+        /// <summary>The outgoing Flash message <c>Game2GetTotalGroupLeaderboard</c>.</summary>
         public const string Game2GetTotalGroupLeaderboard = "Game2GetTotalGroupLeaderboard";
-        /// <summary>f:Game2GetTotalLeaderboard</summary>
+        /// <summary>The outgoing Flash message <c>Game2GetTotalLeaderboard</c>.</summary>
         public const string Game2GetTotalLeaderboard = "Game2GetTotalLeaderboard";
-        /// <summary>f:Game2GetWeeklyFriendsLeaderboard</summary>
+        /// <summary>The outgoing Flash message <c>Game2GetWeeklyFriendsLeaderboard</c>.</summary>
         public const string Game2GetWeeklyFriendsLeaderboard = "Game2GetWeeklyFriendsLeaderboard";
-        /// <summary>f:Game2GetWeeklyGroupLeaderboard</summary>
+        /// <summary>The outgoing Flash message <c>Game2GetWeeklyGroupLeaderboard</c>.</summary>
         public const string Game2GetWeeklyGroupLeaderboard = "Game2GetWeeklyGroupLeaderboard";
-        /// <summary>f:Game2GetWeeklyLeaderboard</summary>
+        /// <summary>The outgoing Flash message <c>Game2GetWeeklyLeaderboard</c>.</summary>
         public const string Game2GetWeeklyLeaderboard = "Game2GetWeeklyLeaderboard";
-        /// <summary>f:Game2LeaveGame</summary>
+        /// <summary>The outgoing Flash message <c>Game2LeaveGame</c>.</summary>
         public const string Game2LeaveGame = "Game2LeaveGame";
-        /// <summary>f:Game2LoadStageReady</summary>
+        /// <summary>The outgoing Flash message <c>Game2LoadStageReady</c>.</summary>
         public const string Game2LoadStageReady = "Game2LoadStageReady";
-        /// <summary>f:Game2MakeSnowball</summary>
+        /// <summary>The outgoing Flash message <c>Game2MakeSnowball</c>.</summary>
         public const string Game2MakeSnowball = "Game2MakeSnowball";
-        /// <summary>f:Game2PlayAgain</summary>
+        /// <summary>The outgoing Flash message <c>Game2PlayAgain</c>.</summary>
         public const string Game2PlayAgain = "Game2PlayAgain";
-        /// <summary>f:Game2QuickJoinGame</summary>
+        /// <summary>The outgoing Flash message <c>Game2QuickJoinGame</c>.</summary>
         public const string Game2QuickJoinGame = "Game2QuickJoinGame";
-        /// <summary>f:Game2RequestFullStatusUpdate</summary>
+        /// <summary>The outgoing Flash message <c>Game2RequestFullStatusUpdate</c>.</summary>
         public const string Game2RequestFullStatusUpdate = "Game2RequestFullStatusUpdate";
-        /// <summary>f:Game2SetUserMoveTarget</summary>
+        /// <summary>The outgoing Flash message <c>Game2SetUserMoveTarget</c>.</summary>
         public const string Game2SetUserMoveTarget = "Game2SetUserMoveTarget";
-        /// <summary>f:Game2StartSnowWar</summary>
+        /// <summary>The outgoing Flash message <c>Game2StartSnowWar</c>.</summary>
         public const string Game2StartSnowWar = "Game2StartSnowWar";
-        /// <summary>f:Game2ThrowSnowballAtHuman</summary>
+        /// <summary>The outgoing Flash message <c>Game2ThrowSnowballAtHuman</c>.</summary>
         public const string Game2ThrowSnowballAtHuman = "Game2ThrowSnowballAtHuman";
-        /// <summary>f:Game2ThrowSnowballAtPosition</summary>
+        /// <summary>The outgoing Flash message <c>Game2ThrowSnowballAtPosition</c>.</summary>
         public const string Game2ThrowSnowballAtPosition = "Game2ThrowSnowballAtPosition";
-        /// <summary>f:GetAchievements</summary>
+        /// <summary>The outgoing Flash message <c>GetAchievements</c>.</summary>
         public const string GetAchievements = "GetAchievements";
-        /// <summary>f:GetBadgeInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetBadgeInfo</c>.</summary>
         public const string GetBadgeInfo = "GetBadgeInfo";
-        /// <summary>f:GetBadgeLeaderboard</summary>
+        /// <summary>The outgoing Flash message <c>GetBadgeLeaderboard</c>.</summary>
         public const string GetBadgeLeaderboard = "GetBadgeLeaderboard";
-        /// <summary>f:GetBadgePointLimits</summary>
+        /// <summary>The outgoing Flash message <c>GetBadgePointLimits</c>.</summary>
         public const string GetBadgePointLimits = "GetBadgePointLimits";
-        /// <summary>f:GetBadges</summary>
+        /// <summary>The outgoing Flash message <c>GetBadges</c>.</summary>
         public const string GetBadges = "GetBadges";
-        /// <summary>f:GetBannedUsersFromRoom</summary>
+        /// <summary>The outgoing Flash message <c>GetBannedUsersFromRoom</c>.</summary>
         public const string GetBannedUsersFromRoom = "GetBannedUsersFromRoom";
-        /// <summary>f:GetBonusRareInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetBonusRareInfo</c>.</summary>
         public const string GetBonusRareInfo = "GetBonusRareInfo";
-        /// <summary>f:GetBotCommandConfigurationData</summary>
+        /// <summary>The outgoing Flash message <c>GetBotCommandConfigurationData</c>.</summary>
         public const string GetBotCommandConfigurationData = "GetBotCommandConfigurationData";
-        /// <summary>f:GetBotInventory</summary>
+        /// <summary>The outgoing Flash message <c>GetBotInventory</c>.</summary>
         public const string GetBotInventory = "GetBotInventory";
-        /// <summary>f:GetBundleDiscountRuleset</summary>
+        /// <summary>The outgoing Flash message <c>GetBundleDiscountRuleset</c>.</summary>
         public const string GetBundleDiscountRuleset = "GetBundleDiscountRuleset";
-        /// <summary>f:GetCatalogIndex</summary>
+        /// <summary>The outgoing Flash message <c>GetCatalogIndex</c>.</summary>
         public const string GetCatalogIndex = "GetCatalogIndex";
-        /// <summary>f:GetCatalogPage</summary>
+        /// <summary>The outgoing Flash message <c>GetCatalogPage</c>.</summary>
         public const string GetCatalogPage = "GetCatalogPage";
-        /// <summary>f:GetCatalogPageExpiration</summary>
+        /// <summary>The outgoing Flash message <c>GetCatalogPageExpiration</c>.</summary>
         public const string GetCatalogPageExpiration = "GetCatalogPageExpiration";
-        /// <summary>f:GetCatalogPageWithEarliestExpiry</summary>
+        /// <summary>The outgoing Flash message <c>GetCatalogPageWithEarliestExpiry</c>.</summary>
         public const string GetCatalogPageWithEarliestExpiry = "GetCatalogPageWithEarliestExpiry";
-        /// <summary>f:GetCategoriesWithUserCount</summary>
+        /// <summary>The outgoing Flash message <c>GetCategoriesWithUserCount</c>.</summary>
         public const string GetCategoriesWithUserCount = "GetCategoriesWithUserCount";
-        /// <summary>f:GetCfhChatLog</summary>
+        /// <summary>The outgoing Flash message <c>GetCfhChatLog</c>.</summary>
         public const string GetCfhChatLog = "GetCfhChatLog";
-        /// <summary>f:GetCfhMyReportStatus</summary>
+        /// <summary>The outgoing Flash message <c>GetCfhMyReportStatus</c>.</summary>
         public const string GetCfhMyReportStatus = "GetCfhMyReportStatus";
-        /// <summary>f:GetCfhStatus</summary>
+        /// <summary>The outgoing Flash message <c>GetCfhStatus</c>.</summary>
         public const string GetCfhStatus = "GetCfhStatus";
-        /// <summary>f:GetClubGift</summary>
+        /// <summary>The outgoing Flash message <c>GetClubGift</c>.</summary>
         public const string GetClubGift = "GetClubGift";
-        /// <summary>f:GetClubOffers</summary>
+        /// <summary>The outgoing Flash message <c>GetClubOffers</c>.</summary>
         public const string GetClubOffers = "GetClubOffers";
-        /// <summary>f:GetCollectibleMintTokens</summary>
+        /// <summary>The outgoing Flash message <c>GetCollectibleMintTokens</c>.</summary>
         public const string GetCollectibleMintTokens = "GetCollectibleMintTokens";
-        /// <summary>f:GetCollectibleMintableItemTypes</summary>
+        /// <summary>The outgoing Flash message <c>GetCollectibleMintableItemTypes</c>.</summary>
         public const string GetCollectibleMintableItemTypes = "GetCollectibleMintableItemTypes";
-        /// <summary>f:GetCollectibleMintingEnabled</summary>
+        /// <summary>The outgoing Flash message <c>GetCollectibleMintingEnabled</c>.</summary>
         public const string GetCollectibleMintingEnabled = "GetCollectibleMintingEnabled";
-        /// <summary>f:GetCollectibleWalletAddresses</summary>
+        /// <summary>The outgoing Flash message <c>GetCollectibleWalletAddresses</c>.</summary>
         public const string GetCollectibleWalletAddresses = "GetCollectibleWalletAddresses";
-        /// <summary>f:GetCollectorScore</summary>
+        /// <summary>The outgoing Flash message <c>GetCollectorScore</c>.</summary>
         public const string GetCollectorScore = "GetCollectorScore";
-        /// <summary>f:GetCommunityGoalHallOfFame</summary>
+        /// <summary>The outgoing Flash message <c>GetCommunityGoalHallOfFame</c>.</summary>
         public const string GetCommunityGoalHallOfFame = "GetCommunityGoalHallOfFame";
-        /// <summary>f:GetCommunityGoalProgress</summary>
+        /// <summary>The outgoing Flash message <c>GetCommunityGoalProgress</c>.</summary>
         public const string GetCommunityGoalProgress = "GetCommunityGoalProgress";
-        /// <summary>f:GetConcurrentUsersGoalProgress</summary>
+        /// <summary>The outgoing Flash message <c>GetConcurrentUsersGoalProgress</c>.</summary>
         public const string GetConcurrentUsersGoalProgress = "GetConcurrentUsersGoalProgress";
-        /// <summary>f:GetConcurrentUsersReward</summary>
+        /// <summary>The outgoing Flash message <c>GetConcurrentUsersReward</c>.</summary>
         public const string GetConcurrentUsersReward = "GetConcurrentUsersReward";
-        /// <summary>f:GetCraftableProducts</summary>
+        /// <summary>The outgoing Flash message <c>GetCraftableProducts</c>.</summary>
         public const string GetCraftableProducts = "GetCraftableProducts";
-        /// <summary>f:GetCraftingRecipe</summary>
+        /// <summary>The outgoing Flash message <c>GetCraftingRecipe</c>.</summary>
         public const string GetCraftingRecipe = "GetCraftingRecipe";
-        /// <summary>f:GetCraftingRecipesAvailable</summary>
+        /// <summary>The outgoing Flash message <c>GetCraftingRecipesAvailable</c>.</summary>
         public const string GetCraftingRecipesAvailable = "GetCraftingRecipesAvailable";
-        /// <summary>f:GetCreditsInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetCreditsInfo</c>.</summary>
         public const string GetCreditsInfo = "GetCreditsInfo";
-        /// <summary>f:GetCurrentTimingCode</summary>
+        /// <summary>The outgoing Flash message <c>GetCurrentTimingCode</c>.</summary>
         public const string GetCurrentTimingCode = "GetCurrentTimingCode";
-        /// <summary>f:GetCustomFilter</summary>
+        /// <summary>The outgoing Flash message <c>GetCustomFilter</c>.</summary>
         public const string GetCustomFilter = "GetCustomFilter";
-        /// <summary>f:GetCustomRoomFilter</summary>
+        /// <summary>The outgoing Flash message <c>GetCustomRoomFilter</c>.</summary>
         public const string GetCustomRoomFilter = "GetCustomRoomFilter";
-        /// <summary>f:GetDailyQuest</summary>
+        /// <summary>The outgoing Flash message <c>GetDailyQuest</c>.</summary>
         public const string GetDailyQuest = "GetDailyQuest";
-        /// <summary>f:GetDailyTasks</summary>
+        /// <summary>The outgoing Flash message <c>GetDailyTasks</c>.</summary>
         public const string GetDailyTasks = "GetDailyTasks";
-        /// <summary>f:GetDirectClubBuyAvailable</summary>
+        /// <summary>The outgoing Flash message <c>GetDirectClubBuyAvailable</c>.</summary>
         public const string GetDirectClubBuyAvailable = "GetDirectClubBuyAvailable";
-        /// <summary>f:GetDiscordPreferences</summary>
+        /// <summary>The outgoing Flash message <c>GetDiscordPreferences</c>.</summary>
         public const string GetDiscordPreferences = "GetDiscordPreferences";
-        /// <summary>f:GetEmailStatus</summary>
+        /// <summary>The outgoing Flash message <c>GetEmailStatus</c>.</summary>
         public const string GetEmailStatus = "GetEmailStatus";
-        /// <summary>f:GetExtendedProfile</summary>
+        /// <summary>The outgoing Flash message <c>GetExtendedProfile</c>.</summary>
         public const string GetExtendedProfile = "GetExtendedProfile";
-        /// <summary>f:GetExtendedProfileByName</summary>
+        /// <summary>The outgoing Flash message <c>GetExtendedProfileByName</c>.</summary>
         public const string GetExtendedProfileByName = "GetExtendedProfileByName";
-        /// <summary>f:GetFaqCategory</summary>
+        /// <summary>The outgoing Flash message <c>GetFaqCategory</c>.</summary>
         public const string GetFaqCategory = "GetFaqCategory";
-        /// <summary>f:GetFaqText</summary>
+        /// <summary>The outgoing Flash message <c>GetFaqText</c>.</summary>
         public const string GetFaqText = "GetFaqText";
-        /// <summary>f:GetFlatControllers</summary>
+        /// <summary>The outgoing Flash message <c>GetFlatControllers</c>.</summary>
         public const string GetFlatControllers = "GetFlatControllers";
-        /// <summary>f:GetForumStats</summary>
+        /// <summary>The outgoing Flash message <c>GetForumStats</c>.</summary>
         public const string GetForumStats = "GetForumStats";
-        /// <summary>f:GetForumsList</summary>
+        /// <summary>The outgoing Flash message <c>GetForumsList</c>.</summary>
         public const string GetForumsList = "GetForumsList";
-        /// <summary>f:GetFriendRequests</summary>
+        /// <summary>The outgoing Flash message <c>GetFriendRequests</c>.</summary>
         public const string GetFriendRequests = "GetFriendRequests";
-        /// <summary>f:GetFriendsWeeklyCompetitiveLeaderboard</summary>
+        /// <summary>The outgoing Flash message <c>GetFriendsWeeklyCompetitiveLeaderboard</c>.</summary>
         public const string GetFriendsWeeklyCompetitiveLeaderboard = "GetFriendsWeeklyCompetitiveLeaderboard";
-        /// <summary>f:GetFurnitureAliases</summary>
+        /// <summary>The outgoing Flash message <c>GetFurnitureAliases</c>.</summary>
         public const string GetFurnitureAliases = "GetFurnitureAliases";
-        /// <summary>f:GetGift</summary>
+        /// <summary>The outgoing Flash message <c>GetGift</c>.</summary>
         public const string GetGift = "GetGift";
-        /// <summary>f:GetGiftWrappingConfiguration</summary>
+        /// <summary>The outgoing Flash message <c>GetGiftWrappingConfiguration</c>.</summary>
         public const string GetGiftWrappingConfiguration = "GetGiftWrappingConfiguration";
-        /// <summary>f:GetGuestRoom</summary>
+        /// <summary>The outgoing Flash message <c>GetGuestRoom</c>.</summary>
         public const string GetGuestRoom = "GetGuestRoom";
-        /// <summary>f:GetGuideReportingStatus</summary>
+        /// <summary>The outgoing Flash message <c>GetGuideReportingStatus</c>.</summary>
         public const string GetGuideReportingStatus = "GetGuideReportingStatus";
-        /// <summary>f:GetGuildCreationInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetGuildCreationInfo</c>.</summary>
         public const string GetGuildCreationInfo = "GetGuildCreationInfo";
-        /// <summary>f:GetGuildEditInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetGuildEditInfo</c>.</summary>
         public const string GetGuildEditInfo = "GetGuildEditInfo";
-        /// <summary>f:GetGuildEditorData</summary>
+        /// <summary>The outgoing Flash message <c>GetGuildEditorData</c>.</summary>
         public const string GetGuildEditorData = "GetGuildEditorData";
-        /// <summary>f:GetGuildFurniContextMenuInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetGuildFurniContextMenuInfo</c>.</summary>
         public const string GetGuildFurniContextMenuInfo = "GetGuildFurniContextMenuInfo";
-        /// <summary>f:GetGuildMembers</summary>
+        /// <summary>The outgoing Flash message <c>GetGuildMembers</c>.</summary>
         public const string GetGuildMembers = "GetGuildMembers";
-        /// <summary>f:GetGuildMemberships</summary>
+        /// <summary>The outgoing Flash message <c>GetGuildMemberships</c>.</summary>
         public const string GetGuildMemberships = "GetGuildMemberships";
-        /// <summary>f:GetHabbiconInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetHabbiconInfo</c>.</summary>
         public const string GetHabbiconInfo = "GetHabbiconInfo";
-        /// <summary>f:GetHabbiconShopData</summary>
+        /// <summary>The outgoing Flash message <c>GetHabbiconShopData</c>.</summary>
         public const string GetHabbiconShopData = "GetHabbiconShopData";
-        /// <summary>f:GetHabboBasicMembershipExtendOffer</summary>
+        /// <summary>The outgoing Flash message <c>GetHabboBasicMembershipExtendOffer</c>.</summary>
         public const string GetHabboBasicMembershipExtendOffer = "GetHabboBasicMembershipExtendOffer";
-        /// <summary>f:GetHabboClubExtendOffer</summary>
+        /// <summary>The outgoing Flash message <c>GetHabboClubExtendOffer</c>.</summary>
         public const string GetHabboClubExtendOffer = "GetHabboClubExtendOffer";
-        /// <summary>f:GetHabboGroupBadges</summary>
+        /// <summary>The outgoing Flash message <c>GetHabboGroupBadges</c>.</summary>
         public const string GetHabboGroupBadges = "GetHabboGroupBadges";
-        /// <summary>f:GetHabboGroupDetails</summary>
+        /// <summary>The outgoing Flash message <c>GetHabboGroupDetails</c>.</summary>
         public const string GetHabboGroupDetails = "GetHabboGroupDetails";
-        /// <summary>f:GetHotlooks</summary>
+        /// <summary>The outgoing Flash message <c>GetHotlooks</c>.</summary>
         public const string GetHotlooks = "GetHotlooks";
-        /// <summary>f:GetIgnoredUsers</summary>
+        /// <summary>The outgoing Flash message <c>GetIgnoredUsers</c>.</summary>
         public const string GetIgnoredUsers = "GetIgnoredUsers";
-        /// <summary>f:GetInterstitial</summary>
+        /// <summary>The outgoing Flash message <c>GetInterstitial</c>.</summary>
         public const string GetInterstitial = "GetInterstitial";
-        /// <summary>f:GetIsBadgeRequestFulfilled</summary>
+        /// <summary>The outgoing Flash message <c>GetIsBadgeRequestFulfilled</c>.</summary>
         public const string GetIsBadgeRequestFulfilled = "GetIsBadgeRequestFulfilled";
-        /// <summary>f:GetIsOfferGiftable</summary>
+        /// <summary>The outgoing Flash message <c>GetIsOfferGiftable</c>.</summary>
         public const string GetIsOfferGiftable = "GetIsOfferGiftable";
-        /// <summary>f:GetIsUserPartOfCompetition</summary>
+        /// <summary>The outgoing Flash message <c>GetIsUserPartOfCompetition</c>.</summary>
         public const string GetIsUserPartOfCompetition = "GetIsUserPartOfCompetition";
-        /// <summary>f:GetItemData</summary>
+        /// <summary>The outgoing Flash message <c>GetItemData</c>.</summary>
         public const string GetItemData = "GetItemData";
-        /// <summary>f:GetJukeboxPlayList</summary>
+        /// <summary>The outgoing Flash message <c>GetJukeboxPlayList</c>.</summary>
         public const string GetJukeboxPlayList = "GetJukeboxPlayList";
-        /// <summary>f:GetLimitedOfferAppearingNext</summary>
+        /// <summary>The outgoing Flash message <c>GetLimitedOfferAppearingNext</c>.</summary>
         public const string GetLimitedOfferAppearingNext = "GetLimitedOfferAppearingNext";
-        /// <summary>f:GetMarketplaceCanMakeOffer</summary>
+        /// <summary>The outgoing Flash message <c>GetMarketplaceCanMakeOffer</c>.</summary>
         public const string GetMarketplaceCanMakeOffer = "GetMarketplaceCanMakeOffer";
-        /// <summary>f:GetMarketplaceConfiguration</summary>
+        /// <summary>The outgoing Flash message <c>GetMarketplaceConfiguration</c>.</summary>
         public const string GetMarketplaceConfiguration = "GetMarketplaceConfiguration";
-        /// <summary>f:GetMarketplaceItemStats</summary>
+        /// <summary>The outgoing Flash message <c>GetMarketplaceItemStats</c>.</summary>
         public const string GetMarketplaceItemStats = "GetMarketplaceItemStats";
-        /// <summary>f:GetMarketplaceOffers</summary>
+        /// <summary>The outgoing Flash message <c>GetMarketplaceOffers</c>.</summary>
         public const string GetMarketplaceOffers = "GetMarketplaceOffers";
-        /// <summary>f:GetMarketplaceOwnOffers</summary>
+        /// <summary>The outgoing Flash message <c>GetMarketplaceOwnOffers</c>.</summary>
         public const string GetMarketplaceOwnOffers = "GetMarketplaceOwnOffers";
-        /// <summary>f:GetMemberGuildItemCount</summary>
+        /// <summary>The outgoing Flash message <c>GetMemberGuildItemCount</c>.</summary>
         public const string GetMemberGuildItemCount = "GetMemberGuildItemCount";
-        /// <summary>f:GetMessages</summary>
+        /// <summary>The outgoing Flash message <c>GetMessages</c>.</summary>
         public const string GetMessages = "GetMessages";
-        /// <summary>f:GetMessengerHistory</summary>
+        /// <summary>The outgoing Flash message <c>GetMessengerHistory</c>.</summary>
         public const string GetMessengerHistory = "GetMessengerHistory";
-        /// <summary>f:GetMintTokenOffers</summary>
+        /// <summary>The outgoing Flash message <c>GetMintTokenOffers</c>.</summary>
         public const string GetMintTokenOffers = "GetMintTokenOffers";
-        /// <summary>f:GetModeratorRoomInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetModeratorRoomInfo</c>.</summary>
         public const string GetModeratorRoomInfo = "GetModeratorRoomInfo";
-        /// <summary>f:GetModeratorUserInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetModeratorUserInfo</c>.</summary>
         public const string GetModeratorUserInfo = "GetModeratorUserInfo";
-        /// <summary>f:GetMotd</summary>
+        /// <summary>The outgoing Flash message <c>GetMotd</c>.</summary>
         public const string GetMotd = "GetMotd";
-        /// <summary>f:GetMySanctionStatus</summary>
+        /// <summary>The outgoing Flash message <c>GetMySanctionStatus</c>.</summary>
         public const string GetMySanctionStatus = "GetMySanctionStatus";
-        /// <summary>f:GetNextTargetedOffer</summary>
+        /// <summary>The outgoing Flash message <c>GetNextTargetedOffer</c>.</summary>
         public const string GetNextTargetedOffer = "GetNextTargetedOffer";
-        /// <summary>f:GetNftClaims</summary>
+        /// <summary>The outgoing Flash message <c>GetNftClaims</c>.</summary>
         public const string GetNftClaims = "GetNftClaims";
-        /// <summary>f:GetNftCollections</summary>
+        /// <summary>The outgoing Flash message <c>GetNftCollections</c>.</summary>
         public const string GetNftCollections = "GetNftCollections";
-        /// <summary>f:GetNftCredits</summary>
+        /// <summary>The outgoing Flash message <c>GetNftCredits</c>.</summary>
         public const string GetNftCredits = "GetNftCredits";
-        /// <summary>f:GetNftStoreOffers</summary>
+        /// <summary>The outgoing Flash message <c>GetNftStoreOffers</c>.</summary>
         public const string GetNftStoreOffers = "GetNftStoreOffers";
-        /// <summary>f:GetNftTradeInventory</summary>
+        /// <summary>The outgoing Flash message <c>GetNftTradeInventory</c>.</summary>
         public const string GetNftTradeInventory = "GetNftTradeInventory";
-        /// <summary>f:GetNftTransferFee</summary>
+        /// <summary>The outgoing Flash message <c>GetNftTransferFee</c>.</summary>
         public const string GetNftTransferFee = "GetNftTransferFee";
-        /// <summary>f:GetNowPlaying</summary>
+        /// <summary>The outgoing Flash message <c>GetNowPlaying</c>.</summary>
         public const string GetNowPlaying = "GetNowPlaying";
-        /// <summary>f:GetOccupiedTiles</summary>
+        /// <summary>The outgoing Flash message <c>GetOccupiedTiles</c>.</summary>
         public const string GetOccupiedTiles = "GetOccupiedTiles";
-        /// <summary>f:GetOfficialRooms</summary>
+        /// <summary>The outgoing Flash message <c>GetOfficialRooms</c>.</summary>
         public const string GetOfficialRooms = "GetOfficialRooms";
-        /// <summary>f:GetOfficialSongId</summary>
+        /// <summary>The outgoing Flash message <c>GetOfficialSongId</c>.</summary>
         public const string GetOfficialSongId = "GetOfficialSongId";
-        /// <summary>f:GetPendingCallsForHelp</summary>
+        /// <summary>The outgoing Flash message <c>GetPendingCallsForHelp</c>.</summary>
         public const string GetPendingCallsForHelp = "GetPendingCallsForHelp";
-        /// <summary>f:GetPetCommands</summary>
+        /// <summary>The outgoing Flash message <c>GetPetCommands</c>.</summary>
         public const string GetPetCommands = "GetPetCommands";
-        /// <summary>f:GetPetInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetPetInfo</c>.</summary>
         public const string GetPetInfo = "GetPetInfo";
-        /// <summary>f:GetPetInventory</summary>
+        /// <summary>The outgoing Flash message <c>GetPetInventory</c>.</summary>
         public const string GetPetInventory = "GetPetInventory";
-        /// <summary>f:GetPopularRoomTags</summary>
+        /// <summary>The outgoing Flash message <c>GetPopularRoomTags</c>.</summary>
         public const string GetPopularRoomTags = "GetPopularRoomTags";
-        /// <summary>f:GetProductOffer</summary>
+        /// <summary>The outgoing Flash message <c>GetProductOffer</c>.</summary>
         public const string GetProductOffer = "GetProductOffer";
-        /// <summary>f:GetPromoArticles</summary>
+        /// <summary>The outgoing Flash message <c>GetPromoArticles</c>.</summary>
         public const string GetPromoArticles = "GetPromoArticles";
-        /// <summary>f:GetQuests</summary>
+        /// <summary>The outgoing Flash message <c>GetQuests</c>.</summary>
         public const string GetQuests = "GetQuests";
-        /// <summary>f:GetQuizQuestions</summary>
+        /// <summary>The outgoing Flash message <c>GetQuizQuestions</c>.</summary>
         public const string GetQuizQuestions = "GetQuizQuestions";
-        /// <summary>f:GetRecyclerPrizes</summary>
+        /// <summary>The outgoing Flash message <c>GetRecyclerPrizes</c>.</summary>
         public const string GetRecyclerPrizes = "GetRecyclerPrizes";
-        /// <summary>f:GetRecyclerStatus</summary>
+        /// <summary>The outgoing Flash message <c>GetRecyclerStatus</c>.</summary>
         public const string GetRecyclerStatus = "GetRecyclerStatus";
-        /// <summary>f:GetRelationshipStatusInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetRelationshipStatusInfo</c>.</summary>
         public const string GetRelationshipStatusInfo = "GetRelationshipStatusInfo";
-        /// <summary>f:GetRentOrBuyoutOffer</summary>
+        /// <summary>The outgoing Flash message <c>GetRentOrBuyoutOffer</c>.</summary>
         public const string GetRentOrBuyoutOffer = "GetRentOrBuyoutOffer";
-        /// <summary>f:GetResolutionAchievements</summary>
+        /// <summary>The outgoing Flash message <c>GetResolutionAchievements</c>.</summary>
         public const string GetResolutionAchievements = "GetResolutionAchievements";
-        /// <summary>f:GetRoomAdPurchaseInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetRoomAdPurchaseInfo</c>.</summary>
         public const string GetRoomAdPurchaseInfo = "GetRoomAdPurchaseInfo";
-        /// <summary>f:GetRoomChatLog</summary>
+        /// <summary>The outgoing Flash message <c>GetRoomChatLog</c>.</summary>
         public const string GetRoomChatLog = "GetRoomChatLog";
-        /// <summary>f:GetRoomEntryTile</summary>
+        /// <summary>The outgoing Flash message <c>GetRoomEntryTile</c>.</summary>
         public const string GetRoomEntryTile = "GetRoomEntryTile";
-        /// <summary>f:GetRoomSettings</summary>
+        /// <summary>The outgoing Flash message <c>GetRoomSettings</c>.</summary>
         public const string GetRoomSettings = "GetRoomSettings";
-        /// <summary>f:GetRoomVisits</summary>
+        /// <summary>The outgoing Flash message <c>GetRoomVisits</c>.</summary>
         public const string GetRoomVisits = "GetRoomVisits";
-        /// <summary>f:GetSeasonalCalendarDaily</summary>
+        /// <summary>The outgoing Flash message <c>GetSeasonalCalendarDaily</c>.</summary>
         public const string GetSeasonalCalendarDaily = "GetSeasonalCalendarDaily";
-        /// <summary>f:GetSeasonalQuestsOnly</summary>
+        /// <summary>The outgoing Flash message <c>GetSeasonalQuestsOnly</c>.</summary>
         public const string GetSeasonalQuestsOnly = "GetSeasonalQuestsOnly";
-        /// <summary>f:GetSecondsUntil</summary>
+        /// <summary>The outgoing Flash message <c>GetSecondsUntil</c>.</summary>
         public const string GetSecondsUntil = "GetSecondsUntil";
-        /// <summary>f:GetSelectedBadges</summary>
+        /// <summary>The outgoing Flash message <c>GetSelectedBadges</c>.</summary>
         public const string GetSelectedBadges = "GetSelectedBadges";
-        /// <summary>f:GetSelectedNftWardrobeOutfit</summary>
+        /// <summary>The outgoing Flash message <c>GetSelectedNftWardrobeOutfit</c>.</summary>
         public const string GetSelectedNftWardrobeOutfit = "GetSelectedNftWardrobeOutfit";
-        /// <summary>f:GetSellablePetPalettes</summary>
+        /// <summary>The outgoing Flash message <c>GetSellablePetPalettes</c>.</summary>
         public const string GetSellablePetPalettes = "GetSellablePetPalettes";
-        /// <summary>f:GetSilver</summary>
+        /// <summary>The outgoing Flash message <c>GetSilver</c>.</summary>
         public const string GetSilver = "GetSilver";
-        /// <summary>f:GetSnowWarGameTokensOffer</summary>
+        /// <summary>The outgoing Flash message <c>GetSnowWarGameTokensOffer</c>.</summary>
         public const string GetSnowWarGameTokensOffer = "GetSnowWarGameTokensOffer";
-        /// <summary>f:GetSongInfo</summary>
+        /// <summary>The outgoing Flash message <c>GetSongInfo</c>.</summary>
         public const string GetSongInfo = "GetSongInfo";
-        /// <summary>f:GetSoundMachinePlayList</summary>
+        /// <summary>The outgoing Flash message <c>GetSoundMachinePlayList</c>.</summary>
         public const string GetSoundMachinePlayList = "GetSoundMachinePlayList";
-        /// <summary>f:GetSoundSettings</summary>
+        /// <summary>The outgoing Flash message <c>GetSoundSettings</c>.</summary>
         public const string GetSoundSettings = "GetSoundSettings";
-        /// <summary>f:GetTalentTrack</summary>
+        /// <summary>The outgoing Flash message <c>GetTalentTrack</c>.</summary>
         public const string GetTalentTrack = "GetTalentTrack";
-        /// <summary>f:GetTalentTrackLevel</summary>
+        /// <summary>The outgoing Flash message <c>GetTalentTrackLevel</c>.</summary>
         public const string GetTalentTrackLevel = "GetTalentTrackLevel";
-        /// <summary>f:GetTargetedOffer</summary>
+        /// <summary>The outgoing Flash message <c>GetTargetedOffer</c>.</summary>
         public const string GetTargetedOffer = "GetTargetedOffer";
-        /// <summary>f:GetThread</summary>
+        /// <summary>The outgoing Flash message <c>GetThread</c>.</summary>
         public const string GetThread = "GetThread";
-        /// <summary>f:GetThreads</summary>
+        /// <summary>The outgoing Flash message <c>GetThreads</c>.</summary>
         public const string GetThreads = "GetThreads";
-        /// <summary>f:GetUnreadForumsCount</summary>
+        /// <summary>The outgoing Flash message <c>GetUnreadForumsCount</c>.</summary>
         public const string GetUnreadForumsCount = "GetUnreadForumsCount";
-        /// <summary>f:GetUserChatLog</summary>
+        /// <summary>The outgoing Flash message <c>GetUserChatLog</c>.</summary>
         public const string GetUserChatLog = "GetUserChatLog";
-        /// <summary>f:GetUserEventCats</summary>
+        /// <summary>The outgoing Flash message <c>GetUserEventCats</c>.</summary>
         public const string GetUserEventCats = "GetUserEventCats";
-        /// <summary>f:GetUserFlatCats</summary>
+        /// <summary>The outgoing Flash message <c>GetUserFlatCats</c>.</summary>
         public const string GetUserFlatCats = "GetUserFlatCats";
-        /// <summary>f:GetUserGameAchievements</summary>
+        /// <summary>The outgoing Flash message <c>GetUserGameAchievements</c>.</summary>
         public const string GetUserGameAchievements = "GetUserGameAchievements";
-        /// <summary>f:GetUserNftChatStyles</summary>
+        /// <summary>The outgoing Flash message <c>GetUserNftChatStyles</c>.</summary>
         public const string GetUserNftChatStyles = "GetUserNftChatStyles";
-        /// <summary>f:GetUserNftWardrobe</summary>
+        /// <summary>The outgoing Flash message <c>GetUserNftWardrobe</c>.</summary>
         public const string GetUserNftWardrobe = "GetUserNftWardrobe";
-        /// <summary>f:GetUserSongDisks</summary>
+        /// <summary>The outgoing Flash message <c>GetUserSongDisks</c>.</summary>
         public const string GetUserSongDisks = "GetUserSongDisks";
-        /// <summary>f:GetWardrobe</summary>
+        /// <summary>The outgoing Flash message <c>GetWardrobe</c>.</summary>
         public const string GetWardrobe = "GetWardrobe";
-        /// <summary>f:GetWeeklyCompetitiveLeaderboard</summary>
+        /// <summary>The outgoing Flash message <c>GetWeeklyCompetitiveLeaderboard</c>.</summary>
         public const string GetWeeklyCompetitiveLeaderboard = "GetWeeklyCompetitiveLeaderboard";
-        /// <summary>f:GetWeeklyGameReward</summary>
+        /// <summary>The outgoing Flash message <c>GetWeeklyGameReward</c>.</summary>
         public const string GetWeeklyGameReward = "GetWeeklyGameReward";
-        /// <summary>f:GetWeeklyGameRewardWinners</summary>
+        /// <summary>The outgoing Flash message <c>GetWeeklyGameRewardWinners</c>.</summary>
         public const string GetWeeklyGameRewardWinners = "GetWeeklyGameRewardWinners";
-        /// <summary>f:GetYoutubeDisplayStatus</summary>
+        /// <summary>The outgoing Flash message <c>GetYoutubeDisplayStatus</c>.</summary>
         public const string GetYoutubeDisplayStatus = "GetYoutubeDisplayStatus";
-        /// <summary>f:GiveStarGemToUser</summary>
+        /// <summary>The outgoing Flash message <c>GiveStarGemToUser</c>.</summary>
         public const string GiveStarGemToUser = "GiveStarGemToUser";
-        /// <summary>f:GiveSupplementToPet</summary>
+        /// <summary>The outgoing Flash message <c>GiveSupplementToPet</c>.</summary>
         public const string GiveSupplementToPet = "GiveSupplementToPet";
-        /// <summary>f:GuideAdvertisementRead</summary>
+        /// <summary>The outgoing Flash message <c>GuideAdvertisementRead</c>.</summary>
         public const string GuideAdvertisementRead = "GuideAdvertisementRead";
-        /// <summary>f:GuideSessionCreate</summary>
+        /// <summary>The outgoing Flash message <c>GuideSessionCreate</c>.</summary>
         public const string GuideSessionCreate = "GuideSessionCreate";
-        /// <summary>f:GuideSessionFeedback</summary>
+        /// <summary>The outgoing Flash message <c>GuideSessionFeedback</c>.</summary>
         public const string GuideSessionFeedback = "GuideSessionFeedback";
-        /// <summary>f:GuideSessionGetRequesterRoom</summary>
+        /// <summary>The outgoing Flash message <c>GuideSessionGetRequesterRoom</c>.</summary>
         public const string GuideSessionGetRequesterRoom = "GuideSessionGetRequesterRoom";
-        /// <summary>f:GuideSessionGuideDecides</summary>
+        /// <summary>The outgoing Flash message <c>GuideSessionGuideDecides</c>.</summary>
         public const string GuideSessionGuideDecides = "GuideSessionGuideDecides";
-        /// <summary>f:GuideSessionInviteRequester</summary>
+        /// <summary>The outgoing Flash message <c>GuideSessionInviteRequester</c>.</summary>
         public const string GuideSessionInviteRequester = "GuideSessionInviteRequester";
-        /// <summary>f:GuideSessionIsTyping</summary>
+        /// <summary>The outgoing Flash message <c>GuideSessionIsTyping</c>.</summary>
         public const string GuideSessionIsTyping = "GuideSessionIsTyping";
-        /// <summary>f:GuideSessionMessage</summary>
+        /// <summary>The outgoing Flash message <c>GuideSessionMessage</c>.</summary>
         public const string GuideSessionMessage = "GuideSessionMessage";
-        /// <summary>f:GuideSessionOnDutyUpdate</summary>
+        /// <summary>The outgoing Flash message <c>GuideSessionOnDutyUpdate</c>.</summary>
         public const string GuideSessionOnDutyUpdate = "GuideSessionOnDutyUpdate";
-        /// <summary>f:GuideSessionReport</summary>
+        /// <summary>The outgoing Flash message <c>GuideSessionReport</c>.</summary>
         public const string GuideSessionReport = "GuideSessionReport";
-        /// <summary>f:GuideSessionRequesterCancels</summary>
+        /// <summary>The outgoing Flash message <c>GuideSessionRequesterCancels</c>.</summary>
         public const string GuideSessionRequesterCancels = "GuideSessionRequesterCancels";
-        /// <summary>f:GuideSessionResolved</summary>
+        /// <summary>The outgoing Flash message <c>GuideSessionResolved</c>.</summary>
         public const string GuideSessionResolved = "GuideSessionResolved";
-        /// <summary>f:GuildBaseSearch</summary>
+        /// <summary>The outgoing Flash message <c>GuildBaseSearch</c>.</summary>
         public const string GuildBaseSearch = "GuildBaseSearch";
-        /// <summary>f:HabboSearch</summary>
+        /// <summary>The outgoing Flash message <c>HabboSearch</c>.</summary>
         public const string HabboSearch = "HabboSearch";
-        /// <summary>f:HarvestPet</summary>
+        /// <summary>The outgoing Flash message <c>HarvestPet</c>.</summary>
         public const string HarvestPet = "HarvestPet";
-        /// <summary>f:HasClaimedProduct</summary>
+        /// <summary>The outgoing Flash message <c>HasClaimedProduct</c>.</summary>
         public const string HasClaimedProduct = "HasClaimedProduct";
-        /// <summary>f:IgnoreUser</summary>
+        /// <summary>The outgoing Flash message <c>IgnoreUser</c>.</summary>
         public const string IgnoreUser = "IgnoreUser";
-        /// <summary>f:IncomeRewardClaim</summary>
+        /// <summary>The outgoing Flash message <c>IncomeRewardClaim</c>.</summary>
         public const string IncomeRewardClaim = "IncomeRewardClaim";
-        /// <summary>f:IncomeRewardStatus</summary>
+        /// <summary>The outgoing Flash message <c>IncomeRewardStatus</c>.</summary>
         public const string IncomeRewardStatus = "IncomeRewardStatus";
-        /// <summary>f:InfoRetrieve</summary>
+        /// <summary>The outgoing Flash message <c>InfoRetrieve</c>.</summary>
         public const string InfoRetrieve = "InfoRetrieve";
-        /// <summary>f:InitDiffieHandshake</summary>
+        /// <summary>The outgoing Flash message <c>InitDiffieHandshake</c>.</summary>
         public const string InitDiffieHandshake = "InitDiffieHandshake";
-        /// <summary>f:InterstitialShown</summary>
+        /// <summary>The outgoing Flash message <c>InterstitialShown</c>.</summary>
         public const string InterstitialShown = "InterstitialShown";
-        /// <summary>f:JoinHabboGroup</summary>
+        /// <summary>The outgoing Flash message <c>JoinHabboGroup</c>.</summary>
         public const string JoinHabboGroup = "JoinHabboGroup";
-        /// <summary>f:KickMember</summary>
+        /// <summary>The outgoing Flash message <c>KickMember</c>.</summary>
         public const string KickMember = "KickMember";
-        /// <summary>f:KickUser</summary>
+        /// <summary>The outgoing Flash message <c>KickUser</c>.</summary>
         public const string KickUser = "KickUser";
-        /// <summary>f:LagWarningReport</summary>
+        /// <summary>The outgoing Flash message <c>LagWarningReport</c>.</summary>
         public const string LagWarningReport = "LagWarningReport";
-        /// <summary>f:LatencyPingReport</summary>
+        /// <summary>The outgoing Flash message <c>LatencyPingReport</c>.</summary>
         public const string LatencyPingReport = "LatencyPingReport";
-        /// <summary>f:LatencyPingRequest</summary>
+        /// <summary>The outgoing Flash message <c>LatencyPingRequest</c>.</summary>
         public const string LatencyPingRequest = "LatencyPingRequest";
-        /// <summary>f:LetUserIn</summary>
+        /// <summary>The outgoing Flash message <c>LetUserIn</c>.</summary>
         public const string LetUserIn = "LetUserIn";
-        /// <summary>f:LockAllChests</summary>
+        /// <summary>The outgoing Flash message <c>LockAllChests</c>.</summary>
         public const string LockAllChests = "LockAllChests";
-        /// <summary>f:LookTo</summary>
+        /// <summary>The outgoing Flash message <c>LookTo</c>.</summary>
         public const string LookTo = "LookTo";
-        /// <summary>f:MakeOffer</summary>
+        /// <summary>The outgoing Flash message <c>MakeOffer</c>.</summary>
         public const string MakeOffer = "MakeOffer";
-        /// <summary>f:MarkCatalogNewAdditionsPageOpened</summary>
+        /// <summary>The outgoing Flash message <c>MarkCatalogNewAdditionsPageOpened</c>.</summary>
         public const string MarkCatalogNewAdditionsPageOpened = "MarkCatalogNewAdditionsPageOpened";
-        /// <summary>f:MessengerInit</summary>
+        /// <summary>The outgoing Flash message <c>MessengerInit</c>.</summary>
         public const string MessengerInit = "MessengerInit";
-        /// <summary>f:MintItem</summary>
+        /// <summary>The outgoing Flash message <c>MintItem</c>.</summary>
         public const string MintItem = "MintItem";
-        /// <summary>f:ModAlert</summary>
+        /// <summary>The outgoing Flash message <c>ModAlert</c>.</summary>
         public const string ModAlert = "ModAlert";
-        /// <summary>f:ModBan</summary>
+        /// <summary>The outgoing Flash message <c>ModBan</c>.</summary>
         public const string ModBan = "ModBan";
-        /// <summary>f:ModKick</summary>
+        /// <summary>The outgoing Flash message <c>ModKick</c>.</summary>
         public const string ModKick = "ModKick";
-        /// <summary>f:ModMessage</summary>
+        /// <summary>The outgoing Flash message <c>ModMessage</c>.</summary>
         public const string ModMessage = "ModMessage";
-        /// <summary>f:ModMute</summary>
+        /// <summary>The outgoing Flash message <c>ModMute</c>.</summary>
         public const string ModMute = "ModMute";
-        /// <summary>f:ModToolPreferences</summary>
+        /// <summary>The outgoing Flash message <c>ModToolPreferences</c>.</summary>
         public const string ModToolPreferences = "ModToolPreferences";
-        /// <summary>f:ModToolSanction</summary>
+        /// <summary>The outgoing Flash message <c>ModToolSanction</c>.</summary>
         public const string ModToolSanction = "ModToolSanction";
-        /// <summary>f:ModTradingLock</summary>
+        /// <summary>The outgoing Flash message <c>ModTradingLock</c>.</summary>
         public const string ModTradingLock = "ModTradingLock";
-        /// <summary>f:ModerateMessage</summary>
+        /// <summary>The outgoing Flash message <c>ModerateMessage</c>.</summary>
         public const string ModerateMessage = "ModerateMessage";
-        /// <summary>f:ModerateRoom</summary>
+        /// <summary>The outgoing Flash message <c>ModerateRoom</c>.</summary>
         public const string ModerateRoom = "ModerateRoom";
-        /// <summary>f:ModerateThread</summary>
+        /// <summary>The outgoing Flash message <c>ModerateThread</c>.</summary>
         public const string ModerateThread = "ModerateThread";
-        /// <summary>f:ModeratorAction</summary>
+        /// <summary>The outgoing Flash message <c>ModeratorAction</c>.</summary>
         public const string ModeratorAction = "ModeratorAction";
-        /// <summary>f:MountPet</summary>
+        /// <summary>The outgoing Flash message <c>MountPet</c>.</summary>
         public const string MountPet = "MountPet";
-        /// <summary>f:MoveAvatar</summary>
+        /// <summary>The outgoing Flash message <c>MoveAvatar</c>.</summary>
         public const string MoveAvatar = "MoveAvatar";
-        /// <summary>f:MoveEntityInFlat</summary>
+        /// <summary>The outgoing Flash message <c>MoveEntityInFlat</c>.</summary>
         public const string MoveEntityInFlat = "MoveEntityInFlat";
-        /// <summary>f:MoveObject</summary>
+        /// <summary>The outgoing Flash message <c>MoveObject</c>.</summary>
         public const string MoveObject = "MoveObject";
-        /// <summary>f:MovePet</summary>
+        /// <summary>The outgoing Flash message <c>MovePet</c>.</summary>
         public const string MovePet = "MovePet";
-        /// <summary>f:MoveWallItem</summary>
+        /// <summary>The outgoing Flash message <c>MoveWallItem</c>.</summary>
         public const string MoveWallItem = "MoveWallItem";
-        /// <summary>f:MuteAllInRoom</summary>
+        /// <summary>The outgoing Flash message <c>MuteAllInRoom</c>.</summary>
         public const string MuteAllInRoom = "MuteAllInRoom";
-        /// <summary>f:MuteUser</summary>
+        /// <summary>The outgoing Flash message <c>MuteUser</c>.</summary>
         public const string MuteUser = "MuteUser";
-        /// <summary>f:MyFavouriteRoomsSearch</summary>
+        /// <summary>The outgoing Flash message <c>MyFavouriteRoomsSearch</c>.</summary>
         public const string MyFavouriteRoomsSearch = "MyFavouriteRoomsSearch";
-        /// <summary>f:MyFrequentRoomHistorySearch</summary>
+        /// <summary>The outgoing Flash message <c>MyFrequentRoomHistorySearch</c>.</summary>
         public const string MyFrequentRoomHistorySearch = "MyFrequentRoomHistorySearch";
-        /// <summary>f:MyFriendsRoomsSearch</summary>
+        /// <summary>The outgoing Flash message <c>MyFriendsRoomsSearch</c>.</summary>
         public const string MyFriendsRoomsSearch = "MyFriendsRoomsSearch";
-        /// <summary>f:MyGuildBasesSearch</summary>
+        /// <summary>The outgoing Flash message <c>MyGuildBasesSearch</c>.</summary>
         public const string MyGuildBasesSearch = "MyGuildBasesSearch";
-        /// <summary>f:MyRecommendedRooms</summary>
+        /// <summary>The outgoing Flash message <c>MyRecommendedRooms</c>.</summary>
         public const string MyRecommendedRooms = "MyRecommendedRooms";
-        /// <summary>f:MyRoomHistorySearch</summary>
+        /// <summary>The outgoing Flash message <c>MyRoomHistorySearch</c>.</summary>
         public const string MyRoomHistorySearch = "MyRoomHistorySearch";
-        /// <summary>f:MyRoomRightsSearch</summary>
+        /// <summary>The outgoing Flash message <c>MyRoomRightsSearch</c>.</summary>
         public const string MyRoomRightsSearch = "MyRoomRightsSearch";
-        /// <summary>f:MyRoomsSearch</summary>
+        /// <summary>The outgoing Flash message <c>MyRoomsSearch</c>.</summary>
         public const string MyRoomsSearch = "MyRoomsSearch";
-        /// <summary>f:MysteryBoxWaitingCanceled</summary>
+        /// <summary>The outgoing Flash message <c>MysteryBoxWaitingCanceled</c>.</summary>
         public const string MysteryBoxWaitingCanceled = "MysteryBoxWaitingCanceled";
-        /// <summary>f:NavigatorAddCollapsedCategory</summary>
+        /// <summary>The outgoing Flash message <c>NavigatorAddCollapsedCategory</c>.</summary>
         public const string NavigatorAddCollapsedCategory = "NavigatorAddCollapsedCategory";
-        /// <summary>f:NavigatorAddSavedSearch</summary>
+        /// <summary>The outgoing Flash message <c>NavigatorAddSavedSearch</c>.</summary>
         public const string NavigatorAddSavedSearch = "NavigatorAddSavedSearch";
-        /// <summary>f:NavigatorDeleteSavedSearch</summary>
+        /// <summary>The outgoing Flash message <c>NavigatorDeleteSavedSearch</c>.</summary>
         public const string NavigatorDeleteSavedSearch = "NavigatorDeleteSavedSearch";
-        /// <summary>f:NavigatorRemoveCollapsedCategory</summary>
+        /// <summary>The outgoing Flash message <c>NavigatorRemoveCollapsedCategory</c>.</summary>
         public const string NavigatorRemoveCollapsedCategory = "NavigatorRemoveCollapsedCategory";
-        /// <summary>f:NavigatorSetSearchCodeViewMode</summary>
+        /// <summary>The outgoing Flash message <c>NavigatorSetSearchCodeViewMode</c>.</summary>
         public const string NavigatorSetSearchCodeViewMode = "NavigatorSetSearchCodeViewMode";
-        /// <summary>f:NewNavigatorInit</summary>
+        /// <summary>The outgoing Flash message <c>NewNavigatorInit</c>.</summary>
         public const string NewNavigatorInit = "NewNavigatorInit";
-        /// <summary>f:NewNavigatorSearch</summary>
+        /// <summary>The outgoing Flash message <c>NewNavigatorSearch</c>.</summary>
         public const string NewNavigatorSearch = "NewNavigatorSearch";
-        /// <summary>f:NewUserExperienceGetGifts</summary>
+        /// <summary>The outgoing Flash message <c>NewUserExperienceGetGifts</c>.</summary>
         public const string NewUserExperienceGetGifts = "NewUserExperienceGetGifts";
-        /// <summary>f:NewUserExperienceScriptProceed</summary>
+        /// <summary>The outgoing Flash message <c>NewUserExperienceScriptProceed</c>.</summary>
         public const string NewUserExperienceScriptProceed = "NewUserExperienceScriptProceed";
-        /// <summary>f:NftCollectiblesClaimBonusItem</summary>
+        /// <summary>The outgoing Flash message <c>NftCollectiblesClaimBonusItem</c>.</summary>
         public const string NftCollectiblesClaimBonusItem = "NftCollectiblesClaimBonusItem";
-        /// <summary>f:NftCollectiblesClaimRewardItem</summary>
+        /// <summary>The outgoing Flash message <c>NftCollectiblesClaimRewardItem</c>.</summary>
         public const string NftCollectiblesClaimRewardItem = "NftCollectiblesClaimRewardItem";
-        /// <summary>f:NftStorePurchase</summary>
+        /// <summary>The outgoing Flash message <c>NftStorePurchase</c>.</summary>
         public const string NftStorePurchase = "NftStorePurchase";
-        /// <summary>f:NftTransferAssets</summary>
+        /// <summary>The outgoing Flash message <c>NftTransferAssets</c>.</summary>
         public const string NftTransferAssets = "NftTransferAssets";
-        /// <summary>f:Open</summary>
+        /// <summary>The outgoing Flash message <c>Open</c>.</summary>
         public const string Open = "Open";
-        /// <summary>f:OpenCampaignCalendarDoor</summary>
+        /// <summary>The outgoing Flash message <c>OpenCampaignCalendarDoor</c>.</summary>
         public const string OpenCampaignCalendarDoor = "OpenCampaignCalendarDoor";
-        /// <summary>f:OpenCampaignCalendarDoorAsStaff</summary>
+        /// <summary>The outgoing Flash message <c>OpenCampaignCalendarDoorAsStaff</c>.</summary>
         public const string OpenCampaignCalendarDoorAsStaff = "OpenCampaignCalendarDoorAsStaff";
-        /// <summary>f:OpenChestAndGetContents</summary>
+        /// <summary>The outgoing Flash message <c>OpenChestAndGetContents</c>.</summary>
         public const string OpenChestAndGetContents = "OpenChestAndGetContents";
-        /// <summary>f:OpenFlatConnection</summary>
+        /// <summary>The outgoing Flash message <c>OpenFlatConnection</c>.</summary>
         public const string OpenFlatConnection = "OpenFlatConnection";
-        /// <summary>f:OpenMysteryTrophy</summary>
+        /// <summary>The outgoing Flash message <c>OpenMysteryTrophy</c>.</summary>
         public const string OpenMysteryTrophy = "OpenMysteryTrophy";
-        /// <summary>f:OpenPetPackage</summary>
+        /// <summary>The outgoing Flash message <c>OpenPetPackage</c>.</summary>
         public const string OpenPetPackage = "OpenPetPackage";
-        /// <summary>f:OpenQuestTracker</summary>
+        /// <summary>The outgoing Flash message <c>OpenQuestTracker</c>.</summary>
         public const string OpenQuestTracker = "OpenQuestTracker";
-        /// <summary>f:OpenTrading</summary>
+        /// <summary>The outgoing Flash message <c>OpenTrading</c>.</summary>
         public const string OpenTrading = "OpenTrading";
-        /// <summary>f:PassCarryItem</summary>
+        /// <summary>The outgoing Flash message <c>PassCarryItem</c>.</summary>
         public const string PassCarryItem = "PassCarryItem";
-        /// <summary>f:PassCarryItemToPet</summary>
+        /// <summary>The outgoing Flash message <c>PassCarryItemToPet</c>.</summary>
         public const string PassCarryItemToPet = "PassCarryItemToPet";
-        /// <summary>f:PeerUsersClassification</summary>
+        /// <summary>The outgoing Flash message <c>PeerUsersClassification</c>.</summary>
         public const string PeerUsersClassification = "PeerUsersClassification";
-        /// <summary>f:PerformanceLog</summary>
+        /// <summary>The outgoing Flash message <c>PerformanceLog</c>.</summary>
         public const string PerformanceLog = "PerformanceLog";
-        /// <summary>f:PetSelected</summary>
+        /// <summary>The outgoing Flash message <c>PetSelected</c>.</summary>
         public const string PetSelected = "PetSelected";
-        /// <summary>f:PhotoCompetition</summary>
+        /// <summary>The outgoing Flash message <c>PhotoCompetition</c>.</summary>
         public const string PhotoCompetition = "PhotoCompetition";
-        /// <summary>f:PickIssues</summary>
+        /// <summary>The outgoing Flash message <c>PickIssues</c>.</summary>
         public const string PickIssues = "PickIssues";
-        /// <summary>f:PickupObject</summary>
+        /// <summary>The outgoing Flash message <c>PickupObject</c>.</summary>
         public const string PickupObject = "PickupObject";
-        /// <summary>f:PlaceBot</summary>
+        /// <summary>The outgoing Flash message <c>PlaceBot</c>.</summary>
         public const string PlaceBot = "PlaceBot";
-        /// <summary>f:PlaceObject</summary>
+        /// <summary>The outgoing Flash message <c>PlaceObject</c>.</summary>
         public const string PlaceObject = "PlaceObject";
-        /// <summary>f:PlacePet</summary>
+        /// <summary>The outgoing Flash message <c>PlacePet</c>.</summary>
         public const string PlacePet = "PlacePet";
-        /// <summary>f:PlacePostIt</summary>
+        /// <summary>The outgoing Flash message <c>PlacePostIt</c>.</summary>
         public const string PlacePostIt = "PlacePostIt";
-        /// <summary>f:PollAnswer</summary>
+        /// <summary>The outgoing Flash message <c>PollAnswer</c>.</summary>
         public const string PollAnswer = "PollAnswer";
-        /// <summary>f:PollReject</summary>
+        /// <summary>The outgoing Flash message <c>PollReject</c>.</summary>
         public const string PollReject = "PollReject";
-        /// <summary>f:PollStart</summary>
+        /// <summary>The outgoing Flash message <c>PollStart</c>.</summary>
         public const string PollStart = "PollStart";
-        /// <summary>f:Pong</summary>
+        /// <summary>The outgoing Flash message <c>Pong</c>.</summary>
         public const string Pong = "Pong";
-        /// <summary>f:PopularRoomsSearch</summary>
+        /// <summary>The outgoing Flash message <c>PopularRoomsSearch</c>.</summary>
         public const string PopularRoomsSearch = "PopularRoomsSearch";
-        /// <summary>f:PostMessage</summary>
+        /// <summary>The outgoing Flash message <c>PostMessage</c>.</summary>
         public const string PostMessage = "PostMessage";
-        /// <summary>f:PostQuizAnswers</summary>
+        /// <summary>The outgoing Flash message <c>PostQuizAnswers</c>.</summary>
         public const string PostQuizAnswers = "PostQuizAnswers";
-        /// <summary>f:PresentOpen</summary>
+        /// <summary>The outgoing Flash message <c>PresentOpen</c>.</summary>
         public const string PresentOpen = "PresentOpen";
-        /// <summary>f:ProgressTreasureHunt</summary>
+        /// <summary>The outgoing Flash message <c>ProgressTreasureHunt</c>.</summary>
         public const string ProgressTreasureHunt = "ProgressTreasureHunt";
-        /// <summary>f:PublishPhoto</summary>
+        /// <summary>The outgoing Flash message <c>PublishPhoto</c>.</summary>
         public const string PublishPhoto = "PublishPhoto";
-        /// <summary>f:PurchaseBasicMembershipExtension</summary>
+        /// <summary>The outgoing Flash message <c>PurchaseBasicMembershipExtension</c>.</summary>
         public const string PurchaseBasicMembershipExtension = "PurchaseBasicMembershipExtension";
-        /// <summary>f:PurchaseFromCatalog</summary>
+        /// <summary>The outgoing Flash message <c>PurchaseFromCatalog</c>.</summary>
         public const string PurchaseFromCatalog = "PurchaseFromCatalog";
-        /// <summary>f:PurchaseFromCatalogAsGift</summary>
+        /// <summary>The outgoing Flash message <c>PurchaseFromCatalogAsGift</c>.</summary>
         public const string PurchaseFromCatalogAsGift = "PurchaseFromCatalogAsGift";
-        /// <summary>f:PurchaseMintToken</summary>
+        /// <summary>The outgoing Flash message <c>PurchaseMintToken</c>.</summary>
         public const string PurchaseMintToken = "PurchaseMintToken";
-        /// <summary>f:PurchasePhoto</summary>
+        /// <summary>The outgoing Flash message <c>PurchasePhoto</c>.</summary>
         public const string PurchasePhoto = "PurchasePhoto";
-        /// <summary>f:PurchaseRewardTrackPremium</summary>
+        /// <summary>The outgoing Flash message <c>PurchaseRewardTrackPremium</c>.</summary>
         public const string PurchaseRewardTrackPremium = "PurchaseRewardTrackPremium";
-        /// <summary>f:PurchaseRoomAd</summary>
+        /// <summary>The outgoing Flash message <c>PurchaseRoomAd</c>.</summary>
         public const string PurchaseRoomAd = "PurchaseRoomAd";
-        /// <summary>f:PurchaseSnowWarGameTokensOffer</summary>
+        /// <summary>The outgoing Flash message <c>PurchaseSnowWarGameTokensOffer</c>.</summary>
         public const string PurchaseSnowWarGameTokensOffer = "PurchaseSnowWarGameTokensOffer";
-        /// <summary>f:PurchaseTargetedOffer</summary>
+        /// <summary>The outgoing Flash message <c>PurchaseTargetedOffer</c>.</summary>
         public const string PurchaseTargetedOffer = "PurchaseTargetedOffer";
-        /// <summary>f:PurchaseVipMembershipExtension</summary>
+        /// <summary>The outgoing Flash message <c>PurchaseVipMembershipExtension</c>.</summary>
         public const string PurchaseVipMembershipExtension = "PurchaseVipMembershipExtension";
-        /// <summary>f:Quit</summary>
+        /// <summary>The outgoing Flash message <c>Quit</c>.</summary>
         public const string Quit = "Quit";
-        /// <summary>f:RateFlat</summary>
+        /// <summary>The outgoing Flash message <c>RateFlat</c>.</summary>
         public const string RateFlat = "RateFlat";
-        /// <summary>f:RecycleItems</summary>
+        /// <summary>The outgoing Flash message <c>RecycleItems</c>.</summary>
         public const string RecycleItems = "RecycleItems";
-        /// <summary>f:RedeemCommunityGoalPrize</summary>
+        /// <summary>The outgoing Flash message <c>RedeemCommunityGoalPrize</c>.</summary>
         public const string RedeemCommunityGoalPrize = "RedeemCommunityGoalPrize";
-        /// <summary>f:RedeemMarketplaceOfferCredits</summary>
+        /// <summary>The outgoing Flash message <c>RedeemMarketplaceOfferCredits</c>.</summary>
         public const string RedeemMarketplaceOfferCredits = "RedeemMarketplaceOfferCredits";
-        /// <summary>f:RedeemNftLootBox</summary>
+        /// <summary>The outgoing Flash message <c>RedeemNftLootBox</c>.</summary>
         public const string RedeemNftLootBox = "RedeemNftLootBox";
-        /// <summary>f:RedeemVoucher</summary>
+        /// <summary>The outgoing Flash message <c>RedeemVoucher</c>.</summary>
         public const string RedeemVoucher = "RedeemVoucher";
-        /// <summary>f:RejectMembershipRequest</summary>
+        /// <summary>The outgoing Flash message <c>RejectMembershipRequest</c>.</summary>
         public const string RejectMembershipRequest = "RejectMembershipRequest";
-        /// <summary>f:RejectQuest</summary>
+        /// <summary>The outgoing Flash message <c>RejectQuest</c>.</summary>
         public const string RejectQuest = "RejectQuest";
-        /// <summary>f:ReleaseIssues</summary>
+        /// <summary>The outgoing Flash message <c>ReleaseIssues</c>.</summary>
         public const string ReleaseIssues = "ReleaseIssues";
-        /// <summary>f:RemoveAdminRightsFromMember</summary>
+        /// <summary>The outgoing Flash message <c>RemoveAdminRightsFromMember</c>.</summary>
         public const string RemoveAdminRightsFromMember = "RemoveAdminRightsFromMember";
-        /// <summary>f:RemoveAllRights</summary>
+        /// <summary>The outgoing Flash message <c>RemoveAllRights</c>.</summary>
         public const string RemoveAllRights = "RemoveAllRights";
-        /// <summary>f:RemoveBotFromFlat</summary>
+        /// <summary>The outgoing Flash message <c>RemoveBotFromFlat</c>.</summary>
         public const string RemoveBotFromFlat = "RemoveBotFromFlat";
-        /// <summary>f:RemoveFriend</summary>
+        /// <summary>The outgoing Flash message <c>RemoveFriend</c>.</summary>
         public const string RemoveFriend = "RemoveFriend";
-        /// <summary>f:RemoveFromCustomFilter</summary>
+        /// <summary>The outgoing Flash message <c>RemoveFromCustomFilter</c>.</summary>
         public const string RemoveFromCustomFilter = "RemoveFromCustomFilter";
-        /// <summary>f:RemoveItem</summary>
+        /// <summary>The outgoing Flash message <c>RemoveItem</c>.</summary>
         public const string RemoveItem = "RemoveItem";
-        /// <summary>f:RemoveItemFromTrade</summary>
+        /// <summary>The outgoing Flash message <c>RemoveItemFromTrade</c>.</summary>
         public const string RemoveItemFromTrade = "RemoveItemFromTrade";
-        /// <summary>f:RemoveJukeboxDisk</summary>
+        /// <summary>The outgoing Flash message <c>RemoveJukeboxDisk</c>.</summary>
         public const string RemoveJukeboxDisk = "RemoveJukeboxDisk";
-        /// <summary>f:RemoveNftFromTrade</summary>
+        /// <summary>The outgoing Flash message <c>RemoveNftFromTrade</c>.</summary>
         public const string RemoveNftFromTrade = "RemoveNftFromTrade";
-        /// <summary>f:RemoveOwnRoomRightsRoom</summary>
+        /// <summary>The outgoing Flash message <c>RemoveOwnRoomRightsRoom</c>.</summary>
         public const string RemoveOwnRoomRightsRoom = "RemoveOwnRoomRightsRoom";
-        /// <summary>f:RemovePetFromFlat</summary>
+        /// <summary>The outgoing Flash message <c>RemovePetFromFlat</c>.</summary>
         public const string RemovePetFromFlat = "RemovePetFromFlat";
-        /// <summary>f:RemoveRights</summary>
+        /// <summary>The outgoing Flash message <c>RemoveRights</c>.</summary>
         public const string RemoveRights = "RemoveRights";
-        /// <summary>f:RemoveSaddleFromPet</summary>
+        /// <summary>The outgoing Flash message <c>RemoveSaddleFromPet</c>.</summary>
         public const string RemoveSaddleFromPet = "RemoveSaddleFromPet";
-        /// <summary>f:RenderRoom</summary>
+        /// <summary>The outgoing Flash message <c>RenderRoom</c>.</summary>
         public const string RenderRoom = "RenderRoom";
-        /// <summary>f:RenderRoomThumbnail</summary>
+        /// <summary>The outgoing Flash message <c>RenderRoomThumbnail</c>.</summary>
         public const string RenderRoomThumbnail = "RenderRoomThumbnail";
-        /// <summary>f:RentableSpaceCancelRent</summary>
+        /// <summary>The outgoing Flash message <c>RentableSpaceCancelRent</c>.</summary>
         public const string RentableSpaceCancelRent = "RentableSpaceCancelRent";
-        /// <summary>f:RentableSpaceRent</summary>
+        /// <summary>The outgoing Flash message <c>RentableSpaceRent</c>.</summary>
         public const string RentableSpaceRent = "RentableSpaceRent";
-        /// <summary>f:RentableSpaceStatus</summary>
+        /// <summary>The outgoing Flash message <c>RentableSpaceStatus</c>.</summary>
         public const string RentableSpaceStatus = "RentableSpaceStatus";
-        /// <summary>f:ReplenishRespect</summary>
+        /// <summary>The outgoing Flash message <c>ReplenishRespect</c>.</summary>
         public const string ReplenishRespect = "ReplenishRespect";
-        /// <summary>f:RequestAbadge</summary>
+        /// <summary>The outgoing Flash message <c>RequestAbadge</c>.</summary>
         public const string RequestAbadge = "RequestAbadge";
-        /// <summary>f:RequestCameraConfiguration</summary>
+        /// <summary>The outgoing Flash message <c>RequestCameraConfiguration</c>.</summary>
         public const string RequestCameraConfiguration = "RequestCameraConfiguration";
-        /// <summary>f:RequestFriend</summary>
+        /// <summary>The outgoing Flash message <c>RequestFriend</c>.</summary>
         public const string RequestFriend = "RequestFriend";
-        /// <summary>f:RequestFurniInventory</summary>
+        /// <summary>The outgoing Flash message <c>RequestFurniInventory</c>.</summary>
         public const string RequestFurniInventory = "RequestFurniInventory";
-        /// <summary>f:RequestFurniInventoryWhenNotInRoom</summary>
+        /// <summary>The outgoing Flash message <c>RequestFurniInventoryWhenNotInRoom</c>.</summary>
         public const string RequestFurniInventoryWhenNotInRoom = "RequestFurniInventoryWhenNotInRoom";
-        /// <summary>f:RequestRoomPropertySet</summary>
+        /// <summary>The outgoing Flash message <c>RequestRoomPropertySet</c>.</summary>
         public const string RequestRoomPropertySet = "RequestRoomPropertySet";
-        /// <summary>f:ResetPhoneNumberState</summary>
+        /// <summary>The outgoing Flash message <c>ResetPhoneNumberState</c>.</summary>
         public const string ResetPhoneNumberState = "ResetPhoneNumberState";
-        /// <summary>f:ResetResolutionAchievement</summary>
+        /// <summary>The outgoing Flash message <c>ResetResolutionAchievement</c>.</summary>
         public const string ResetResolutionAchievement = "ResetResolutionAchievement";
-        /// <summary>f:ResetUnseenItemIds</summary>
+        /// <summary>The outgoing Flash message <c>ResetUnseenItemIds</c>.</summary>
         public const string ResetUnseenItemIds = "ResetUnseenItemIds";
-        /// <summary>f:ResetUnseenItems</summary>
+        /// <summary>The outgoing Flash message <c>ResetUnseenItems</c>.</summary>
         public const string ResetUnseenItems = "ResetUnseenItems";
-        /// <summary>f:RespectPet</summary>
+        /// <summary>The outgoing Flash message <c>RespectPet</c>.</summary>
         public const string RespectPet = "RespectPet";
-        /// <summary>f:RespectUser</summary>
+        /// <summary>The outgoing Flash message <c>RespectUser</c>.</summary>
         public const string RespectUser = "RespectUser";
-        /// <summary>f:RoomAdEventTabAdClicked</summary>
+        /// <summary>The outgoing Flash message <c>RoomAdEventTabAdClicked</c>.</summary>
         public const string RoomAdEventTabAdClicked = "RoomAdEventTabAdClicked";
-        /// <summary>f:RoomAdEventTabViewed</summary>
+        /// <summary>The outgoing Flash message <c>RoomAdEventTabViewed</c>.</summary>
         public const string RoomAdEventTabViewed = "RoomAdEventTabViewed";
-        /// <summary>f:RoomAdPurchaseInitiated</summary>
+        /// <summary>The outgoing Flash message <c>RoomAdPurchaseInitiated</c>.</summary>
         public const string RoomAdPurchaseInitiated = "RoomAdPurchaseInitiated";
-        /// <summary>f:RoomAdSearch</summary>
+        /// <summary>The outgoing Flash message <c>RoomAdSearch</c>.</summary>
         public const string RoomAdSearch = "RoomAdSearch";
-        /// <summary>f:RoomCompetitionInit</summary>
+        /// <summary>The outgoing Flash message <c>RoomCompetitionInit</c>.</summary>
         public const string RoomCompetitionInit = "RoomCompetitionInit";
-        /// <summary>f:RoomDimmerChangeState</summary>
+        /// <summary>The outgoing Flash message <c>RoomDimmerChangeState</c>.</summary>
         public const string RoomDimmerChangeState = "RoomDimmerChangeState";
-        /// <summary>f:RoomDimmerGetPresets</summary>
+        /// <summary>The outgoing Flash message <c>RoomDimmerGetPresets</c>.</summary>
         public const string RoomDimmerGetPresets = "RoomDimmerGetPresets";
-        /// <summary>f:RoomDimmerSavePreset</summary>
+        /// <summary>The outgoing Flash message <c>RoomDimmerSavePreset</c>.</summary>
         public const string RoomDimmerSavePreset = "RoomDimmerSavePreset";
-        /// <summary>f:RoomNetworkOpenConnection</summary>
+        /// <summary>The outgoing Flash message <c>RoomNetworkOpenConnection</c>.</summary>
         public const string RoomNetworkOpenConnection = "RoomNetworkOpenConnection";
-        /// <summary>f:RoomTextSearch</summary>
+        /// <summary>The outgoing Flash message <c>RoomTextSearch</c>.</summary>
         public const string RoomTextSearch = "RoomTextSearch";
-        /// <summary>f:RoomUsersClassification</summary>
+        /// <summary>The outgoing Flash message <c>RoomUsersClassification</c>.</summary>
         public const string RoomUsersClassification = "RoomUsersClassification";
-        /// <summary>f:RoomsWhereMyFriendsAreSearch</summary>
+        /// <summary>The outgoing Flash message <c>RoomsWhereMyFriendsAreSearch</c>.</summary>
         public const string RoomsWhereMyFriendsAreSearch = "RoomsWhereMyFriendsAreSearch";
-        /// <summary>f:RoomsWithHighestScoreSearch</summary>
+        /// <summary>The outgoing Flash message <c>RoomsWithHighestScoreSearch</c>.</summary>
         public const string RoomsWithHighestScoreSearch = "RoomsWithHighestScoreSearch";
-        /// <summary>f:SaveRoomSettings</summary>
+        /// <summary>The outgoing Flash message <c>SaveRoomSettings</c>.</summary>
         public const string SaveRoomSettings = "SaveRoomSettings";
-        /// <summary>f:SaveUserNftWardrobe</summary>
+        /// <summary>The outgoing Flash message <c>SaveUserNftWardrobe</c>.</summary>
         public const string SaveUserNftWardrobe = "SaveUserNftWardrobe";
-        /// <summary>f:SaveWardrobeOutfit</summary>
+        /// <summary>The outgoing Flash message <c>SaveWardrobeOutfit</c>.</summary>
         public const string SaveWardrobeOutfit = "SaveWardrobeOutfit";
-        /// <summary>f:ScrGetKickbackInfo</summary>
+        /// <summary>The outgoing Flash message <c>ScrGetKickbackInfo</c>.</summary>
         public const string ScrGetKickbackInfo = "ScrGetKickbackInfo";
-        /// <summary>f:ScrGetUserInfo</summary>
+        /// <summary>The outgoing Flash message <c>ScrGetUserInfo</c>.</summary>
         public const string ScrGetUserInfo = "ScrGetUserInfo";
-        /// <summary>f:SearchFaqs</summary>
+        /// <summary>The outgoing Flash message <c>SearchFaqs</c>.</summary>
         public const string SearchFaqs = "SearchFaqs";
-        /// <summary>f:SelectClubGift</summary>
+        /// <summary>The outgoing Flash message <c>SelectClubGift</c>.</summary>
         public const string SelectClubGift = "SelectClubGift";
-        /// <summary>f:SelectFavouriteHabboGroup</summary>
+        /// <summary>The outgoing Flash message <c>SelectFavouriteHabboGroup</c>.</summary>
         public const string SelectFavouriteHabboGroup = "SelectFavouriteHabboGroup";
-        /// <summary>f:SelectInitialRoom</summary>
+        /// <summary>The outgoing Flash message <c>SelectInitialRoom</c>.</summary>
         public const string SelectInitialRoom = "SelectInitialRoom";
-        /// <summary>f:SelfDonateItem</summary>
+        /// <summary>The outgoing Flash message <c>SelfDonateItem</c>.</summary>
         public const string SelfDonateItem = "SelfDonateItem";
-        /// <summary>f:SendHabbicon</summary>
+        /// <summary>The outgoing Flash message <c>SendHabbicon</c>.</summary>
         public const string SendHabbicon = "SendHabbicon";
-        /// <summary>f:SendMsg</summary>
+        /// <summary>The outgoing Flash message <c>SendMsg</c>.</summary>
         public const string SendMsg = "SendMsg";
-        /// <summary>f:SendRoomInvite</summary>
+        /// <summary>The outgoing Flash message <c>SendRoomInvite</c>.</summary>
         public const string SendRoomInvite = "SendRoomInvite";
-        /// <summary>f:SetActivatedBadges</summary>
+        /// <summary>The outgoing Flash message <c>SetActivatedBadges</c>.</summary>
         public const string SetActivatedBadges = "SetActivatedBadges";
-        /// <summary>f:SetAdjacentCustomStackingHeight</summary>
+        /// <summary>The outgoing Flash message <c>SetAdjacentCustomStackingHeight</c>.</summary>
         public const string SetAdjacentCustomStackingHeight = "SetAdjacentCustomStackingHeight";
-        /// <summary>f:SetAreaHideData</summary>
+        /// <summary>The outgoing Flash message <c>SetAreaHideData</c>.</summary>
         public const string SetAreaHideData = "SetAreaHideData";
-        /// <summary>f:SetChatPreferences</summary>
+        /// <summary>The outgoing Flash message <c>SetChatPreferences</c>.</summary>
         public const string SetChatPreferences = "SetChatPreferences";
-        /// <summary>f:SetChatStylePreference</summary>
+        /// <summary>The outgoing Flash message <c>SetChatStylePreference</c>.</summary>
         public const string SetChatStylePreference = "SetChatStylePreference";
-        /// <summary>f:SetChestNotificationPreferences</summary>
+        /// <summary>The outgoing Flash message <c>SetChestNotificationPreferences</c>.</summary>
         public const string SetChestNotificationPreferences = "SetChestNotificationPreferences";
-        /// <summary>f:SetChestOptions</summary>
+        /// <summary>The outgoing Flash message <c>SetChestOptions</c>.</summary>
         public const string SetChestOptions = "SetChestOptions";
-        /// <summary>f:SetChestPreferences</summary>
+        /// <summary>The outgoing Flash message <c>SetChestPreferences</c>.</summary>
         public const string SetChestPreferences = "SetChestPreferences";
-        /// <summary>f:SetClothingChangeData</summary>
+        /// <summary>The outgoing Flash message <c>SetClothingChangeData</c>.</summary>
         public const string SetClothingChangeData = "SetClothingChangeData";
-        /// <summary>f:SetCustomStackingHeight</summary>
+        /// <summary>The outgoing Flash message <c>SetCustomStackingHeight</c>.</summary>
         public const string SetCustomStackingHeight = "SetCustomStackingHeight";
-        /// <summary>f:SetDiscordPreferences</summary>
+        /// <summary>The outgoing Flash message <c>SetDiscordPreferences</c>.</summary>
         public const string SetDiscordPreferences = "SetDiscordPreferences";
-        /// <summary>f:SetIgnoreRoomInvites</summary>
+        /// <summary>The outgoing Flash message <c>SetIgnoreRoomInvites</c>.</summary>
         public const string SetIgnoreRoomInvites = "SetIgnoreRoomInvites";
-        /// <summary>f:SetItemData</summary>
+        /// <summary>The outgoing Flash message <c>SetItemData</c>.</summary>
         public const string SetItemData = "SetItemData";
-        /// <summary>f:SetMannequinFigure</summary>
+        /// <summary>The outgoing Flash message <c>SetMannequinFigure</c>.</summary>
         public const string SetMannequinFigure = "SetMannequinFigure";
-        /// <summary>f:SetMannequinName</summary>
+        /// <summary>The outgoing Flash message <c>SetMannequinName</c>.</summary>
         public const string SetMannequinName = "SetMannequinName";
-        /// <summary>f:SetNewNavigatorWindowPreferences</summary>
+        /// <summary>The outgoing Flash message <c>SetNewNavigatorWindowPreferences</c>.</summary>
         public const string SetNewNavigatorWindowPreferences = "SetNewNavigatorWindowPreferences";
-        /// <summary>f:SetObjectData</summary>
+        /// <summary>The outgoing Flash message <c>SetObjectData</c>.</summary>
         public const string SetObjectData = "SetObjectData";
-        /// <summary>f:SetPhoneNumberVerificationStatus</summary>
+        /// <summary>The outgoing Flash message <c>SetPhoneNumberVerificationStatus</c>.</summary>
         public const string SetPhoneNumberVerificationStatus = "SetPhoneNumberVerificationStatus";
-        /// <summary>f:SetRandomState</summary>
+        /// <summary>The outgoing Flash message <c>SetRandomState</c>.</summary>
         public const string SetRandomState = "SetRandomState";
-        /// <summary>f:SetRelationshipStatus</summary>
+        /// <summary>The outgoing Flash message <c>SetRelationshipStatus</c>.</summary>
         public const string SetRelationshipStatus = "SetRelationshipStatus";
-        /// <summary>f:SetRoomBackgroundColorData</summary>
+        /// <summary>The outgoing Flash message <c>SetRoomBackgroundColorData</c>.</summary>
         public const string SetRoomBackgroundColorData = "SetRoomBackgroundColorData";
-        /// <summary>f:SetRoomCameraPreferences</summary>
+        /// <summary>The outgoing Flash message <c>SetRoomCameraPreferences</c>.</summary>
         public const string SetRoomCameraPreferences = "SetRoomCameraPreferences";
-        /// <summary>f:SetRoomSessionTags</summary>
+        /// <summary>The outgoing Flash message <c>SetRoomSessionTags</c>.</summary>
         public const string SetRoomSessionTags = "SetRoomSessionTags";
-        /// <summary>f:SetSoundSettings</summary>
+        /// <summary>The outgoing Flash message <c>SetSoundSettings</c>.</summary>
         public const string SetSoundSettings = "SetSoundSettings";
-        /// <summary>f:SetTargetedOfferState</summary>
+        /// <summary>The outgoing Flash message <c>SetTargetedOfferState</c>.</summary>
         public const string SetTargetedOfferState = "SetTargetedOfferState";
-        /// <summary>f:SetUiFlags</summary>
+        /// <summary>The outgoing Flash message <c>SetUiFlags</c>.</summary>
         public const string SetUiFlags = "SetUiFlags";
-        /// <summary>f:SetYoutubeDisplayPlaylist</summary>
+        /// <summary>The outgoing Flash message <c>SetYoutubeDisplayPlaylist</c>.</summary>
         public const string SetYoutubeDisplayPlaylist = "SetYoutubeDisplayPlaylist";
-        /// <summary>f:ShopTargetedOfferViewed</summary>
+        /// <summary>The outgoing Flash message <c>ShopTargetedOfferViewed</c>.</summary>
         public const string ShopTargetedOfferViewed = "ShopTargetedOfferViewed";
-        /// <summary>f:Shout</summary>
+        /// <summary>The outgoing Flash message <c>Shout</c>.</summary>
         public const string Shout = "Shout";
-        /// <summary>f:Sign</summary>
+        /// <summary>The outgoing Flash message <c>Sign</c>.</summary>
         public const string Sign = "Sign";
-        /// <summary>f:SilverFee</summary>
+        /// <summary>The outgoing Flash message <c>SilverFee</c>.</summary>
         public const string SilverFee = "SilverFee";
-        /// <summary>f:SpinWheelOfFortune</summary>
+        /// <summary>The outgoing Flash message <c>SpinWheelOfFortune</c>.</summary>
         public const string SpinWheelOfFortune = "SpinWheelOfFortune";
-        /// <summary>f:Ssoticket</summary>
+        /// <summary>The outgoing Flash message <c>Ssoticket</c>.</summary>
         public const string Ssoticket = "Ssoticket";
-        /// <summary>f:StartAddingToChest</summary>
+        /// <summary>The outgoing Flash message <c>StartAddingToChest</c>.</summary>
         public const string StartAddingToChest = "StartAddingToChest";
-        /// <summary>f:StartCampaign</summary>
+        /// <summary>The outgoing Flash message <c>StartCampaign</c>.</summary>
         public const string StartCampaign = "StartCampaign";
-        /// <summary>f:StartTyping</summary>
+        /// <summary>The outgoing Flash message <c>StartTyping</c>.</summary>
         public const string StartTyping = "StartTyping";
-        /// <summary>f:SubmitRoomToCompetition</summary>
+        /// <summary>The outgoing Flash message <c>SubmitRoomToCompetition</c>.</summary>
         public const string SubmitRoomToCompetition = "SubmitRoomToCompetition";
-        /// <summary>f:ThrowDice</summary>
+        /// <summary>The outgoing Flash message <c>ThrowDice</c>.</summary>
         public const string ThrowDice = "ThrowDice";
-        /// <summary>f:TogglePetBreedingPermission</summary>
+        /// <summary>The outgoing Flash message <c>TogglePetBreedingPermission</c>.</summary>
         public const string TogglePetBreedingPermission = "TogglePetBreedingPermission";
-        /// <summary>f:TogglePetRidingPermission</summary>
+        /// <summary>The outgoing Flash message <c>TogglePetRidingPermission</c>.</summary>
         public const string TogglePetRidingPermission = "TogglePetRidingPermission";
-        /// <summary>f:ToggleStaffPick</summary>
+        /// <summary>The outgoing Flash message <c>ToggleStaffPick</c>.</summary>
         public const string ToggleStaffPick = "ToggleStaffPick";
-        /// <summary>f:TriggerHabbicon</summary>
+        /// <summary>The outgoing Flash message <c>TriggerHabbicon</c>.</summary>
         public const string TriggerHabbicon = "TriggerHabbicon";
-        /// <summary>f:TryPhoneNumber</summary>
+        /// <summary>The outgoing Flash message <c>TryPhoneNumber</c>.</summary>
         public const string TryPhoneNumber = "TryPhoneNumber";
-        /// <summary>f:UnacceptTrading</summary>
+        /// <summary>The outgoing Flash message <c>UnacceptTrading</c>.</summary>
         public const string UnacceptTrading = "UnacceptTrading";
-        /// <summary>f:UnbanUserFromRoom</summary>
+        /// <summary>The outgoing Flash message <c>UnbanUserFromRoom</c>.</summary>
         public const string UnbanUserFromRoom = "UnbanUserFromRoom";
-        /// <summary>f:UnblockGroupMember</summary>
+        /// <summary>The outgoing Flash message <c>UnblockGroupMember</c>.</summary>
         public const string UnblockGroupMember = "UnblockGroupMember";
-        /// <summary>f:UnblockUser</summary>
+        /// <summary>The outgoing Flash message <c>UnblockUser</c>.</summary>
         public const string UnblockUser = "UnblockUser";
-        /// <summary>f:UnfavoriteHabbicon</summary>
+        /// <summary>The outgoing Flash message <c>UnfavoriteHabbicon</c>.</summary>
         public const string UnfavoriteHabbicon = "UnfavoriteHabbicon";
-        /// <summary>f:UnignoreUser</summary>
+        /// <summary>The outgoing Flash message <c>UnignoreUser</c>.</summary>
         public const string UnignoreUser = "UnignoreUser";
-        /// <summary>f:UniqueId</summary>
+        /// <summary>The outgoing Flash message <c>UniqueId</c>.</summary>
         public const string UniqueId = "UniqueId";
-        /// <summary>f:UnmuteUser</summary>
+        /// <summary>The outgoing Flash message <c>UnmuteUser</c>.</summary>
         public const string UnmuteUser = "UnmuteUser";
-        /// <summary>f:UpdateAction</summary>
+        /// <summary>The outgoing Flash message <c>UpdateAction</c>.</summary>
         public const string UpdateAction = "UpdateAction";
-        /// <summary>f:UpdateAddon</summary>
+        /// <summary>The outgoing Flash message <c>UpdateAddon</c>.</summary>
         public const string UpdateAddon = "UpdateAddon";
-        /// <summary>f:UpdateCondition</summary>
+        /// <summary>The outgoing Flash message <c>UpdateCondition</c>.</summary>
         public const string UpdateCondition = "UpdateCondition";
-        /// <summary>f:UpdateFigureData</summary>
+        /// <summary>The outgoing Flash message <c>UpdateFigureData</c>.</summary>
         public const string UpdateFigureData = "UpdateFigureData";
-        /// <summary>f:UpdateFloorProperties</summary>
+        /// <summary>The outgoing Flash message <c>UpdateFloorProperties</c>.</summary>
         public const string UpdateFloorProperties = "UpdateFloorProperties";
-        /// <summary>f:UpdateForumReadMarker</summary>
+        /// <summary>The outgoing Flash message <c>UpdateForumReadMarker</c>.</summary>
         public const string UpdateForumReadMarker = "UpdateForumReadMarker";
-        /// <summary>f:UpdateForumSettings</summary>
+        /// <summary>The outgoing Flash message <c>UpdateForumSettings</c>.</summary>
         public const string UpdateForumSettings = "UpdateForumSettings";
-        /// <summary>f:UpdateGuildBadge</summary>
+        /// <summary>The outgoing Flash message <c>UpdateGuildBadge</c>.</summary>
         public const string UpdateGuildBadge = "UpdateGuildBadge";
-        /// <summary>f:UpdateGuildColors</summary>
+        /// <summary>The outgoing Flash message <c>UpdateGuildColors</c>.</summary>
         public const string UpdateGuildColors = "UpdateGuildColors";
-        /// <summary>f:UpdateGuildIdentity</summary>
+        /// <summary>The outgoing Flash message <c>UpdateGuildIdentity</c>.</summary>
         public const string UpdateGuildIdentity = "UpdateGuildIdentity";
-        /// <summary>f:UpdateGuildSettings</summary>
+        /// <summary>The outgoing Flash message <c>UpdateGuildSettings</c>.</summary>
         public const string UpdateGuildSettings = "UpdateGuildSettings";
-        /// <summary>f:UpdateHomeRoom</summary>
+        /// <summary>The outgoing Flash message <c>UpdateHomeRoom</c>.</summary>
         public const string UpdateHomeRoom = "UpdateHomeRoom";
-        /// <summary>f:UpdateRoomCategoryAndTradeSettings</summary>
+        /// <summary>The outgoing Flash message <c>UpdateRoomCategoryAndTradeSettings</c>.</summary>
         public const string UpdateRoomCategoryAndTradeSettings = "UpdateRoomCategoryAndTradeSettings";
-        /// <summary>f:UpdateRoomFilter</summary>
+        /// <summary>The outgoing Flash message <c>UpdateRoomFilter</c>.</summary>
         public const string UpdateRoomFilter = "UpdateRoomFilter";
-        /// <summary>f:UpdateRoomThumbnail</summary>
+        /// <summary>The outgoing Flash message <c>UpdateRoomThumbnail</c>.</summary>
         public const string UpdateRoomThumbnail = "UpdateRoomThumbnail";
-        /// <summary>f:UpdateSelector</summary>
+        /// <summary>The outgoing Flash message <c>UpdateSelector</c>.</summary>
         public const string UpdateSelector = "UpdateSelector";
-        /// <summary>f:UpdateThread</summary>
+        /// <summary>The outgoing Flash message <c>UpdateThread</c>.</summary>
         public const string UpdateThread = "UpdateThread";
-        /// <summary>f:UpdateTrigger</summary>
+        /// <summary>The outgoing Flash message <c>UpdateTrigger</c>.</summary>
         public const string UpdateTrigger = "UpdateTrigger";
-        /// <summary>f:UpdateVariable</summary>
+        /// <summary>The outgoing Flash message <c>UpdateVariable</c>.</summary>
         public const string UpdateVariable = "UpdateVariable";
-        /// <summary>f:UpgradeChest</summary>
+        /// <summary>The outgoing Flash message <c>UpgradeChest</c>.</summary>
         public const string UpgradeChest = "UpgradeChest";
-        /// <summary>f:UseFurniture</summary>
+        /// <summary>The outgoing Flash message <c>UseFurniture</c>.</summary>
         public const string UseFurniture = "UseFurniture";
-        /// <summary>f:UseWallItem</summary>
+        /// <summary>The outgoing Flash message <c>UseWallItem</c>.</summary>
         public const string UseWallItem = "UseWallItem";
-        /// <summary>f:VerifyCode</summary>
+        /// <summary>The outgoing Flash message <c>VerifyCode</c>.</summary>
         public const string VerifyCode = "VerifyCode";
-        /// <summary>f:VersionCheck</summary>
+        /// <summary>The outgoing Flash message <c>VersionCheck</c>.</summary>
         public const string VersionCheck = "VersionCheck";
-        /// <summary>f:VisitUser</summary>
+        /// <summary>The outgoing Flash message <c>VisitUser</c>.</summary>
         public const string VisitUser = "VisitUser";
-        /// <summary>f:VoteForRoom</summary>
+        /// <summary>The outgoing Flash message <c>VoteForRoom</c>.</summary>
         public const string VoteForRoom = "VoteForRoom";
-        /// <summary>f:Whisper</summary>
+        /// <summary>The outgoing Flash message <c>Whisper</c>.</summary>
         public const string Whisper = "Whisper";
-        /// <summary>f:WiredClearErrorLogs</summary>
+        /// <summary>The outgoing Flash message <c>WiredClearErrorLogs</c>.</summary>
         public const string WiredClearErrorLogs = "WiredClearErrorLogs";
-        /// <summary>f:WiredClickUser</summary>
+        /// <summary>The outgoing Flash message <c>WiredClickUser</c>.</summary>
         public const string WiredClickUser = "WiredClickUser";
-        /// <summary>f:WiredDeleteAllVariableHolders</summary>
+        /// <summary>The outgoing Flash message <c>WiredDeleteAllVariableHolders</c>.</summary>
         public const string WiredDeleteAllVariableHolders = "WiredDeleteAllVariableHolders";
-        /// <summary>f:WiredGetAllVariableHolders</summary>
+        /// <summary>The outgoing Flash message <c>WiredGetAllVariableHolders</c>.</summary>
         public const string WiredGetAllVariableHolders = "WiredGetAllVariableHolders";
-        /// <summary>f:WiredGetAllVariablesDiffs</summary>
+        /// <summary>The outgoing Flash message <c>WiredGetAllVariablesDiffs</c>.</summary>
         public const string WiredGetAllVariablesDiffs = "WiredGetAllVariablesDiffs";
-        /// <summary>f:WiredGetAllVariablesHash</summary>
+        /// <summary>The outgoing Flash message <c>WiredGetAllVariablesHash</c>.</summary>
         public const string WiredGetAllVariablesHash = "WiredGetAllVariablesHash";
-        /// <summary>f:WiredGetErrorLogs</summary>
+        /// <summary>The outgoing Flash message <c>WiredGetErrorLogs</c>.</summary>
         public const string WiredGetErrorLogs = "WiredGetErrorLogs";
-        /// <summary>f:WiredGetRoomLogs</summary>
+        /// <summary>The outgoing Flash message <c>WiredGetRoomLogs</c>.</summary>
         public const string WiredGetRoomLogs = "WiredGetRoomLogs";
-        /// <summary>f:WiredGetRoomSettings</summary>
+        /// <summary>The outgoing Flash message <c>WiredGetRoomSettings</c>.</summary>
         public const string WiredGetRoomSettings = "WiredGetRoomSettings";
-        /// <summary>f:WiredGetRoomStats</summary>
+        /// <summary>The outgoing Flash message <c>WiredGetRoomStats</c>.</summary>
         public const string WiredGetRoomStats = "WiredGetRoomStats";
-        /// <summary>f:WiredGetUserPermanentVariables</summary>
+        /// <summary>The outgoing Flash message <c>WiredGetUserPermanentVariables</c>.</summary>
         public const string WiredGetUserPermanentVariables = "WiredGetUserPermanentVariables";
-        /// <summary>f:WiredGetVariableOwnersPage</summary>
+        /// <summary>The outgoing Flash message <c>WiredGetVariableOwnersPage</c>.</summary>
         public const string WiredGetVariableOwnersPage = "WiredGetVariableOwnersPage";
-        /// <summary>f:WiredGetVariablesForObject</summary>
+        /// <summary>The outgoing Flash message <c>WiredGetVariablesForObject</c>.</summary>
         public const string WiredGetVariablesForObject = "WiredGetVariablesForObject";
-        /// <summary>f:WiredOpenContract</summary>
+        /// <summary>The outgoing Flash message <c>WiredOpenContract</c>.</summary>
         public const string WiredOpenContract = "WiredOpenContract";
-        /// <summary>f:WiredSetObjectVariableValue</summary>
+        /// <summary>The outgoing Flash message <c>WiredSetObjectVariableValue</c>.</summary>
         public const string WiredSetObjectVariableValue = "WiredSetObjectVariableValue";
-        /// <summary>f:WiredSetPreferences</summary>
+        /// <summary>The outgoing Flash message <c>WiredSetPreferences</c>.</summary>
         public const string WiredSetPreferences = "WiredSetPreferences";
-        /// <summary>f:WiredSetRoomSettings</summary>
+        /// <summary>The outgoing Flash message <c>WiredSetRoomSettings</c>.</summary>
         public const string WiredSetRoomSettings = "WiredSetRoomSettings";
-        /// <summary>f:WiredSetUserPermanentVariable</summary>
+        /// <summary>The outgoing Flash message <c>WiredSetUserPermanentVariable</c>.</summary>
         public const string WiredSetUserPermanentVariable = "WiredSetUserPermanentVariable";
-        /// <summary>f:WiredTradeAddDeleteItems</summary>
+        /// <summary>The outgoing Flash message <c>WiredTradeAddDeleteItems</c>.</summary>
         public const string WiredTradeAddDeleteItems = "WiredTradeAddDeleteItems";
-        /// <summary>f:WiredTradeCancel</summary>
+        /// <summary>The outgoing Flash message <c>WiredTradeCancel</c>.</summary>
         public const string WiredTradeCancel = "WiredTradeCancel";
-        /// <summary>f:WiredTradeConfirm</summary>
+        /// <summary>The outgoing Flash message <c>WiredTradeConfirm</c>.</summary>
         public const string WiredTradeConfirm = "WiredTradeConfirm";
-        /// <summary>f:WiredTransactionGetChestLogs</summary>
+        /// <summary>The outgoing Flash message <c>WiredTransactionGetChestLogs</c>.</summary>
         public const string WiredTransactionGetChestLogs = "WiredTransactionGetChestLogs";
-        /// <summary>f:WiredTransactionGetLogDetails</summary>
+        /// <summary>The outgoing Flash message <c>WiredTransactionGetLogDetails</c>.</summary>
         public const string WiredTransactionGetLogDetails = "WiredTransactionGetLogDetails";
-        /// <summary>f:WiredTransactionGetRoomLogs</summary>
+        /// <summary>The outgoing Flash message <c>WiredTransactionGetRoomLogs</c>.</summary>
         public const string WiredTransactionGetRoomLogs = "WiredTransactionGetRoomLogs";
-        /// <summary>f:WiredUpdateContract</summary>
+        /// <summary>The outgoing Flash message <c>WiredUpdateContract</c>.</summary>
         public const string WiredUpdateContract = "WiredUpdateContract";
-        /// <summary>f:WiredUpdateRoom</summary>
+        /// <summary>The outgoing Flash message <c>WiredUpdateRoom</c>.</summary>
         public const string WiredUpdateRoom = "WiredUpdateRoom";
-        /// <summary>f:WithdrawAllFromChest</summary>
+        /// <summary>The outgoing Flash message <c>WithdrawAllFromChest</c>.</summary>
         public const string WithdrawAllFromChest = "WithdrawAllFromChest";
-        /// <summary>f:WithdrawCoinsFromChest</summary>
+        /// <summary>The outgoing Flash message <c>WithdrawCoinsFromChest</c>.</summary>
         public const string WithdrawCoinsFromChest = "WithdrawCoinsFromChest";
-        /// <summary>f:WithdrawCreditVault</summary>
+        /// <summary>The outgoing Flash message <c>WithdrawCreditVault</c>.</summary>
         public const string WithdrawCreditVault = "WithdrawCreditVault";
-        /// <summary>f:WithdrawItemsFromChest</summary>
+        /// <summary>The outgoing Flash message <c>WithdrawItemsFromChest</c>.</summary>
         public const string WithdrawItemsFromChest = "WithdrawItemsFromChest";
     }
 }

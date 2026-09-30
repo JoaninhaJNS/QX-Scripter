@@ -2,8 +2,14 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the <c>Objects</c> message, received with the floor items loaded into the room.</summary>
+/// <param name="Items">
+/// The floor items in the room, each with its owner name filled in from the owner table at the start of the message.
+/// </param>
 public sealed record FloorItems(IReadOnlyList<FloorItem> Items) : IParserComposer<FloorItems>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FloorItems Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -29,6 +35,8 @@ public sealed record FloorItems(IReadOnlyList<FloorItem> Items) : IParserCompose
         return new FloorItems(items);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

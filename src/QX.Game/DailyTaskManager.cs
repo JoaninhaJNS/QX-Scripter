@@ -44,6 +44,14 @@ internal readonly record struct DailyTaskRequestCorrelation(
     long RequestEpoch,
     int OutstandingRequests);
 
+/// <summary>Manages the daily tasks of the current session.</summary>
+/// <remarks>
+/// <para>All members are safe to call from any thread.</para>
+/// <para>
+/// Events are raised after the state is updated. The state is cleared when the hotel connection
+/// closes and when a new session starts.
+/// </para>
+/// </remarks>
 public sealed class DailyTaskManager : GameStateManager
 {
     private const int RequestIntervalMs = 10000;
@@ -66,38 +74,44 @@ public sealed class DailyTaskManager : GameStateManager
     private bool delivering;
     private int delivery_thread_id;
 
-    /// <summary>The running tasks, ordinary ones first and the bonus task last.</summary>
+    /// <summary>Gets a copy of the running tasks, with the ordinary tasks first and the bonus task last.</summary>
     public IReadOnlyList<DailyTask> Tasks => State.Tasks.ToArray();
 
-    /// <summary>Whether the hotel has sent the task list this session.</summary>
+    /// <summary>Gets whether the server has sent the task list in this session.</summary>
     public bool IsLoaded => State.Loaded;
 
-    /// <summary>The tasks that are finished and still owe a reward.</summary>
+    /// <summary>Gets the tasks that are finished and whose reward has not been claimed.</summary>
     public IReadOnlyList<DailyTask> Claimable =>
         State.Tasks.Where(task => task.IsClaimable).ToArray();
 
-    /// <summary>The bonus task, or <see langword="null"/> when the hotel has not granted one.</summary>
+    /// <summary>Gets the bonus task, or <see langword="null"/> if the server has not granted one.</summary>
     public DailyTask? Bonus => State.Tasks.FirstOrDefault(task => task.IsBonus);
 
-    /// <summary>Raised when the full task list arrived and replaced what was held.</summary>
+    /// <summary>Occurs when the server sends the full task list and it replaces the held tasks.</summary>
+    /// <remarks>The argument is the new task list.</remarks>
     public event Action<IReadOnlyList<DailyTask>>? ListChanged;
 
-    /// <summary>Raised when the hotel added tasks to the running set.</summary>
+    /// <summary>Occurs when the server adds tasks to the running set.</summary>
+    /// <remarks>The argument contains the added tasks. A task with an id that is already held replaces it.</remarks>
     public event Action<IReadOnlyList<DailyTask>>? TasksAdded;
 
-    /// <summary>Raised when a task's progress or status changed, with the task as it now stands.</summary>
+    /// <summary>Occurs when the progress or status of a task changes.</summary>
+    /// <remarks>The argument is the task as it now stands.</remarks>
     public event Action<DailyTask>? TaskUpdated;
 
-    /// <summary>Raised when a task became claimable.</summary>
+    /// <summary>Occurs when the status of a task changes to <see cref="DailyTaskStatus.Completed"/>.</summary>
+    /// <remarks>Raised after <see cref="TaskUpdated"/> for the same update.</remarks>
     public event Action<DailyTask>? TaskCompleted;
 
-    /// <summary>Raised when a task's reward was taken.</summary>
+    /// <summary>Occurs when the status of a task changes to <see cref="DailyTaskStatus.Claimed"/>.</summary>
+    /// <remarks>Raised after <see cref="TaskUpdated"/> for the same update.</remarks>
     public event Action<DailyTask>? TaskClaimed;
     internal event Action<DailyTaskStateUpdate>? StateCommitted;
     internal event Action<DailyTaskStateUpdate>? StateChanged;
 
     internal DailyTaskState State => Volatile.Read(ref state);
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         CommitReset(CurrentSession);
@@ -110,22 +124,32 @@ public sealed class DailyTaskManager : GameStateManager
         OnIncoming(MessageContracts.DailyTasks.Updated, ApplyUpdate);
     }
 
-    /// <summary>Asks the hotel for the task list, unless one was asked for in the last ten seconds.</summary>
-    /// <returns>Whether a request was actually sent.</returns>
+    /// <summary>Requests the task list from the server, unless a request was sent in the last ten seconds.</summary>
+    /// <returns><see langword="true"/> if a request was sent; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// The request is sent without waiting for a response. An update for a task that is not held
+    /// also triggers a request.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public bool Request() => Operations().Request();
 
     /// <summary>Claims the reward for a finished task.</summary>
-    /// <param name="taskId">The task to claim.</param>
+    /// <param name="taskId">The id of the task to claim.</param>
+    /// <remarks>The request is sent without waiting for a response.</remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void Claim(long taskId) => Operations().Claim(taskId);
 
-    /// <summary>Whether the connected client supports daily tasks at all.</summary>
+    /// <summary>Gets whether the connected client supports daily tasks.</summary>
+    /// <remarks>Only the Flash client supports daily tasks.</remarks>
     public bool IsSupported =>
         (Interceptor.Session?.Client ?? Interceptor.Messages.ActiveClient) is ClientType.Flash;
 
-    /// <summary>Returns the task list, asking the hotel for it when it has not been seen.</summary>
-    /// <param name="timeoutMs">Total budget in milliseconds.</param>
-    /// <param name="cancellationToken">Cancels the wait.</param>
-    /// <exception cref="TimeoutException">The hotel did not answer in time.</exception>
+    /// <summary>Gets the task list, requesting it from the server if it has not been received in this session.</summary>
+    /// <param name="timeoutMs">The time to wait for the task list, in milliseconds.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with a copy of the running tasks.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="TimeoutException">Thrown when the server does not send the task list in time.</exception>
     public Task<IReadOnlyList<DailyTask>> EnsureLoadedAsync(
         int timeoutMs = 10000,
         CancellationToken cancellationToken = default)
@@ -249,6 +273,7 @@ public sealed class DailyTaskManager : GameStateManager
 
     internal bool IsCurrentPublication(DailyTaskStateUpdate update) => UpdateCurrent(update);
 
+    /// <inheritdoc/>
     protected override void Reset() => CommitReset(CurrentSession);
 
     private void BindSession(Session session) => CommitReset(session);

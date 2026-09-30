@@ -6,10 +6,12 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// Starts a filter/sort/projection query over the pets currently cached in the inventory.
-    /// Nothing is requested: query before the pet inventory has been loaded and the result is
-    /// empty.
+    /// Starts a filter, sort and projection query over the pets currently cached in the inventory.
     /// </summary>
+    /// <remarks>
+    /// Nothing is requested: query before the pet inventory has been loaded and the result is
+    /// empty. Call <see cref="EnsurePetInventoryLoaded"/> first to load it.
+    /// </remarks>
     /// <returns>A query over a snapshot of the cached pets.</returns>
     public InventoryPetQuery QueryInventoryPets() => Queries.InventoryPets;
 
@@ -18,5 +20,6 @@ public partial class ScriptGlobals
     /// </summary>
     /// <param name="pets">The pets to query.</param>
     /// <returns>A query over the given pets.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="pets"/> is <see langword="null"/>.</exception>
     public InventoryPetQuery QueryInventoryPets(IEnumerable<InventoryPet> pets) => Queries.From(pets);
 }

@@ -20,13 +20,16 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// Raised when the details of one subscription product arrive: days left in the period,
-    /// periods held and paid ahead, the VIP flag, past club and VIP days, and the minutes until
-    /// expiry.
+    /// Registers a handler that runs when the details of one subscription product arrive.
     /// </summary>
-    /// <param name="handler">Receives the details, which carry their own product name.</param>
+    /// <remarks>
+    /// The details hold the days left in the period, the periods held and paid ahead, the VIP
+    /// flag, past club and VIP days, and the minutes until expiry.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the details, which carry their own product name.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnSubscriptionInfoChanged(Action<ScrSendUserInfo> handler)
     {
         ArgumentNullException.ThrowIfNull(handler);
@@ -43,12 +46,16 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Raised when the Habbo Club kickback summary arrives: streak length, kickback percentage,
-    /// credits spent, missed and rewarded, and the time until the next payday.
+    /// Registers a handler that runs when the Habbo Club kickback summary arrives.
     /// </summary>
-    /// <param name="handler">Receives the summary.</param>
+    /// <remarks>
+    /// The summary holds the streak length, the kickback percentage, the credits spent, missed and
+    /// rewarded, and the time until the next payday.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the summary.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnSubscriptionKickbackChanged(
         Action<ScrSendKickbackInfo> handler)
     {
@@ -66,11 +73,13 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Raised when the server reports how many Builders Club furniture the local user has placed.
+    /// Registers a handler that runs when the server reports how many Builders Club furniture the
+    /// local user has placed.
     /// </summary>
-    /// <param name="handler">Receives the count.</param>
+    /// <param name="handler">The handler to call with the count.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnBuildersClubFurniCountChanged(
         Action<BuildersClubFurniCount> handler)
     {
@@ -87,6 +96,17 @@ public partial class ScriptGlobals
             })));
     }
 
+    /// <summary>
+    /// Registers a handler that runs when the server sends the Builders Club membership status.
+    /// </summary>
+    /// <remarks>
+    /// The status holds the seconds left, the furni limit, the maximum furni limit and, when the
+    /// server sends it, the seconds left including the grace period.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the membership status.</param>
+    /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnBuildersClubStatusChanged(
     Action<BuildersClubMembershipStatus> handler)
     {
@@ -103,6 +123,17 @@ public partial class ScriptGlobals
             })));
     }
 
+    /// <summary>
+    /// Registers a handler that runs when the server sends a Builders Club placement warning.
+    /// </summary>
+    /// <remarks>
+    /// The warning names the catalog page, offer and extra parameter of the placement, and its
+    /// floor tile and direction or its wall location.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the warning.</param>
+    /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnBuildersClubPlacementWarning(
     Action<BuildersClubPlacementWarning> handler)
     {
@@ -120,13 +151,17 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Raised after the cached subscription state was emptied for a new session, which happens on
-    /// reconnect. The subscription map is empty and every other value unset by the time the
-    /// handler runs.
+    /// Registers a handler that runs after the cached subscription state was emptied.
     /// </summary>
-    /// <param name="handler">Invoked with no arguments.</param>
+    /// <remarks>
+    /// It only runs for a reset that leaves no hotel session bound, which happens when the session
+    /// ends; the reset for a newly connected session does not call it. The subscription map is
+    /// empty and every other value unset by the time the handler runs.
+    /// </remarks>
+    /// <param name="handler">The handler to call, with no arguments.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnSubscriptionsReset(Action handler)
     {
         ArgumentNullException.ThrowIfNull(handler);

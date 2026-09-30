@@ -4,12 +4,30 @@ using System.Text.Json;
 
 namespace Qx.Updates;
 
+/// <summary>Represents a published GitHub release of the application.</summary>
+/// <param name="Tag">The release tag as published, for example <c>v1.2.3</c>.</param>
+/// <param name="Version">The normalized <c>major.minor.patch</c> version parsed from the tag.</param>
+/// <param name="Name">The release title with control characters and extra whitespace removed, or the tag when the title is empty or longer than 120 characters.</param>
+/// <param name="Uri">The URL of the release page.</param>
 public sealed record GitHubRelease(string Tag, string Version, string Name, Uri Uri);
 
+/// <summary>Provides update checks against the project's GitHub releases.</summary>
 public static class GitHubReleaseUpdates
 {
     private const int MaxResponseBytes = 1024 * 1024;
 
+    /// <summary>Requests the release list from the GitHub API and gets the highest released version.</summary>
+    /// <remarks>
+    /// Only the first 100 releases are read. Drafts and tags that are not a plain <c>major.minor.patch</c>
+    /// version, with an optional <c>v</c> prefix, are ignored. Responses larger than 1 MiB are rejected.
+    /// </remarks>
+    /// <param name="http">The HTTP client used to send the request.</param>
+    /// <param name="cancellation_token">A token that cancels the request.</param>
+    /// <returns>
+    /// The highest release, or <see langword="null"/> when the request fails, the response is invalid or
+    /// no release matched.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="http"/> is <see langword="null"/>.</exception>
     public static async Task<GitHubRelease?> GetLatestAsync(
         HttpClient http,
         CancellationToken cancellation_token = default)
@@ -75,6 +93,17 @@ public static class GitHubReleaseUpdates
         }
     }
 
+    /// <summary>Gets whether the user should be told about a release.</summary>
+    /// <remarks>
+    /// <see langword="true"/> when the release was not the last one notified and its version is higher than
+    /// the installed version. An installed version that is not <c>major.minor.patch</c> or
+    /// <c>major.minor.patch.0</c> never triggers a notification.
+    /// </remarks>
+    /// <param name="installed_version">The version of the running application.</param>
+    /// <param name="last_notified_release">The tag of the release the user was last told about, or <see langword="null"/> for none.</param>
+    /// <param name="release">The available release.</param>
+    /// <returns><see langword="true"/> when a notification should be shown.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="release"/> is <see langword="null"/>.</exception>
     public static bool ShouldNotify(
         string installed_version,
         string? last_notified_release,

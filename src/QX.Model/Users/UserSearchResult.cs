@@ -2,6 +2,16 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
+/// <summary>Represents one user found by a user search.</summary>
+/// <param name="Id">The user identifier.</param>
+/// <param name="Name">The user's name.</param>
+/// <param name="Motto">The user's motto.</param>
+/// <param name="IsOnline">Whether the user is online.</param>
+/// <param name="CanFollow">Whether the local user may follow the user into their room.</param>
+/// <param name="LastAccess">The user's last access time as the hotel formats it.</param>
+/// <param name="Gender">The user's gender as the hotel numbers it.</param>
+/// <param name="Figure">The user's figure string.</param>
+/// <param name="RealName">The user's real name, empty unless the hotel discloses it.</param>
 public sealed record UserSearchResult(
     Id Id,
     string Name,
@@ -13,6 +23,8 @@ public sealed record UserSearchResult(
     string Figure,
     string RealName) : IParserComposer<UserSearchResult>
 {
+    /// <summary>Reads a search result from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
     public static UserSearchResult Parse(in PacketReader p) =>
         new(
             p.ReadId(),
@@ -25,6 +37,8 @@ public sealed record UserSearchResult(
             p.ReadString(),
             p.ReadString());
 
+    /// <summary>Writes the search result to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteId(Id);
@@ -39,13 +53,21 @@ public sealed record UserSearchResult(
     }
 }
 
+/// <summary>Represents the results of a user search, split into friends and other users.</summary>
+/// <param name="Friends">The matching users who are friends of the local user.</param>
+/// <param name="Others">The matching users who are not friends of the local user.</param>
 public sealed record UserSearchResults(
     IReadOnlyList<UserSearchResult> Friends,
     IReadOnlyList<UserSearchResult> Others) : IParserComposer<UserSearchResults>
 {
+    /// <summary>Finds a result by name, ignoring case and checking friends first.</summary>
+    /// <param name="name">The name to look for.</param>
+    /// <returns>The first matching result, or <see langword="null"/> when none matches.</returns>
     public UserSearchResult? Find(string name) =>
         Friends.Concat(Others).FirstOrDefault(u => string.Equals(u.Name, name, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>Reads search results from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
     public static UserSearchResults Parse(in PacketReader p)
     {
         int friendCount = p.ReadLength();
@@ -61,6 +83,8 @@ public sealed record UserSearchResults(
         return new UserSearchResults(friends, others);
     }
 
+    /// <summary>Writes the search results to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteLength((Length)Friends.Count);

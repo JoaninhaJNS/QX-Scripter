@@ -8,68 +8,79 @@ using Qx.Protocol;
 namespace Qx.Scripting;
 
 /// <summary>
-/// Which slice of a group's member list to fetch, in the older API's vocabulary. Translated to the
-/// native search type: <c>Members</c> becomes all members, <c>Admins</c> becomes administrators,
-/// <c>Requests</c> becomes pending join requests. The native enum additionally has a blocked-users
-/// value that this one cannot express.
+/// Specifies which slice of a group's member list to fetch, in the older API's vocabulary.
 /// </summary>
+/// <remarks>
+/// It is translated to the native <see cref="GuildMemberSearchType"/>: <c>Members</c> becomes all
+/// members, <c>Admins</c> becomes administrators and <c>Requests</c> becomes pending join
+/// requests. The native enum also has a blocked users value that this one cannot express.
+/// </remarks>
 public enum GroupMemberSearchType
 {
-    /// <summary>Every member. Maps to the native <c>All</c>.</summary>
+    /// <summary>Every member, mapped to the native <see cref="GuildMemberSearchType.All"/>.</summary>
     Members,
 
-    /// <summary>Administrators only. Maps to the native <c>Administrators</c>.</summary>
+    /// <summary>Administrators only, mapped to the native <see cref="GuildMemberSearchType.Administrators"/>.</summary>
     Admins,
 
-    /// <summary>Pending join requests. Maps to the native <c>Pending</c>.</summary>
+    /// <summary>Pending join requests, mapped to the native <see cref="GuildMemberSearchType.Pending"/>.</summary>
     Requests
 }
 
 /// <content>
-/// A source-compatibility layer: aliases and blocking wrappers that let scripts written against
-/// the older Xabbo Scripter globals compile and run unchanged. Nothing here adds behaviour — every
-/// member forwards to a native member of this class.
+/// A source compatibility layer: aliases and blocking wrappers that let scripts written against
+/// the older Xabbo Scripter globals compile and run unchanged. Most members forward to a native
+/// member of this class.
 /// <para>
-/// <b>Prefer the native members in new scripts.</b> Each summary below names the native member it
-/// forwards to.
+/// <b>Prefer the native members in new scripts.</b> The documentation of each alias names the
+/// native member it forwards to.
 /// </para>
 /// <para>
-/// <b>Two behavioural differences worth knowing.</b> First, the request wrappers here are
+/// <b>Two behavioral differences.</b> First, the request wrappers here are
 /// <em>blocking</em>: they await the native task with <c>GetAwaiter().GetResult()</c>, so they tie
 /// up the calling thread until the reply arrives or the timeout expires, and a failure surfaces as
 /// the underlying exception rather than as a faulted task. Their <c>timeout</c> parameter is in
 /// milliseconds. Second, several state properties here <em>throw</em>
 /// <see cref="InvalidOperationException"/> when the underlying data has not been received, where
-/// the native member simply returns <see langword="null"/>.
+/// the native member returns <see langword="null"/>.
 /// </para>
 /// </content>
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// The local user's own account data. Non-nullable form of <see cref="Self"/>.
+    /// Gets the local user's own account data.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The user's data has not been received yet.</exception>
+    /// <remarks>
+    /// Non-nullable form of <see cref="Self"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the user's data has not been received yet.</exception>
     public Qx.Model.UserData UserData =>
         Self ?? throw new InvalidOperationException("The user's data has not been loaded.");
 
-    /// <summary>Whether the local user may still change their name for free.</summary>
-    /// <exception cref="InvalidOperationException">The user's data has not been received yet.</exception>
+    /// <summary>Gets whether the local user may still change their name for free.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when the user's data has not been received yet.</exception>
     public bool UserNameChangeable => UserData.IsNameChangeable;
 
     /// <summary>
-    /// The local user's achievements. Non-nullable form of <c>Achievements</c>.
+    /// Gets the local user's achievements.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The achievements have not been received yet.</exception>
+    /// <remarks>
+    /// Non-nullable form of the <c>Achievements</c> property.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the achievements have not been received yet.</exception>
     public IReadOnlyCollection<Achievement> UserAchievements =>
         IsAchievementsLoaded
             ? Achievements
             : throw new InvalidOperationException("The user's achievements have not been loaded.");
 
     /// <summary>
-    /// The local user's credit balance. Same value as <see cref="Credits"/>, but it refuses to
-    /// report a wallet that has never been seen as 0.
+    /// Gets the local user's credit balance.
     /// </summary>
-    /// <exception cref="InvalidOperationException">No wallet balance has been observed yet.</exception>
+    /// <remarks>
+    /// Same value as <see cref="Credits"/>, but it refuses to report a wallet that has never been
+    /// seen as 0.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when no wallet balance has been observed yet.</exception>
     public int UserCredits
     {
         get
@@ -82,9 +93,12 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Every activity-point currency the local user holds, keyed by currency type id.
+    /// Gets every activity point currency the local user holds, keyed by currency type id.
     /// </summary>
-    /// <exception cref="InvalidOperationException">No activity points have been observed yet.</exception>
+    /// <remarks>
+    /// Every read builds a new read-only dictionary from the complete wallet state.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when no activity points have been observed yet.</exception>
     public IReadOnlyDictionary<int, int> UserPoints
     {
         get
@@ -100,83 +114,104 @@ public partial class ScriptGlobals
         }
     }
 
-    /// <summary>The local user's diamond balance — activity-point currency type 5.</summary>
-    /// <exception cref="InvalidOperationException">No activity points have been observed yet.</exception>
+    /// <summary>Gets the local user's diamond balance, which is activity point currency type 5.</summary>
+    /// <remarks>Alias for <see cref="Diamonds"/>.</remarks>
+    /// <exception cref="InvalidOperationException">Thrown when no activity points have been observed yet.</exception>
     public int UserDiamonds => Diamonds;
 
-    /// <summary>The local user's duckets balance — activity-point currency type 0.</summary>
-    /// <exception cref="InvalidOperationException">No activity points have been observed yet.</exception>
+    /// <summary>Gets the local user's ducket balance, which is activity point currency type 0.</summary>
+    /// <remarks>Alias for <see cref="Duckets"/>.</remarks>
+    /// <exception cref="InvalidOperationException">Thrown when no activity points have been observed yet.</exception>
     public int UserDuckets => Duckets;
 
-    /// <summary>Whether the local user is inside a room. Alias for <see cref="InRoom"/>.</summary>
+    /// <summary>Gets whether the local user is inside a room.</summary>
+    /// <remarks>Alias for <see cref="InRoom"/>.</remarks>
     public bool IsInRoom => InRoom;
 
     /// <summary>
-    /// Whether the local user is in a door queue. Alias for <see cref="IsInRoomQueue"/>.
+    /// Gets whether the local user is in a door queue.
     /// </summary>
+    /// <remarks>Alias for <see cref="IsInRoomQueue"/>.</remarks>
     public bool IsInQueue => IsInRoomQueue;
 
     /// <summary>
-    /// The local user's place in the door queue, or -1 when they are not queued. Same value as
-    /// <see cref="RoomQueuePosition"/> with the null case folded into -1.
+    /// Gets the local user's place in the door queue, or -1 when they are not queued.
     /// </summary>
+    /// <remarks>
+    /// Same value as <see cref="RoomQueuePosition"/> with the <see langword="null"/> case folded
+    /// into -1.
+    /// </remarks>
     public int QueuePosition => RoomQueuePosition ?? -1;
 
     /// <summary>
-    /// Whether a room is being entered right now — the room session state is "entering".
+    /// Gets whether a room is being entered right now, that is, whether the room session state is
+    /// <see cref="RoomSessionState.Entering"/>.
     /// </summary>
     public bool IsLoadingRoom => RoomState is RoomSessionState.Entering;
 
-    /// <summary>Whether the local user owns the room they are in.</summary>
+    /// <summary>Gets whether the local user owns the room they are in.</summary>
     public bool IsRoomOwner => Room.IsOwner;
 
     /// <summary>
-    /// Whether the local user may unban from this room, which the hotel grants to the owner only.
-    /// Identical to <see cref="IsRoomOwner"/>.
+    /// Gets whether the local user may unban from this room, which the hotel grants to the owner only.
     /// </summary>
+    /// <remarks>Identical to <see cref="IsRoomOwner"/>.</remarks>
     public bool CanUnban => IsRoomOwner;
 
     /// <summary>
-    /// Whether the local user may mute others here. Same as <see cref="CanMuteInRoom"/>, except
-    /// that "room details not loaded yet" is reported as <see langword="false"/> rather than null.
+    /// Gets whether the local user may mute others in the current room.
     /// </summary>
+    /// <remarks>
+    /// Same as <see cref="CanMuteInRoom"/>, except that room details that have not been loaded yet
+    /// are reported as <see langword="false"/> rather than <see langword="null"/>.
+    /// </remarks>
     public bool CanMute => CanMuteInRoom ?? false;
 
-    /// <summary>The room's door tile. Alias for <c>RoomEntryTile</c>.</summary>
+    /// <summary>Gets the room's door tile, or <see langword="null"/> before the heightmap arrives.</summary>
+    /// <remarks>Alias for the <c>RoomEntryTile</c> property.</remarks>
     public RoomEntryTile? DoorTile => RoomEntryTile;
 
     /// <summary>
-    /// Every avatar in the room — users, pets and bots. Alias for <see cref="Avatars"/>.
+    /// Gets every avatar in the room: users, pets and bots.
     /// </summary>
+    /// <remarks>Alias for <see cref="Avatars"/>.</remarks>
     public IEnumerable<Avatar> Entities => Avatars;
 
     /// <summary>
-    /// Every item in the room, floor items followed by wall items, as one sequence of the shared
-    /// base type. Concatenates <c>FloorItems</c> and <c>WallItems</c>.
+    /// Gets every item in the room, floor items followed by wall items, as one sequence of the
+    /// shared base type.
     /// </summary>
+    /// <remarks>Concatenates <see cref="FloorItems"/> and <see cref="WallItems"/>.</remarks>
     public IEnumerable<Furni> Furni => FloorItems.Cast<Furni>().Concat(WallItems);
 
     /// <summary>
-    /// The hotel's furniture definitions. Non-nullable form of the furniture data on
-    /// <c>GameData</c>.
+    /// Gets the hotel's furniture definitions.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The furniture data has not been loaded.</exception>
+    /// <remarks>
+    /// Non-nullable form of <see cref="Qx.Game.GameData.Furni"/> on <see cref="GameData"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the furniture data has not been loaded.</exception>
     public Qx.Game.FurniData FurniData =>
         GameData.Furni ?? throw new InvalidOperationException("Furniture data has not been loaded.");
 
     /// <summary>
-    /// The hotel's catalog product definitions. Non-nullable form of the product data on
-    /// <c>GameData</c>.
+    /// Gets the hotel's catalog product definitions.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The product data has not been loaded.</exception>
+    /// <remarks>
+    /// Non-nullable form of <see cref="Qx.Game.GameData.Products"/> on <see cref="GameData"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the product data has not been loaded.</exception>
     public Qx.Game.ProductData ProductData =>
         GameData.Products ?? throw new InvalidOperationException("Product data has not been loaded.");
 
     /// <summary>
-    /// The hotel's external text table, which holds every localized string including furniture,
-    /// badge, effect and hand-item names. Non-nullable form of the texts on <c>GameData</c>.
+    /// Gets the hotel's external text table.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The external texts have not been loaded.</exception>
+    /// <remarks>
+    /// The table holds every localized string, including furniture, badge, effect and hand item
+    /// names. Non-nullable form of <see cref="Qx.Game.GameData.Texts"/> on <see cref="GameData"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public ExternalTexts Texts =>
         GameData.Texts ?? throw new InvalidOperationException("External texts have not been loaded.");
 
@@ -243,26 +278,31 @@ public partial class ScriptGlobals
     /// <returns>The item, or <see langword="null"/> when it is not in the room.</returns>
     public WallItem? GetWallItem(Id id) => Room.WallItem(id);
 
-    /// <summary>Changes the local user's motto. Alias for <see cref="SetMotto"/>.</summary>
+    /// <summary>Changes the local user's motto.</summary>
+    /// <remarks>Alias for <see cref="SetMotto"/>.</remarks>
     /// <param name="motto">The new motto.</param>
     public void SetUserMotto(string motto) => SetMotto(motto);
 
     /// <summary>
-    /// Changes the local user's figure and gender. Wraps <see cref="UpdateFigure"/>, converting the
-    /// gender to the single-letter code the wire uses.
+    /// Changes the local user's figure and gender.
     /// </summary>
+    /// <remarks>
+    /// Wraps <see cref="UpdateFigure"/>, converting the gender to the single letter code the wire
+    /// uses.
+    /// </remarks>
     /// <param name="figure">The figure string.</param>
     /// <param name="gender">The avatar's gender.</param>
     public void SetUserFigure(string figure, Gender gender) =>
         UpdateFigure(gender.ToClientString(), figure);
 
-    /// <summary>Sends a friend request to a user by name. Alias for <c>AddFriend</c>.</summary>
+    /// <summary>Sends a friend request to a user by name.</summary>
+    /// <remarks>Alias for <see cref="AddFriend(string)"/>.</remarks>
     /// <param name="name">The target user's name.</param>
     public void FriendRequest(string name) => AddFriend(name);
 
     /// <summary>Sends a friend request to a user in the room.</summary>
     /// <param name="user">The target user; only its name is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="user"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="user"/> is <see langword="null"/>.</exception>
     public void FriendRequest(User user)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -271,25 +311,25 @@ public partial class ScriptGlobals
 
     /// <summary>Sends a friend request to a user in the room.</summary>
     /// <param name="user">The target user; only its name is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="user"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="user"/> is <see langword="null"/>.</exception>
     public void AddFriend(User user)
     {
         ArgumentNullException.ThrowIfNull(user);
         AddFriend(user.Name);
     }
 
-    /// <summary>Whether a user is on the local user's friend list.</summary>
+    /// <summary>Gets whether a user is on the local user's friend list.</summary>
     /// <param name="id">The user's account id.</param>
     /// <returns>
     /// <see langword="true"/> when the friend list holds that id. The friend list has to have been
-    /// received; before that this is always <see langword="false"/>.
+    /// received; before that the result is always <see langword="false"/>.
     /// </returns>
     public bool IsFriend(Id id) => Game.Friends.FriendById(id) is not null;
 
-    /// <summary>Whether a user in the room is on the local user's friend list.</summary>
+    /// <summary>Gets whether a user in the room is on the local user's friend list.</summary>
     /// <param name="user">The user; only its id is used.</param>
     /// <returns><see langword="true"/> when the friend list holds that user.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="user"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="user"/> is <see langword="null"/>.</exception>
     public bool IsFriend(User user)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -298,7 +338,7 @@ public partial class ScriptGlobals
 
     /// <summary>Accepts several pending friend requests in one message.</summary>
     /// <param name="user_ids">The account ids of the requesters to accept.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="user_ids"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="user_ids"/> is <see langword="null"/>.</exception>
     public void AcceptFriendRequests(IEnumerable<Id> user_ids)
     {
         ArgumentNullException.ThrowIfNull(user_ids);
@@ -310,7 +350,7 @@ public partial class ScriptGlobals
 
     /// <summary>Removes a friend from the friend list.</summary>
     /// <param name="friend">The friend to remove; only its id is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="friend"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="friend"/> is <see langword="null"/>.</exception>
     public void RemoveFriend(Friend friend)
     {
         ArgumentNullException.ThrowIfNull(friend);
@@ -319,7 +359,7 @@ public partial class ScriptGlobals
 
     /// <summary>Removes several friends in one message.</summary>
     /// <param name="user_ids">The account ids to remove.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="user_ids"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="user_ids"/> is <see langword="null"/>.</exception>
     public void RemoveFriends(IEnumerable<Id> user_ids)
     {
         ArgumentNullException.ThrowIfNull(user_ids);
@@ -328,7 +368,7 @@ public partial class ScriptGlobals
 
     /// <summary>Removes several friends in one message, skipping null entries.</summary>
     /// <param name="friends">The friends to remove.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="friends"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="friends"/> is <see langword="null"/>.</exception>
     public void RemoveFriends(IEnumerable<Friend> friends)
     {
         ArgumentNullException.ThrowIfNull(friends);
@@ -340,7 +380,7 @@ public partial class ScriptGlobals
     /// <summary>Sends a console (private) message to a friend.</summary>
     /// <param name="friend">The recipient; only its id is used.</param>
     /// <param name="message">The message text.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="friend"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="friend"/> is <see langword="null"/>.</exception>
     public void SendMessage(Friend friend, string message)
     {
         ArgumentNullException.ThrowIfNull(friend);
@@ -349,7 +389,7 @@ public partial class ScriptGlobals
 
     /// <summary>Adds a user in the room to the ignore list.</summary>
     /// <param name="user">The user; only its id is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="user"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="user"/> is <see langword="null"/>.</exception>
     public void Ignore(User user)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -358,72 +398,77 @@ public partial class ScriptGlobals
 
     /// <summary>Removes a user in the room from the ignore list.</summary>
     /// <param name="user">The user; only its id is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="user"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="user"/> is <see langword="null"/>.</exception>
     public void Unignore(User user)
     {
         ArgumentNullException.ThrowIfNull(user);
         Unignore(user.Id);
     }
 
-    /// <summary>Gives a respect to a user. Alias for <c>RespectUser</c>.</summary>
+    /// <summary>Gives a respect to a user.</summary>
+    /// <remarks>Alias for <see cref="RespectUser(Id)"/>.</remarks>
     /// <param name="user_id">The target user's account id.</param>
     public void Respect(Id user_id) => RespectUser(user_id);
 
-    /// <summary>Gives a respect to a user in the room. Alias for <c>RespectUser</c>.</summary>
+    /// <summary>Gives a respect to a user in the room.</summary>
+    /// <remarks>Alias for <see cref="RespectUser(User)"/>.</remarks>
     /// <param name="user">The target user.</param>
     public void Respect(User user) => RespectUser(user);
 
     /// <summary>
-    /// Scratches (respects) a pet, which is what raises its happiness. Alias for
-    /// <see cref="RespectPet"/>.
+    /// Scratches (respects) a pet, which is what raises its happiness.
     /// </summary>
+    /// <remarks>Alias for <see cref="RespectPet"/>.</remarks>
     /// <param name="pet_id">The pet id.</param>
     public void Scratch(Id pet_id) => RespectPet(pet_id);
 
     /// <summary>Scratches a pet in the room.</summary>
     /// <param name="pet">The pet; only its id is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="pet"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="pet"/> is <see langword="null"/>.</exception>
     public void Scratch(Pet pet)
     {
         ArgumentNullException.ThrowIfNull(pet);
         RespectPet(pet.Id);
     }
 
-    /// <summary>Mounts or dismounts a rideable pet. Alias for <c>MountPet</c>.</summary>
+    /// <summary>Mounts or dismounts a rideable pet.</summary>
+    /// <remarks>Alias for <see cref="MountPet"/>.</remarks>
     /// <param name="pet_id">The pet id.</param>
-    /// <param name="mount">True to get on, false to get off.</param>
+    /// <param name="mount"><see langword="true"/> to get on; <see langword="false"/> to get off.</param>
     public void Ride(Id pet_id, bool mount) => MountPet(pet_id, mount);
 
     /// <summary>Mounts or dismounts a rideable pet in the room.</summary>
     /// <param name="pet">The pet; only its id is used.</param>
-    /// <param name="mount">True to get on, false to get off.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="pet"/> is null.</exception>
+    /// <param name="mount"><see langword="true"/> to get on; <see langword="false"/> to get off.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="pet"/> is <see langword="null"/>.</exception>
     public void Ride(Pet pet, bool mount)
     {
         ArgumentNullException.ThrowIfNull(pet);
         MountPet(pet.Id, mount);
     }
 
-    /// <summary>Gets on a rideable pet. Alias for <c>MountPet</c>.</summary>
+    /// <summary>Gets on a rideable pet.</summary>
+    /// <remarks>Alias for <see cref="MountPet"/>.</remarks>
     /// <param name="pet_id">The pet id.</param>
     public void Mount(Id pet_id) => MountPet(pet_id);
 
     /// <summary>Gets on a rideable pet in the room.</summary>
     /// <param name="pet">The pet; only its id is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="pet"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="pet"/> is <see langword="null"/>.</exception>
     public void Mount(Pet pet)
     {
         ArgumentNullException.ThrowIfNull(pet);
         MountPet(pet.Id);
     }
 
-    /// <summary>Gets off a rideable pet. Alias for <see cref="DismountPet"/>.</summary>
+    /// <summary>Gets off a rideable pet.</summary>
+    /// <remarks>Alias for <see cref="DismountPet"/>.</remarks>
     /// <param name="pet_id">The pet id.</param>
     public void Dismount(Id pet_id) => DismountPet(pet_id);
 
     /// <summary>Gets off a rideable pet in the room.</summary>
     /// <param name="pet">The pet; only its id is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="pet"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="pet"/> is <see langword="null"/>.</exception>
     public void Dismount(Pet pet)
     {
         ArgumentNullException.ThrowIfNull(pet);
@@ -431,37 +476,60 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Leaves a group. There is no dedicated message for this: the client kicks the local user out
-    /// of the group, so this forwards to <see cref="KickGroupMember"/> with the own account id.
+    /// Leaves a group.
     /// </summary>
-    /// <param name="group_id">The group to leave.</param>
-    /// <exception cref="InvalidOperationException">The user's data has not been received yet.</exception>
+    /// <remarks>
+    /// There is no dedicated message for leaving: the client kicks the local user out of the
+    /// group, so the call forwards to <see cref="KickGroupMember"/> with the own account id.
+    /// </remarks>
+    /// <param name="group_id">The id of the group to leave.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the user's data has not been received yet.</exception>
     public void LeaveGroup(Id group_id) =>
         KickGroupMember(group_id, UserData.Id);
 
     /// <summary>
-    /// Makes a group the local user's favourite, shown on their avatar. Alias for
-    /// <see cref="SetFavouriteGroup"/>.
+    /// Makes a group the local user's favorite, shown on their avatar.
     /// </summary>
+    /// <remarks>Alias for <see cref="SetFavouriteGroup"/>.</remarks>
     /// <param name="group_id">The group id.</param>
     public void SetGroupFavourite(Id group_id) =>
         SetFavouriteGroup(group_id);
 
     /// <summary>
-    /// Clears the favourite group. Alias for <see cref="UnsetFavouriteGroup"/>.
+    /// Clears the local user's favorite group.
     /// </summary>
-    /// <param name="group_id">The group id.</param>
+    /// <remarks>Alias for <see cref="UnsetFavouriteGroup"/>.</remarks>
+    /// <param name="group_id">The id of the group to clear as favorite.</param>
     public void RemoveGroupFavourite(Id group_id) =>
         UnsetFavouriteGroup(group_id);
 
     /// <summary>
-    /// Approves a pending group join request. Alias for <see cref="ApproveGroupMember"/>.
+    /// Approves a pending group join request.
     /// </summary>
+    /// <remarks>Alias for <see cref="ApproveGroupMember"/>.</remarks>
     /// <param name="group_id">The group id.</param>
     /// <param name="user_id">The requesting user's account id.</param>
     public void AcceptGroupMember(Id group_id, Id user_id) =>
         ApproveGroupMember(group_id, user_id);
 
+    /// <summary>
+    /// Requests one page of a group's member list, blocking the calling thread until the reply arrives.
+    /// </summary>
+    /// <remarks>
+    /// Blocking form of <see cref="GetGuildMembers"/> that takes the older
+    /// <see cref="GroupMemberSearchType"/>. Prefer the awaitable native method.
+    /// </remarks>
+    /// <param name="group_id">The group id.</param>
+    /// <param name="page">The zero-based page index.</param>
+    /// <param name="filter">The user name filter; empty means no filter.</param>
+    /// <param name="search_type">The slice of the member list to fetch.</param>
+    /// <param name="timeout">The total time budget in milliseconds.</param>
+    /// <returns>The requested page of members.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="page"/> is negative or <paramref name="search_type"/> is not a defined value.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="filter"/> is <see langword="null"/>.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no reply arrived in time.</exception>
     public GuildMembers GetGroupMembers(
     Id group_id,
     int page = 0,
@@ -487,35 +555,42 @@ public partial class ScriptGlobals
         .GetResult();
 
     /// <summary>
-    /// Blocking form of <see cref="GetGuildMemberships"/>: the groups the local user belongs to.
+    /// Requests the groups the local user belongs to, blocking the calling thread until the reply arrives.
     /// </summary>
+    /// <remarks>
+    /// Blocking form of <see cref="GetGuildMemberships"/>. Prefer the awaitable native method.
+    /// </remarks>
     /// <param name="timeout">The total time budget in milliseconds.</param>
-    /// <returns>The user's group memberships.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No reply arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <returns>The user's group memberships, or an empty list when the user is in no group.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no reply arrived in time.</exception>
     public IReadOnlyList<GuildMembership> GetUserGroups(int timeout = 10000) =>
         GetGuildMemberships(timeout).GetAwaiter().GetResult();
 
     /// <summary>
-    /// Blocking form of <see cref="GetAchievements"/>: the local user's achievement list.
+    /// Requests the local user's achievement list, blocking the calling thread until the reply arrives.
     /// </summary>
+    /// <remarks>
+    /// Blocking form of <see cref="GetAchievements"/>. The reply also refreshes the tracked
+    /// achievement state. Prefer the awaitable native method.
+    /// </remarks>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The achievements.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No reply arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no reply arrived in time.</exception>
     public Achievements GetUserAchievements(int timeout = 10000) =>
         GetAchievements(timeout).GetAwaiter().GetResult();
 
     /// <summary>
-    /// Blocking form of <see cref="SearchRooms"/>: runs a navigator search and returns the raw
-    /// result blocks.
+    /// Runs a navigator search and returns the raw result blocks, blocking the calling thread
+    /// until the reply arrives.
     /// </summary>
+    /// <remarks>
+    /// Blocking form of <see cref="SearchRooms"/>. Prefer the awaitable native method.
+    /// </remarks>
     /// <param name="category">The navigator view code, for example <c>hotel_view</c> or <c>query</c>.</param>
     /// <param name="filter">The filter text; empty means no filter.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The navigator result.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching result arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching result arrived in time.</exception>
     public NavigatorSearchResult GetNav(
         string category,
         string filter = "",
@@ -523,15 +598,17 @@ public partial class ScriptGlobals
         SearchRooms(category, filter, timeout).GetAwaiter().GetResult();
 
     /// <summary>
-    /// Blocking form of <see cref="SearchRoomQuery"/>: runs a navigator search and returns the
-    /// flattened room list as a query.
+    /// Runs a navigator search and returns the flattened room list as a query, blocking the
+    /// calling thread until the reply arrives.
     /// </summary>
+    /// <remarks>
+    /// Blocking form of <see cref="SearchRoomQuery"/>. Prefer the awaitable native method.
+    /// </remarks>
     /// <param name="category">The navigator view code.</param>
     /// <param name="filter">The filter text; empty means no filter.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>A query over the rooms found.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching result arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching result arrived in time.</exception>
     public RoomDataQuery SearchNav(
         string category,
         string filter = "",
@@ -539,116 +616,143 @@ public partial class ScriptGlobals
         SearchRoomQuery(category, filter, timeout).GetAwaiter().GetResult();
 
     /// <summary>
-    /// Blocking free-text navigator search: runs the <c>query</c> view with the given text, which
-    /// also accepts the navigator prefixes such as <c>owner:</c>, <c>roomname:</c>, <c>tag:</c> and
-    /// <c>group:</c>.
+    /// Runs a free text navigator search, blocking the calling thread until the reply arrives.
     /// </summary>
+    /// <remarks>
+    /// Runs the <c>query</c> view with the given text, which also accepts the navigator prefixes
+    /// such as <c>owner:</c>, <c>roomname:</c>, <c>tag:</c> and <c>group:</c>.
+    /// </remarks>
     /// <param name="query">The search text.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>A query over the rooms found.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching result arrived in time.</exception>
-    /// <remarks>Blocks the calling thread.</remarks>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching result arrived in time.</exception>
     public RoomDataQuery QueryNav(string query, int timeout = 10000) =>
         SearchRoomQuery("query", query, timeout).GetAwaiter().GetResult();
 
     /// <summary>
-    /// Blocking form of <see cref="SearchRoomsByName"/>: rooms whose name matches.
+    /// Searches the navigator for rooms whose name contains the given text, blocking the calling
+    /// thread until the reply arrives.
     /// </summary>
-    /// <param name="room_name">The room name or fragment.</param>
+    /// <remarks>
+    /// Blocking form of <see cref="SearchRoomsByName"/>. Prefer the awaitable native method.
+    /// </remarks>
+    /// <param name="room_name">The room name or fragment, compared case-insensitively.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The rooms found.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching result arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching result arrived in time.</exception>
     public IReadOnlyList<RoomData> SearchNavByName(
         string room_name,
         int timeout = 10000) =>
         SearchRoomsByName(room_name, timeout).GetAwaiter().GetResult();
 
     /// <summary>
-    /// Blocking form of <see cref="SearchRoomsByOwner"/>: rooms owned by a user.
+    /// Searches the navigator for rooms owned by a user, blocking the calling thread until the
+    /// reply arrives.
     /// </summary>
-    /// <param name="owner_name">The owner's name.</param>
+    /// <remarks>
+    /// Blocking form of <see cref="SearchRoomsByOwner"/>, which keeps only exact owner name
+    /// matches. Prefer the awaitable native method.
+    /// </remarks>
+    /// <param name="owner_name">The owner's name, compared case-insensitively.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The rooms found.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching result arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching result arrived in time.</exception>
     public IReadOnlyList<RoomData> SearchNavByOwner(
         string owner_name,
         int timeout = 10000) =>
         SearchRoomsByOwner(owner_name, timeout).GetAwaiter().GetResult();
 
     /// <summary>
-    /// Blocking form of <see cref="SearchRoomsByTag"/>: rooms carrying a tag.
+    /// Searches the navigator for rooms carrying a tag, blocking the calling thread until the
+    /// reply arrives.
     /// </summary>
-    /// <param name="tag">The tag.</param>
+    /// <remarks>
+    /// Blocking form of <see cref="SearchRoomsByTag"/>. Prefer the awaitable native method.
+    /// </remarks>
+    /// <param name="tag">The tag, without a leading <c>#</c>.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The rooms found.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching result arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching result arrived in time.</exception>
     public IReadOnlyList<RoomData> SearchNavByTag(
         string tag,
         int timeout = 10000) =>
         SearchRoomsByTag(tag, timeout).GetAwaiter().GetResult();
 
     /// <summary>
-    /// Blocking form of <see cref="SearchRoomsByGroup"/>: rooms belonging to a group.
+    /// Searches the navigator for rooms that belong to a group, blocking the calling thread until
+    /// the reply arrives.
     /// </summary>
-    /// <param name="group_name">The group's name.</param>
+    /// <remarks>
+    /// Blocking form of <see cref="SearchRoomsByGroup"/>, which keeps only rooms whose group name
+    /// contains the text. Prefer the awaitable native method.
+    /// </remarks>
+    /// <param name="group_name">The group's name or fragment, compared case-insensitively.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The rooms found.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching result arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching result arrived in time.</exception>
     public IReadOnlyList<RoomData> SearchNavByGroup(
         string group_name,
         int timeout = 10000) =>
         SearchRoomsByGroup(group_name, timeout).GetAwaiter().GetResult();
 
     /// <summary>
-    /// Blocking form of <see cref="GetCatalogIndex"/>: the catalog's page tree.
+    /// Gets the catalog's page tree, blocking the calling thread until it is available.
     /// </summary>
+    /// <remarks>
+    /// Blocking form of <see cref="GetCatalogIndex"/>, so a cached copy younger than
+    /// <see cref="Qx.Game.CatalogManager.DefaultMaxAge"/> is returned without a request. Prefer
+    /// the awaitable native method.
+    /// </remarks>
     /// <param name="type">
     /// The catalog to read: <c>NORMAL</c> for the shop, <c>BUILDERS_CLUB</c> for the Builders Club
     /// catalog.
     /// </param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The catalog index.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching index arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching index arrived in time.</exception>
     public CatalogIndex GetCatalog(
         string type = "NORMAL",
         int timeout = 10000) =>
         GetCatalogIndex(type, timeout).GetAwaiter().GetResult();
 
-    /// <summary>Blocking read of the Builders Club catalog index.</summary>
+    /// <summary>Gets the Builders Club catalog index, blocking the calling thread until it is available.</summary>
+    /// <remarks>
+    /// Same as <see cref="GetCatalog"/> with <c>BUILDERS_CLUB</c>, including the use of the catalog cache.
+    /// </remarks>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The Builders Club catalog index.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching index arrived in time.</exception>
-    /// <remarks>Blocks the calling thread.</remarks>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching index arrived in time.</exception>
     public CatalogIndex GetBcCatalog(int timeout = 10000) =>
         GetCatalog("BUILDERS_CLUB", timeout);
 
-    /// <summary>Blocking read of one Builders Club catalog page.</summary>
+    /// <summary>Gets one Builders Club catalog page, blocking the calling thread until it is available.</summary>
+    /// <remarks>
+    /// Blocking form of <see cref="GetCatalogPage"/> with no preselected offer, so a cached copy
+    /// younger than <see cref="Qx.Game.CatalogManager.DefaultMaxAge"/> is returned without a
+    /// request. Prefer the awaitable native method.
+    /// </remarks>
     /// <param name="page_id">The page id from the catalog index.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The page and its offers.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching page arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching page arrived in time.</exception>
     public CatalogPage GetBcCatalogPage(int page_id, int timeout = 10000) =>
         GetCatalogPage(page_id, -1, "BUILDERS_CLUB", timeout)
             .GetAwaiter()
             .GetResult();
 
     /// <summary>
-    /// Buys from the catalog. Same as <see cref="PurchaseFromCatalog"/> with the argument order the
-    /// older API used: count before extra data.
+    /// Buys an offer from the catalog.
     /// </summary>
+    /// <remarks>
+    /// Same as <see cref="PurchaseFromCatalog"/> with the argument order the older API used: count
+    /// before extra data. The call does not wait; the purchase result arrives as its own message.
+    /// </remarks>
     /// <param name="page_id">The catalog page id.</param>
     /// <param name="offer_id">The offer id on that page.</param>
-    /// <param name="count">How many to buy.</param>
+    /// <param name="count">The number of items to buy.</param>
     /// <param name="extra">
-    /// The offer's extra data, for example a chosen colour or the text on a personalised item.
+    /// The offer's extra data, for example a chosen color or the text on a personalized item.
     /// </param>
-    /// <remarks>Fire-and-forget; the purchase result arrives as its own message.</remarks>
     public void Purchase(
         int page_id,
         int offer_id,
@@ -657,28 +761,35 @@ public partial class ScriptGlobals
         PurchaseFromCatalog(page_id, offer_id, extra, count);
 
     /// <summary>
-    /// Blocking form of <c>GetMyMarketplaceOffers</c>: the local user's own marketplace offers.
+    /// Requests the local user's own marketplace offers, blocking the calling thread until the
+    /// reply arrives.
     /// </summary>
+    /// <remarks>
+    /// Blocking form of <see cref="GetMyMarketplaceOffers(int)"/>. Prefer the awaitable native method.
+    /// </remarks>
     /// <param name="timeout">The total time budget in milliseconds.</param>
-    /// <returns>The own-offer list.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No reply arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <returns>The own offer list.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no reply arrived in time.</exception>
     public MarketplaceOwnOfferPage GetUserMarketplaceOffers(int timeout = 10000) =>
         GetMyMarketplaceOffers(timeout).GetAwaiter().GetResult();
 
     /// <summary>
-    /// Blocking marketplace price lookup for one furni kind, taking the item type as an enum.
+    /// Requests the marketplace price statistics for one furni kind, blocking the calling thread
+    /// until the reply arrives.
     /// </summary>
+    /// <remarks>
+    /// Blocking form of <see cref="GetMarketplaceStats(int, int, int)"/> that takes the item type
+    /// as an enum. Prefer the awaitable native method.
+    /// </remarks>
     /// <param name="type">
-    /// The item kind: <c>Floor</c> maps to marketplace category 1, <c>Wall</c> to 2. Limited
+    /// The item type: <c>Floor</c> maps to marketplace category 1, <c>Wall</c> to 2. Limited
     /// editions cannot be expressed here.
     /// </param>
     /// <param name="kind">The furni type id.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The price statistics.</returns>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="type"/> is neither floor nor wall.</exception>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching stats arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="type"/> is neither floor nor wall.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching stats arrived in time.</exception>
     public MarketplaceItemStatsSnapshot GetMarketplaceInfo(
         ItemType type,
         int kind,
@@ -692,13 +803,16 @@ public partial class ScriptGlobals
             .GetAwaiter()
             .GetResult();
 
-    /// <summary>Blocking marketplace price lookup for a room item's kind.</summary>
+    /// <summary>
+    /// Requests the marketplace price statistics for a room item's kind, blocking the calling
+    /// thread until the reply arrives.
+    /// </summary>
     /// <param name="item">The room item; its type and kind are used.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The price statistics for that furni kind.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching stats arrived in time.</exception>
-    /// <remarks>Blocks the calling thread.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the item is neither a floor nor a wall item.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching stats arrived in time.</exception>
     public MarketplaceItemStatsSnapshot GetMarketplaceInfo(
         Furni item,
         int timeout = 10000)
@@ -707,13 +821,16 @@ public partial class ScriptGlobals
         return GetMarketplaceInfo(item.Type, item.Kind, timeout);
     }
 
-    /// <summary>Blocking marketplace price lookup for an inventory item's kind.</summary>
+    /// <summary>
+    /// Requests the marketplace price statistics for an inventory item's kind, blocking the
+    /// calling thread until the reply arrives.
+    /// </summary>
     /// <param name="item">The inventory item; its type and kind are used.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The price statistics for that furni kind.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching stats arrived in time.</exception>
-    /// <remarks>Blocks the calling thread.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the item is neither a floor nor a wall item.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching stats arrived in time.</exception>
     public MarketplaceItemStatsSnapshot GetMarketplaceInfo(
         InventoryItem item,
         int timeout = 10000)
@@ -722,13 +839,16 @@ public partial class ScriptGlobals
         return GetMarketplaceInfo(item.Type, item.Kind, timeout);
     }
 
-    /// <summary>Blocking marketplace price lookup from a furniture definition.</summary>
+    /// <summary>
+    /// Requests the marketplace price statistics for a furniture definition, blocking the calling
+    /// thread until the reply arrives.
+    /// </summary>
     /// <param name="item">The furniture definition; its type and kind are used.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The price statistics for that furni kind.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching stats arrived in time.</exception>
-    /// <remarks>Blocks the calling thread.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the definition is neither a floor nor a wall item.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching stats arrived in time.</exception>
     public MarketplaceItemStatsSnapshot GetMarketplaceInfo(
         FurniInfo item,
         int timeout = 10000)
@@ -741,8 +861,8 @@ public partial class ScriptGlobals
     /// Uses a room item, picking the floor or wall message from the item's runtime type.
     /// </summary>
     /// <param name="item">The item to use.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
-    /// <exception cref="ArgumentException">The item is neither a floor nor a wall item.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the item is neither a floor nor a wall item.</exception>
     public void UseFurni(Furni item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -754,18 +874,20 @@ public partial class ScriptGlobals
             throw new ArgumentException("Unsupported furniture type.", nameof(item));
     }
 
-    /// <summary>Uses a floor item. Alias for <c>UseFloorItem</c>.</summary>
+    /// <summary>Uses a floor item.</summary>
+    /// <remarks>Alias for <see cref="UseFloorItem(Id, int)"/> with the default state.</remarks>
     /// <param name="item">The item; only its id is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void UseFloorItem(FloorItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
         UseFloorItem(item.Id);
     }
 
-    /// <summary>Uses a wall item. Alias for <c>UseWallItem</c>.</summary>
+    /// <summary>Uses a wall item.</summary>
+    /// <remarks>Alias for <see cref="UseWallItem(Id, int)"/> with the default state.</remarks>
     /// <param name="item">The item; only its id is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void UseWallItem(WallItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -778,8 +900,8 @@ public partial class ScriptGlobals
     /// </summary>
     /// <param name="item">The item to switch.</param>
     /// <param name="state">The state to request. Its meaning is furniture-specific.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
-    /// <exception cref="ArgumentException">The item is neither a floor nor a wall item.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the item is neither a floor nor a wall item.</exception>
     public void ToggleFurni(Furni item, int state)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -792,47 +914,59 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Switches a floor item to a specific state. Same as <c>UseFloorItem</c> with an explicit
-    /// state rather than the default 0.
+    /// Switches a floor item to a specific state.
     /// </summary>
+    /// <remarks>
+    /// Same as <see cref="UseFloorItem(Id, int)"/> with an explicit state rather than the default 0.
+    /// </remarks>
     /// <param name="item_id">The floor item id.</param>
     /// <param name="state">The state to request.</param>
     public void ToggleFloorItem(Id item_id, int state) =>
         UseFloorItem(item_id, state);
 
     /// <summary>
-    /// Switches a wall item to a specific state. Same as <c>UseWallItem</c> with an explicit state.
+    /// Switches a wall item to a specific state.
     /// </summary>
+    /// <remarks>
+    /// Same as <see cref="UseWallItem(Id, int)"/> with an explicit state rather than the default 0.
+    /// </remarks>
     /// <param name="item_id">The wall item id.</param>
     /// <param name="state">The state to request.</param>
     public void ToggleWallItem(Id item_id, int state) =>
         UseWallItem(item_id, state);
 
-    /// <summary>Walks to a tile. Alias for <c>Walk</c>.</summary>
+    /// <summary>Walks to a tile.</summary>
+    /// <remarks>Alias for <see cref="Walk(int, int)"/>.</remarks>
     /// <param name="location">The target tile.</param>
     public void Move(Point location) => Move(location.X, location.Y);
 
-    /// <summary>Walks to a tile. Alias for <c>Walk</c>.</summary>
+    /// <summary>Walks to a tile.</summary>
+    /// <remarks>Alias for <see cref="Walk(int, int)"/>.</remarks>
     /// <param name="location">The target tile.</param>
     public void Walk(Point location) => Walk(location.X, location.Y);
 
-    /// <summary>Walks to a tile. Alias for <c>Walk</c>.</summary>
+    /// <summary>Walks to a tile.</summary>
+    /// <remarks>Alias for <see cref="Walk(int, int)"/>.</remarks>
     /// <param name="location">The target tile.</param>
     public void WalkTo(Point location) => WalkTo(location.X, location.Y);
 
-    /// <summary>Turns the avatar to face a tile without moving. Alias for <c>LookTo</c>.</summary>
+    /// <summary>Turns the avatar to face a tile without moving.</summary>
+    /// <remarks>Alias for <see cref="LookTo(int, int)"/>.</remarks>
     /// <param name="location">The tile to face.</param>
     public void LookTo(Point location) => LookTo(location.X, location.Y);
 
-    /// <summary>Turns the avatar to face a tile without moving. Alias for <c>LookTo</c>.</summary>
+    /// <summary>Turns the avatar to face a tile without moving.</summary>
+    /// <remarks>Alias for <see cref="LookTo(int, int)"/>.</remarks>
     /// <param name="location">The tile to face.</param>
     public void FaceTo(Point location) => FaceTo(location.X, location.Y);
 
     /// <summary>
-    /// Turns the avatar to one of the eight compass directions. The hotel has no "face direction"
-    /// message, so this aims at a far-off tile in that direction and lets the server work the
-    /// facing out.
+    /// Turns the avatar to one of the eight compass directions.
     /// </summary>
+    /// <remarks>
+    /// The hotel has no "face direction" message, so the call aims at a far-off tile in that
+    /// direction with <see cref="LookTo(int, int)"/> and lets the server work the facing out.
+    /// </remarks>
     /// <param name="direction">
     /// 0 north, 1 north-east, 2 east, 3 south-east, 4 south, 5 south-west, 6 west, 7 north-west.
     /// Values outside 0-7 wrap, including negative ones.
@@ -847,8 +981,8 @@ public partial class ScriptGlobals
     /// <param name="item">The inventory item to place.</param>
     /// <param name="location">The target tile.</param>
     /// <param name="direction">The item's rotation, 0-7 in the same compass order as avatars.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">The inventory item is not a floor item.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the inventory item is not a floor item.</exception>
     public void Place(InventoryItem item, Point location, int direction = 0)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -860,8 +994,8 @@ public partial class ScriptGlobals
     /// <summary>Places a wall item from the inventory onto a wall.</summary>
     /// <param name="item">The inventory item to place.</param>
     /// <param name="location">The wall position.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">The inventory item is not a wall item.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the inventory item is not a wall item.</exception>
     public void Place(InventoryItem item, WallLocation location)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -887,7 +1021,7 @@ public partial class ScriptGlobals
     /// <param name="item">The item to move; only its id is used.</param>
     /// <param name="location">The target tile.</param>
     /// <param name="direction">The item's rotation, 0-7.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void Move(FloorItem item, Point location, int direction = 0)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -897,7 +1031,7 @@ public partial class ScriptGlobals
     /// <summary>Moves a wall item already in the room to another wall position.</summary>
     /// <param name="item">The item to move; only its id is used.</param>
     /// <param name="location">The target wall position.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void Move(WallItem item, WallLocation location)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -922,8 +1056,8 @@ public partial class ScriptGlobals
     /// runtime type.
     /// </summary>
     /// <param name="item">The item to pick up.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
-    /// <exception cref="ArgumentException">The item is neither a floor nor a wall item.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the item is neither a floor nor a wall item.</exception>
     public void Pickup(Furni item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -946,8 +1080,9 @@ public partial class ScriptGlobals
         PickupFurni(new WallItem { Id = item_id });
 
     /// <summary>
-    /// Places a blank sticky note on a wall. Alias for <see cref="PlacePostIt"/>.
+    /// Places a blank sticky note on a wall.
     /// </summary>
+    /// <remarks>Alias for <see cref="PlacePostIt"/>.</remarks>
     /// <param name="item_id">The inventory item id of the sticky pad.</param>
     /// <param name="location">The wall position.</param>
     public void PlaceSticky(Id item_id, WallLocation location) =>
@@ -956,8 +1091,8 @@ public partial class ScriptGlobals
     /// <summary>Places a blank sticky note from the inventory on a wall.</summary>
     /// <param name="item">The inventory item; it must be in the sticky-note category (5).</param>
     /// <param name="location">The wall position.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">The inventory item is not a sticky note.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the inventory item is not a sticky note.</exception>
     public void PlaceSticky(InventoryItem item, WallLocation location)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -967,11 +1102,12 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Places a sticky note and writes it in one step. Alias for <see cref="AddPostIt"/>.
+    /// Places a sticky note and writes it in one step.
     /// </summary>
+    /// <remarks>Alias for <see cref="AddPostIt"/>.</remarks>
     /// <param name="item_id">The inventory item id of the sticky pad.</param>
     /// <param name="location">The wall position.</param>
-    /// <param name="color">The note's background colour.</param>
+    /// <param name="color">The note's background color.</param>
     /// <param name="text">The note's text.</param>
     public void PlaceStickyWithPole(
         Id item_id,
@@ -983,9 +1119,9 @@ public partial class ScriptGlobals
     /// <summary>Places a sticky note from the inventory and writes it in one step.</summary>
     /// <param name="item">The inventory item; only its id is used.</param>
     /// <param name="location">The wall position.</param>
-    /// <param name="color">The note's background colour.</param>
+    /// <param name="color">The note's background color.</param>
     /// <param name="text">The note's text.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void PlaceStickyWithPole(
         InventoryItem item,
         WallLocation location,
@@ -997,14 +1133,16 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Blocking form of <c>GetSticky</c>: reads a sticky note's colour and text off the wall.
+    /// Requests a sticky note's color and text, blocking the calling thread until the reply arrives.
     /// </summary>
+    /// <remarks>
+    /// Blocking form of <see cref="GetSticky(Id, int)"/>. Prefer the awaitable native method.
+    /// </remarks>
     /// <param name="item">The wall item holding the note; only its id is used.</param>
     /// <param name="timeout">The total time budget in milliseconds.</param>
     /// <returns>The note's contents.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No matching item data arrived in time.</exception>
-    /// <remarks>Blocks the calling thread. Prefer the awaitable native method.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching item data arrived in time.</exception>
     public Sticky GetSticky(WallItem item, int timeout = 10000)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -1035,16 +1173,22 @@ public partial class ScriptGlobals
                 : null;
 
     /// <summary>
-    /// Whether the local user is the side that opened the trade rather than the side that was
-    /// invited. <see langword="false"/> when no trade is open.
+    /// Gets whether the local user is the side that opened the trade rather than the side that
+    /// was invited.
     /// </summary>
+    /// <remarks>
+    /// <see langword="false"/> when no trade is open.
+    /// </remarks>
     public bool IsTrader =>
         Trade.Active?.FirstParticipant.UserId == UserId;
 
     /// <summary>
-    /// Whether the local user has accepted the current offer. <see langword="false"/> when no trade
-    /// is open. Accepting is reset whenever either side changes their offer.
+    /// Gets whether the local user has accepted the current offer.
     /// </summary>
+    /// <remarks>
+    /// <see langword="false"/> when no trade is open. Accepting is reset whenever either side
+    /// changes their offer.
+    /// </remarks>
     public bool HasAcceptedTrade
     {
         get
@@ -1068,9 +1212,11 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Whether the trading partner has accepted the current offer. <see langword="false"/> when no
-    /// trade is open.
+    /// Gets whether the trading partner has accepted the current offer.
     /// </summary>
+    /// <remarks>
+    /// <see langword="false"/> when no trade is open.
+    /// </remarks>
     public bool HasPartnerAcceptedTrade
     {
         get
@@ -1081,21 +1227,24 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// The user on the other side of the trade, looked up in the room.
+    /// Gets the user on the other side of the trade, looked up in the room.
     /// </summary>
-    /// <returns>
+    /// <value>
     /// The partner, or <see langword="null"/> when no trade is open or that user is no longer in
     /// the room.
-    /// </returns>
+    /// </value>
     public User? TradePartner =>
         TradePartnerId is Id partner_id
             ? Room.AvatarById(partner_id) as User
             : null;
 
     /// <summary>
-    /// The local user's side of the trade: the items offered and the credit amount.
-    /// <see langword="null"/> until the server has sent the first item list.
+    /// Gets the local user's side of the trade: the items offered and the credit amount.
     /// </summary>
+    /// <remarks>
+    /// <see langword="null"/> when no trade is open or until the server has sent the first item
+    /// list.
+    /// </remarks>
     public TradeOfferView? OwnTradeOffer
     {
         get
@@ -1106,9 +1255,12 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// The partner's side of the trade. <see langword="null"/> until the server has sent the first
-    /// item list.
+    /// Gets the trading partner's side of the trade.
     /// </summary>
+    /// <remarks>
+    /// <see langword="null"/> when no trade is open or until the server has sent the first item
+    /// list.
+    /// </remarks>
     public TradeOfferView? PartnerTradeOffer
     {
         get
@@ -1121,14 +1273,15 @@ public partial class ScriptGlobals
         }
     }
 
-    /// <summary>Adds one inventory item to the trade. Alias for <see cref="OfferTradeItem"/>.</summary>
+    /// <summary>Adds one inventory item to the trade.</summary>
+    /// <remarks>Alias for <see cref="OfferTradeItem"/>.</remarks>
     /// <param name="item_id">The inventory item id.</param>
     public void Offer(Id item_id) =>
         OfferTradeItem(item_id);
 
     /// <summary>Adds one inventory item to the trade.</summary>
     /// <param name="item">The inventory item; only its item id is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void Offer(InventoryItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -1137,7 +1290,7 @@ public partial class ScriptGlobals
 
     /// <summary>Adds several inventory items to the trade in one message.</summary>
     /// <param name="item_ids">The inventory item ids.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item_ids"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item_ids"/> is <see langword="null"/>.</exception>
     public void Offer(IEnumerable<Id> item_ids)
     {
         ArgumentNullException.ThrowIfNull(item_ids);
@@ -1146,7 +1299,7 @@ public partial class ScriptGlobals
 
     /// <summary>Adds several inventory items to the trade, skipping null entries.</summary>
     /// <param name="items">The inventory items.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="items"/> is <see langword="null"/>.</exception>
     public void Offer(IEnumerable<InventoryItem> items)
     {
         ArgumentNullException.ThrowIfNull(items);
@@ -1156,15 +1309,16 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Takes one item back off the trade. Alias for <see cref="RemoveTradeItem"/>.
+    /// Takes one item back off the trade.
     /// </summary>
+    /// <remarks>Alias for <see cref="RemoveTradeItem"/>.</remarks>
     /// <param name="item_id">The inventory item id.</param>
     public void CancelOffer(Id item_id) =>
         RemoveTradeItem(item_id);
 
     /// <summary>Takes one item back off the trade.</summary>
     /// <param name="item">The inventory item; only its item id is used.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void CancelOffer(InventoryItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -1172,33 +1326,39 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Blocks the calling thread for an interval, waking early if the script is stopped. Alias for
-    /// <c>Sleep</c>.
+    /// Blocks the calling thread for an interval, waking early if the script is stopped.
     /// </summary>
-    /// <param name="duration">How long to sleep.</param>
-    /// <exception cref="OperationCanceledException">The script was stopped while sleeping.</exception>
+    /// <remarks>
+    /// Alias for <see cref="Sleep(TimeSpan)"/>. Unlike <see cref="Delay(int)"/>, this overload
+    /// blocks and returns nothing to await.
+    /// </remarks>
+    /// <param name="duration">The time to sleep.</param>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while sleeping.</exception>
     public void Delay(TimeSpan duration) =>
         Sleep(duration);
 
     /// <summary>
     /// Asynchronously waits for an interval, observing the script's stop token.
     /// </summary>
-    /// <param name="duration">How long to wait.</param>
+    /// <param name="duration">The time to wait.</param>
     /// <returns>A task that completes after the interval.</returns>
-    /// <exception cref="OperationCanceledException">The script was stopped while waiting.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while waiting.</exception>
     public Task DelayAsync(TimeSpan duration) =>
         Task.Delay(duration, Ct);
 
     /// <summary>
-    /// A non-negative pseudo-random integer from the shared thread-safe generator. Not suitable for
-    /// anything security-sensitive.
+    /// Gets a non-negative pseudo-random integer from the shared thread-safe generator.
     /// </summary>
-    /// <returns>A random value in the range 0 to <see cref="int.MaxValue"/> - 1.</returns>
+    /// <remarks>
+    /// Not suitable for anything security-sensitive.
+    /// </remarks>
+    /// <returns>A random value from 0 up to but not including <see cref="int.MaxValue"/>.</returns>
     public int Rand() => Random.Shared.Next();
 
-    /// <summary>Fills a buffer with pseudo-random bytes. Not cryptographically secure.</summary>
+    /// <summary>Fills a buffer with pseudo-random bytes.</summary>
+    /// <remarks>The bytes are not cryptographically secure.</remarks>
     /// <param name="buffer">The buffer to fill; every byte is overwritten.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="buffer"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="buffer"/> is <see langword="null"/>.</exception>
     public void Rand(byte[] buffer)
     {
         ArgumentNullException.ThrowIfNull(buffer);
@@ -1206,17 +1366,20 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Stores a value in the process-wide global store only if the key is not taken, so several
-    /// script runs can race to initialise shared state without overwriting each other.
+    /// Stores a value in the process-wide global store only if the key is not taken.
     /// </summary>
+    /// <remarks>
+    /// Several script runs can race to initialize shared state without overwriting each other.
+    /// The store is the one read by <see cref="GetGlobal(string)"/>.
+    /// </remarks>
     /// <param name="key">The key. Compared case-sensitively.</param>
     /// <param name="value">The value to store.</param>
     /// <returns>
     /// <see langword="true"/> when this call stored the value, <see langword="false"/> when the key
     /// already existed and nothing changed.
     /// </returns>
-    /// <exception cref="ArgumentException"><paramref name="key"/> is null, empty or whitespace.</exception>
-    /// <exception cref="ArgumentNullException"><paramref name="value"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="key"/> is <see langword="null"/>, empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
     public bool InitGlobal(string key, object value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
@@ -1231,19 +1394,21 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Stores a lazily-built value in the process-wide global store only if the key is not taken.
-    /// The factory runs only when the key is free, so an expensive initialisation is skipped on the
-    /// losing side of a race.
+    /// Stores a lazily built value in the process-wide global store only if the key is not taken.
     /// </summary>
+    /// <remarks>
+    /// The factory runs only when the key is free, under the store's lock, so an expensive
+    /// initialization is skipped on the losing side of a race.
+    /// </remarks>
     /// <param name="key">The key. Compared case-sensitively.</param>
-    /// <param name="value_factory">Builds the value; must not return null.</param>
+    /// <param name="value_factory">The factory that builds the value; it must not return <see langword="null"/>.</param>
     /// <returns>
     /// <see langword="true"/> when this call stored the value, <see langword="false"/> when the key
     /// already existed and the factory was never called.
     /// </returns>
-    /// <exception cref="ArgumentException"><paramref name="key"/> is null, empty or whitespace.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="key"/> is <see langword="null"/>, empty or whitespace.</exception>
     /// <exception cref="ArgumentNullException">
-    /// <paramref name="value_factory"/> is null, or it returned null.
+    /// Thrown when <paramref name="value_factory"/> is <see langword="null"/>, or it returned <see langword="null"/>.
     /// </exception>
     public bool InitGlobal(string key, Func<object> value_factory)
     {
@@ -1261,9 +1426,11 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// The straight-line distance between two tiles, in tiles. Avatars walk diagonally, so this is
-    /// not the number of steps between them.
+    /// Gets the straight-line distance between two tiles, in tiles.
     /// </summary>
+    /// <remarks>
+    /// Avatars walk diagonally, so the result is not the number of steps between them.
+    /// </remarks>
     /// <param name="first">The first tile.</param>
     /// <param name="second">The second tile.</param>
     /// <returns>The Euclidean distance.</returns>
@@ -1271,8 +1438,9 @@ public partial class ScriptGlobals
         Distance(first.X, first.Y, second.X, second.Y);
 
     /// <summary>
-    /// The furniture definition behind a room item. Alias for <see cref="FurniOf(Furni)"/>.
+    /// Gets the furniture definition behind a room item.
     /// </summary>
+    /// <remarks>Alias for <see cref="FurniOf(Furni)"/>.</remarks>
     /// <param name="item">The room item.</param>
     /// <returns>
     /// The definition, or <see langword="null"/> when the furniture data has not been loaded or has
@@ -1281,10 +1449,14 @@ public partial class ScriptGlobals
     public FurniInfo? GetFurniInfo(Furni item) => FurniOf(item);
 
     /// <summary>
-    /// The localized display name of a room item. Alias for <see cref="FurniName(Furni)"/>.
+    /// Gets the localized display name of a room item.
     /// </summary>
+    /// <remarks>Alias for <see cref="FurniName(Furni)"/>.</remarks>
     /// <param name="item">The room item.</param>
-    /// <returns>The item's name.</returns>
+    /// <returns>
+    /// The item's name, or <c>"#"</c> followed by the numeric kind when the furniture data has not
+    /// been loaded or the kind is unknown.
+    /// </returns>
     public string GetFurniName(Furni item) => FurniName(item);
 
     /// <summary>
@@ -1294,14 +1466,14 @@ public partial class ScriptGlobals
     /// <param name="code">The badge code.</param>
     /// <param name="name">Receives the name, or <see langword="null"/> when the key is absent.</param>
     /// <returns><see langword="true"/> when the text table has that key.</returns>
-    /// <exception cref="InvalidOperationException">The external texts have not been loaded.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public bool TryGetBadgeName(string code, out string? name) =>
         TryGetText($"badge_name_{code}", out name);
 
-    /// <summary>A badge's localized name.</summary>
+    /// <summary>Gets a badge's localized name.</summary>
     /// <param name="code">The badge code.</param>
     /// <returns>The name, or <see langword="null"/> when the text table has no entry for it.</returns>
-    /// <exception cref="InvalidOperationException">The external texts have not been loaded.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public string? GetBadgeName(string code) =>
         TryGetBadgeName(code, out string? name) ? name : null;
 
@@ -1311,14 +1483,14 @@ public partial class ScriptGlobals
     /// <param name="code">The badge code.</param>
     /// <param name="description">Receives the description, or <see langword="null"/> when absent.</param>
     /// <returns><see langword="true"/> when the text table has that key.</returns>
-    /// <exception cref="InvalidOperationException">The external texts have not been loaded.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public bool TryGetBadgeDescription(string code, out string? description) =>
         TryGetText($"badge_desc_{code}", out description);
 
-    /// <summary>A badge's localized description.</summary>
+    /// <summary>Gets a badge's localized description.</summary>
     /// <param name="code">The badge code.</param>
     /// <returns>The description, or <see langword="null"/> when absent.</returns>
-    /// <exception cref="InvalidOperationException">The external texts have not been loaded.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public string? GetBadgeDescription(string code) =>
         TryGetBadgeDescription(code, out string? description)
             ? description
@@ -1330,14 +1502,14 @@ public partial class ScriptGlobals
     /// <param name="id">The effect id.</param>
     /// <param name="name">Receives the name, or <see langword="null"/> when absent.</param>
     /// <returns><see langword="true"/> when the text table has that key.</returns>
-    /// <exception cref="InvalidOperationException">The external texts have not been loaded.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public bool TryGetEffectName(int id, out string? name) =>
         TryGetText($"fx_{id}", out name);
 
-    /// <summary>An avatar effect's localized name.</summary>
+    /// <summary>Gets an avatar effect's localized name.</summary>
     /// <param name="id">The effect id.</param>
     /// <returns>The name, or <see langword="null"/> when absent.</returns>
-    /// <exception cref="InvalidOperationException">The external texts have not been loaded.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public string? GetEffectName(int id) =>
         TryGetEffectName(id, out string? name) ? name : null;
 
@@ -1347,14 +1519,14 @@ public partial class ScriptGlobals
     /// <param name="id">The effect id.</param>
     /// <param name="description">Receives the description, or <see langword="null"/> when absent.</param>
     /// <returns><see langword="true"/> when the text table has that key.</returns>
-    /// <exception cref="InvalidOperationException">The external texts have not been loaded.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public bool TryGetEffectDescription(int id, out string? description) =>
         TryGetText($"fx_{id}_desc", out description);
 
-    /// <summary>An avatar effect's localized description.</summary>
+    /// <summary>Gets an avatar effect's localized description.</summary>
     /// <param name="id">The effect id.</param>
     /// <returns>The description, or <see langword="null"/> when absent.</returns>
-    /// <exception cref="InvalidOperationException">The external texts have not been loaded.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public string? GetEffectDescription(int id) =>
         TryGetEffectDescription(id, out string? description)
             ? description
@@ -1366,30 +1538,32 @@ public partial class ScriptGlobals
     /// <param name="id">The hand item id.</param>
     /// <param name="name">Receives the name, or <see langword="null"/> when absent.</param>
     /// <returns><see langword="true"/> when the text table has that key.</returns>
-    /// <exception cref="InvalidOperationException">The external texts have not been loaded.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public bool TryGetHandItemName(int id, out string? name) =>
         TryGetText($"handitem{id}", out name);
 
-    /// <summary>A hand item's localized name.</summary>
+    /// <summary>Gets a hand item's localized name.</summary>
     /// <param name="id">The hand item id.</param>
     /// <returns>The name, or <see langword="null"/> when absent.</returns>
-    /// <exception cref="InvalidOperationException">The external texts have not been loaded.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public string? GetHandItemName(int id) =>
         TryGetHandItemName(id, out string? name) ? name : null;
 
     /// <summary>
-    /// The reverse lookup: every hand item id whose localized name matches, compared
-    /// case-insensitively. Several ids can share one name, which is why this returns a sequence.
+    /// Gets every hand item id whose localized name matches the given name, compared
+    /// case-insensitively.
     /// </summary>
+    /// <remarks>
+    /// The reverse of <see cref="GetHandItemName"/>. Several ids can share one name, which is why
+    /// the result is a sequence. Argument checks and the text lookup are deferred: both exceptions
+    /// are thrown when the sequence is first enumerated, not when the method is called.
+    /// </remarks>
     /// <param name="name">The hand item name to look for.</param>
     /// <returns>
     /// The matching ids, produced lazily by scanning the whole external text table on enumeration.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="name"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">
-    /// The external texts have not been loaded. Thrown when the sequence is first enumerated, not
-    /// when this method is called.
-    /// </exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the external texts have not been loaded.</exception>
     public IEnumerable<int> GetHandItemIds(string name)
     {
         ArgumentNullException.ThrowIfNull(name);

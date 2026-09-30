@@ -8,11 +8,14 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// Every subscription the server has reported on, keyed by product name (case-insensitively),
-    /// with the days left in the period, periods held and paid ahead, the VIP flag and the minutes
-    /// until expiry. Empty until a subscription has been requested.
+    /// Gets every subscription the server has reported on, keyed by product name and ignoring case.
     /// </summary>
-    /// <returns>A snapshot copy, not a live view.</returns>
+    /// <remarks>
+    /// Each entry holds the days left in the period, the periods held and paid ahead, the VIP flag
+    /// and the minutes until expiry. The map is empty until the server has sent subscription info,
+    /// and holds at most the first 500 products. Every read builds a new snapshot copy, not a live
+    /// view.
+    /// </remarks>
     public IReadOnlyDictionary<string, ScrSendUserInfo> SubscriptionInfo
     {
         get
@@ -27,10 +30,13 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// The Habbo Club kickback summary: streak length, first subscription date, kickback
-    /// percentage, credits spent, missed and rewarded, and the time until the next payday.
-    /// <see langword="null"/> until it has been requested.
+    /// Gets the Habbo Club kickback summary, or <see langword="null"/> until the server has sent it.
     /// </summary>
+    /// <remarks>
+    /// The summary holds the streak length, the first subscription date, the kickback percentage,
+    /// the credits spent, missed and rewarded, and the time until the next payday. Every read
+    /// builds a new copy.
+    /// </remarks>
     public ScrSendKickbackInfo? SubscriptionKickback
     {
         get
@@ -41,9 +47,12 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// How many Builders Club furniture the local user currently has placed, as of the last count
-    /// the server sent. <see langword="null"/> until it has been requested.
+    /// Gets how many Builders Club furniture the local user has placed, as of the last count the
+    /// server sent.
     /// </summary>
+    /// <remarks>
+    /// It is <see langword="null"/> until the server has sent a count.
+    /// </remarks>
     public BuildersClubFurniCount? BuildersClubFurnitureCount
     {
         get
@@ -53,6 +62,14 @@ public partial class ScriptGlobals
         }
     }
 
+    /// <summary>
+    /// Gets the last Builders Club membership status the server sent, or <see langword="null"/>
+    /// when none has arrived.
+    /// </summary>
+    /// <remarks>
+    /// The status holds the seconds left, the furni limit, the maximum furni limit and, when the
+    /// server sends it, the seconds left including the grace period. Every read builds a new copy.
+    /// </remarks>
     public BuildersClubMembershipStatus? BuildersClubMembership
     {
         get
@@ -63,6 +80,15 @@ public partial class ScriptGlobals
         }
     }
 
+    /// <summary>
+    /// Gets the last Builders Club placement warning the server sent, or <see langword="null"/>
+    /// when none has arrived.
+    /// </summary>
+    /// <remarks>
+    /// The warning names the catalog page, offer and extra parameter of the placement, and its
+    /// floor tile and direction or its wall location.
+    /// </remarks>
+    /// <exception cref="InvalidDataException">Thrown when the cached warning lacks the position data its placement kind needs.</exception>
     public BuildersClubPlacementWarning? LastBuildersClubPlacementWarning
     {
         get
@@ -75,13 +101,14 @@ public partial class ScriptGlobals
 
     /// <summary>Finds one cached subscription by product name.</summary>
     /// <param name="product_name">
-    /// The subscription product, for example <c>habbo_club</c> or <c>builders_club</c>. Matched
-    /// case-insensitively.
+    /// The subscription product, for example <c>habbo_club</c> or <c>builders_club</c>, matched
+    /// ignoring case.
     /// </param>
     /// <returns>
-    /// The subscription info, or <see langword="null"/> when this product has not been requested.
+    /// The subscription info, or <see langword="null"/> when the server has not sent info for this
+    /// product.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="product_name"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="product_name"/> is <see langword="null"/>.</exception>
     public ScrSendUserInfo? FindSubscription(string product_name)
     {
         ArgumentNullException.ThrowIfNull(product_name);
@@ -94,30 +121,41 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Asks for one subscription's details. Returns immediately; the answer lands in the
-    /// subscription map, keyed by the product name the server echoes back, and raises the
-    /// subscription-info event.
+    /// Requests one subscription's details from the server.
     /// </summary>
+    /// <remarks>
+    /// It returns immediately. The answer lands in <see cref="SubscriptionInfo"/>, keyed by the
+    /// product name the server echoes back, and raises <see cref="OnSubscriptionInfoChanged"/>.
+    /// </remarks>
     /// <param name="product_name">
     /// The subscription product to ask about. Defaults to <c>habbo_club</c>; <c>builders_club</c>
     /// is the other product the hotel uses.
     /// </param>
-    /// <exception cref="ArgumentNullException"><paramref name="product_name"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="product_name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no active hotel session.</exception>
     public void RequestSubscriptionInfo(
         string product_name = "habbo_club") =>
         Subscriptions.RequestUserInfo(product_name);
 
     /// <summary>
-    /// Asks for the Habbo Club kickback summary. Returns immediately; the answer lands in the
-    /// kickback state and raises the kickback event.
+    /// Requests the Habbo Club kickback summary from the server.
     /// </summary>
+    /// <remarks>
+    /// It returns immediately. The answer lands in <see cref="SubscriptionKickback"/> and raises
+    /// <see cref="OnSubscriptionKickbackChanged"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when there is no active hotel session.</exception>
     public void RequestSubscriptionKickback() =>
         Subscriptions.RequestKickbackInfo();
 
     /// <summary>
-    /// Asks how many Builders Club furniture the local user has placed. Returns immediately; the
-    /// answer lands in the furniture-count state and raises the matching event.
+    /// Requests how many Builders Club furniture the local user has placed.
     /// </summary>
+    /// <remarks>
+    /// It returns immediately. The answer lands in <see cref="BuildersClubFurnitureCount"/> and
+    /// raises <see cref="OnBuildersClubFurniCountChanged"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when there is no active hotel session.</exception>
     public void RequestBuildersClubFurniCount() =>
         Subscriptions.RequestBuildersClubFurniCount();
 

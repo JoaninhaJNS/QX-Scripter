@@ -3,11 +3,16 @@ using Qx;
 
 namespace Qx.Protocol;
 
+/// <summary>Represents the registry of declared messages, looked up by key or by client name.</summary>
 public sealed class MessageRegistry
 {
     private readonly IReadOnlyDictionary<MessageKey, MessageDescriptor> _by_key;
     private readonly IReadOnlyDictionary<(Direction Direction, string Name), MessageDescriptor> _by_alias;
 
+    /// <summary>Initializes a new instance of the <see cref="MessageRegistry"/> class.</summary>
+    /// <param name="descriptors">The message descriptors, kept in the given order.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="descriptors"/> or one of its items is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidDataException">Thrown when a key is declared twice or a name in one direction belongs to two descriptors, ignoring case.</exception>
     public MessageRegistry(IEnumerable<MessageDescriptor> descriptors)
     {
         ArgumentNullException.ThrowIfNull(descriptors);
@@ -39,15 +44,28 @@ public sealed class MessageRegistry
         _by_alias = new ReadOnlyDictionary<(Direction, string), MessageDescriptor>(by_alias);
     }
 
+    /// <summary>Gets the message descriptors in declaration order.</summary>
     public IReadOnlyList<MessageDescriptor> Descriptors { get; }
 
+    /// <summary>Gets the number of message descriptors.</summary>
     public int Count => Descriptors.Count;
 
+    /// <summary>Gets the number of client names across all descriptors.</summary>
     public int AliasCount => _by_alias.Count;
 
+    /// <summary>Tries to get the descriptor of a message key.</summary>
+    /// <param name="key">The message key.</param>
+    /// <param name="descriptor">The descriptor, or <see langword="null"/> when the key is not declared.</param>
+    /// <returns><see langword="true"/> if the key is declared; otherwise, <see langword="false"/>.</returns>
     public bool TryGet(MessageKey key, out MessageDescriptor descriptor) =>
         _by_key.TryGetValue(key, out descriptor!);
 
+    /// <summary>Tries to get the descriptor that declares a client message name.</summary>
+    /// <param name="client">The client type, which must be <see cref="ClientType.Flash"/> to find a descriptor.</param>
+    /// <param name="direction">The direction of the message.</param>
+    /// <param name="name">The message name, matched without regard to case.</param>
+    /// <param name="descriptor">The descriptor, or <see langword="null"/> when none is found.</param>
+    /// <returns><see langword="true"/> if a descriptor was found; otherwise, <see langword="false"/>.</returns>
     public bool TryGet(
         ClientType client,
         Direction direction,

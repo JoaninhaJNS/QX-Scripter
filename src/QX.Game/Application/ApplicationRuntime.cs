@@ -4,26 +4,69 @@ using Qx.Messages;
 
 namespace Qx.Game.Application;
 
+/// <summary>Defines the runtime that describes, invokes and subscribes to application members.</summary>
+/// <remarks>
+/// The member ids are listed in <see cref="ApplicationMemberIds"/>. Queries and operations are
+/// invoked with their request type, and events are subscribed to.
+/// </remarks>
 public interface IApplicationRuntime
 {
+    /// <summary>Gets the metadata of every application member, ordered by id.</summary>
     IReadOnlyList<ApplicationDescriptor> Members { get; }
+    /// <summary>Gets the metadata and current availability of an application member.</summary>
+    /// <param name="id">The member id, such as <c>room.chat.talk</c>.</param>
+    /// <returns>The member metadata and its availability in the active session.</returns>
     ApplicationMemberDescription Describe(string id);
+    /// <summary>Invokes a query or operation and blocks until it completes.</summary>
+    /// <typeparam name="TRequest">The request type of the member.</typeparam>
+    /// <typeparam name="TResult">The result type of the member.</typeparam>
+    /// <param name="id">The member id, such as <c>room.chat.talk</c>.</param>
+    /// <param name="request">The request.</param>
+    /// <param name="cancellation_token">The token to monitor for cancellation requests.</param>
+    /// <returns>The result of the member.</returns>
     TResult Invoke<TRequest, TResult>(
         string id,
         TRequest request,
         CancellationToken cancellation_token = default);
+    /// <summary>Invokes a query or operation.</summary>
+    /// <typeparam name="TRequest">The request type of the member.</typeparam>
+    /// <typeparam name="TResult">The result type of the member.</typeparam>
+    /// <param name="id">The member id, such as <c>room.chat.talk</c>.</param>
+    /// <param name="request">The request.</param>
+    /// <param name="cancellation_token">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the result of the member.</returns>
     ValueTask<TResult> InvokeAsync<TRequest, TResult>(
         string id,
         TRequest request,
         CancellationToken cancellation_token = default);
+    /// <summary>Invokes a query or operation with an untyped request.</summary>
+    /// <param name="id">The member id, such as <c>room.chat.talk</c>.</param>
+    /// <param name="request">The request, which must be an instance of the request type of the member.</param>
+    /// <param name="cancellation_token">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the result of the member.</returns>
     ValueTask<object?> InvokeAsync(
         string id,
         object? request,
         CancellationToken cancellation_token = default);
+    /// <summary>Subscribes to an application event.</summary>
+    /// <typeparam name="TEvent">The value type of the event.</typeparam>
+    /// <param name="id">The event id, such as <c>room.chat.received</c>.</param>
+    /// <param name="receiver">The action that receives each published value.</param>
+    /// <returns>An object that ends the subscription when disposed.</returns>
     IDisposable Subscribe<TEvent>(string id, Action<TEvent> receiver);
+    /// <summary>Subscribes to an application event with an untyped receiver.</summary>
+    /// <param name="id">The event id, such as <c>room.chat.received</c>.</param>
+    /// <param name="receiver">The action that receives each published value.</param>
+    /// <returns>An object that ends the subscription when disposed.</returns>
     IDisposable Subscribe(string id, Action<object?> receiver);
 }
 
+/// <summary>Provides the application members of a game session: the queries, operations and events that scripts, the command line and the MCP server call.</summary>
+/// <remarks>
+/// An invocation first checks the availability of the member and throws
+/// <see cref="ApplicationUnavailableException"/> when a required state or message is missing.
+/// Subscriptions do not check availability.
+/// </remarks>
 public sealed class ApplicationRuntime : IApplicationRuntime, IDisposable
 {
     private readonly IReadOnlyList<IApplicationFeature> features;
@@ -31,6 +74,13 @@ public sealed class ApplicationRuntime : IApplicationRuntime, IDisposable
     private readonly ApplicationMessageDispatcher message_dispatcher;
     private int disposed;
 
+    /// <summary>Initializes a new instance of the <see cref="ApplicationRuntime"/> class and creates every application feature.</summary>
+    /// <param name="interceptor">The interceptor the members send and observe messages through.</param>
+    /// <param name="game">The game state the members read and change.</param>
+    /// <param name="contracts">The message contracts, which must use the message registry of <paramref name="interceptor"/>.</param>
+    /// <param name="time_provider">The time provider, or <see langword="null"/> for <see cref="TimeProvider.System"/>.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="interceptor"/>, <paramref name="game"/> or <paramref name="contracts"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="contracts"/> does not use the message registry of <paramref name="interceptor"/>.</exception>
     public ApplicationRuntime(
         IInterceptor interceptor,
         GameState game,
@@ -279,6 +329,8 @@ public sealed class ApplicationRuntime : IApplicationRuntime, IDisposable
     }
 
     private ApplicationAvailabilityResolver Availability { get; }
+    /// <inheritdoc/>
+    /// <exception cref="ObjectDisposedException">Thrown when the runtime has been disposed.</exception>
     public IReadOnlyList<ApplicationDescriptor> Members
     {
         get
@@ -287,8 +339,14 @@ public sealed class ApplicationRuntime : IApplicationRuntime, IDisposable
             return catalog.Descriptors;
         }
     }
+    /// <summary>Occurs when an event receiver throws an exception.</summary>
+    /// <remarks>The argument is the exception. Exceptions thrown by handlers of this event are ignored.</remarks>
     public event Action<Exception>? ObserverFailed;
 
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is <see langword="null"/>, empty or white space.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when no member has the id.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the runtime has been disposed.</exception>
     public ApplicationMemberDescription Describe(string id)
     {
         ThrowIfDisposed();
@@ -296,6 +354,12 @@ public sealed class ApplicationRuntime : IApplicationRuntime, IDisposable
         return new ApplicationMemberDescription(descriptor, Availability.Read(descriptor));
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is <see langword="null"/>, empty or white space, or <paramref name="request"/> is not an instance of the request type of the member.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when no member has the id.</exception>
+    /// <exception cref="ApplicationUnavailableException">Thrown when the member is not available in the active session.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the member is an event.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the runtime has been disposed.</exception>
     public ValueTask<object?> InvokeAsync(
         string id,
         object? request,
@@ -309,6 +373,9 @@ public sealed class ApplicationRuntime : IApplicationRuntime, IDisposable
         return catalog.InvokeAsync(id, request, cancellation_token);
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="ApplicationUnavailableException">Thrown when the member is not available in the active session.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the member is an event or returns a result that is not a <typeparamref name="TResult"/>.</exception>
     public TResult Invoke<TRequest, TResult>(
         string id,
         TRequest request,
@@ -321,6 +388,9 @@ public sealed class ApplicationRuntime : IApplicationRuntime, IDisposable
                 $"Application member '{id}' returned an unexpected result type.");
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="ApplicationUnavailableException">Thrown when the member is not available in the active session.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the member is an event or returns a result that is not a <typeparamref name="TResult"/>.</exception>
     public async ValueTask<TResult> InvokeAsync<TRequest, TResult>(
         string id,
         TRequest request,
@@ -333,6 +403,16 @@ public sealed class ApplicationRuntime : IApplicationRuntime, IDisposable
                 $"Application member '{id}' returned an unexpected result type.");
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A published value that is not a <typeparamref name="TEvent"/> is not passed to
+    /// <paramref name="receiver"/>, and the resulting <see cref="InvalidOperationException"/> is
+    /// reported through <see cref="ObserverFailed"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="receiver"/> is <see langword="null"/>.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when no member has the id.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the member is not an event.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the runtime has been disposed.</exception>
     public IDisposable Subscribe<TEvent>(string id, Action<TEvent> receiver)
     {
         ArgumentNullException.ThrowIfNull(receiver);
@@ -347,12 +427,20 @@ public sealed class ApplicationRuntime : IApplicationRuntime, IDisposable
         });
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="receiver"/> is <see langword="null"/>.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when no member has the id.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the member is not an event.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the runtime has been disposed.</exception>
     public IDisposable Subscribe(string id, Action<object?> receiver)
     {
         ThrowIfDisposed();
         return catalog.Subscribe(id, receiver);
     }
 
+    /// <summary>Disposes every application feature in reverse creation order.</summary>
+    /// <remarks>Calling the method again has no effect.</remarks>
+    /// <exception cref="AggregateException">Thrown when one or more features fail to dispose.</exception>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref disposed, 1) != 0)
@@ -426,11 +514,20 @@ internal sealed class ApplicationMessageDispatcher : GameStateManager
         SendMessage(contract, message, session, cancellation_token, dispatch_guard);
 }
 
+/// <summary>Thrown when an application member is invoked while it is not available in the active session.</summary>
+/// <remarks>
+/// <see cref="Availability"/> names the missing states, the unresolved messages and the unavailable
+/// wire capabilities.
+/// </remarks>
+/// <param name="member_id">The id of the member that was invoked.</param>
+/// <param name="availability">The availability of the member when it was invoked.</param>
 public sealed class ApplicationUnavailableException(
     string member_id,
     ApplicationAvailability availability) : InvalidOperationException(
         $"Application member '{member_id}' is unavailable for the active session.")
 {
+    /// <summary>Gets the id of the member that was invoked.</summary>
     public string MemberId { get; } = member_id;
+    /// <summary>Gets the availability of the member when it was invoked.</summary>
     public ApplicationAvailability Availability { get; } = availability;
 }

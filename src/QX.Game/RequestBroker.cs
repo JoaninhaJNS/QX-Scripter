@@ -27,6 +27,23 @@ internal sealed class SystemRequestClock : IRequestClock
         Task.Delay(delay, cancellation_token);
 }
 
+/// <summary>
+/// Provides requests to the hotel that wait for a matching response message.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Requests that wait for the same incoming message run one at a time, and the time a request spends
+/// waiting for an earlier one counts toward its timeout. Requests that send the same outgoing message
+/// are spaced at least <see cref="MinimumRequestInterval"/> apart.
+/// </para>
+/// <para>
+/// When the hotel connection closes, pending requests fail with <see cref="RequestDisconnectedException"/>,
+/// and new requests fail the same way until a new session connects.
+/// </para>
+/// <para>
+/// All members are safe to call from any thread.
+/// </para>
+/// </remarks>
 public sealed class RequestBroker : GameStateManager
 {
     private readonly IRequestClock _clock;
@@ -40,6 +57,9 @@ public sealed class RequestBroker : GameStateManager
     private TimeSpan _minimum_request_interval = TimeSpan.FromMilliseconds(40);
     private TimeSpan _retry_delay = TimeSpan.FromMilliseconds(150);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RequestBroker"/> class.
+    /// </summary>
     public RequestBroker() : this(SystemRequestClock.Instance)
     {
     }
@@ -50,6 +70,14 @@ public sealed class RequestBroker : GameStateManager
         _clock = clock;
     }
 
+    /// <summary>
+    /// Gets or sets the minimum time between two requests that send the same outgoing message.
+    /// </summary>
+    /// <remarks>
+    /// The default is 40 milliseconds, and <see cref="TimeSpan.Zero"/> turns the spacing off. Only
+    /// requests are spaced; <c>SendComposer</c> and <see cref="SendToServer"/> send at once.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is negative.</exception>
     public TimeSpan MinimumRequestInterval
     {
         get => _minimum_request_interval;
@@ -61,6 +89,14 @@ public sealed class RequestBroker : GameStateManager
         }
     }
 
+    /// <summary>
+    /// Gets or sets the base delay before a timed out request attempt is sent again.
+    /// </summary>
+    /// <remarks>
+    /// The delay after attempt <c>n</c> is <c>n</c> times this value and counts toward the request's
+    /// timeout. The default is 150 milliseconds.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is negative.</exception>
     public TimeSpan RetryDelay
     {
         get => _retry_delay;
@@ -72,6 +108,7 @@ public sealed class RequestBroker : GameStateManager
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         lock (_connection_sync)
@@ -83,6 +120,28 @@ public sealed class RequestBroker : GameStateManager
         });
     }
 
+    /// <summary>
+    /// Sends an outgoing message built from values and waits for a matching incoming message.
+    /// </summary>
+    /// <remarks>
+    /// The request is sent once. Incoming messages that do not match are ignored.
+    /// </remarks>
+    /// <typeparam name="TResponse">The type the response message is parsed as.</typeparam>
+    /// <param name="outName">The name of the outgoing message to send.</param>
+    /// <param name="request">The values to write to the outgoing message, in order.</param>
+    /// <param name="inName">The name of the incoming message to wait for.</param>
+    /// <param name="match">A predicate that selects the response, or <see langword="null"/> to accept the first message received.</param>
+    /// <param name="timeoutMs">The time to wait for a matching response, in milliseconds.</param>
+    /// <param name="block">Whether the matched response is blocked from reaching the client.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the matching response.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is not positive.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a message name is not known to the current client.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when no matching response arrives within <paramref name="timeoutMs"/>.</exception>
+    /// <exception cref="RequestDisconnectedException">Thrown when the hotel connection is unavailable or closes before the response arrives.</exception>
+    /// <exception cref="ResponseParseException">Thrown when an awaited message cannot be parsed as <typeparamref name="TResponse"/>.</exception>
+    /// <exception cref="ResponseMatchException">Thrown when <paramref name="match"/> throws an exception.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is canceled.</exception>
     public Task<TResponse> RequestAsync<TResponse>(
         string outName,
         object[] request,
@@ -101,6 +160,28 @@ public sealed class RequestBroker : GameStateManager
             cancellationToken,
             1);
 
+    /// <summary>
+    /// Sends an outgoing message built from values and waits for a matching incoming message.
+    /// </summary>
+    /// <remarks>
+    /// The request is sent once. Incoming messages that do not match are ignored.
+    /// </remarks>
+    /// <typeparam name="TResponse">The type the response message is parsed as.</typeparam>
+    /// <param name="outgoingKey">The key of the outgoing message to send.</param>
+    /// <param name="request">The values to write to the outgoing message, in order.</param>
+    /// <param name="incomingKey">The key of the incoming message to wait for.</param>
+    /// <param name="match">A predicate that selects the response, or <see langword="null"/> to accept the first message received.</param>
+    /// <param name="timeoutMs">The time to wait for a matching response, in milliseconds.</param>
+    /// <param name="block">Whether the matched response is blocked from reaching the client.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the matching response.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is not positive.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a message key is not known to the current client.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when no matching response arrives within <paramref name="timeoutMs"/>.</exception>
+    /// <exception cref="RequestDisconnectedException">Thrown when the hotel connection is unavailable or closes before the response arrives.</exception>
+    /// <exception cref="ResponseParseException">Thrown when an awaited message cannot be parsed as <typeparamref name="TResponse"/>.</exception>
+    /// <exception cref="ResponseMatchException">Thrown when <paramref name="match"/> throws an exception.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is canceled.</exception>
     public Task<TResponse> RequestAsync<TResponse>(
         MessageKey outgoingKey,
         object[] request,
@@ -119,6 +200,31 @@ public sealed class RequestBroker : GameStateManager
             cancellationToken,
             1);
 
+    /// <summary>
+    /// Sends an outgoing message built from values and waits for a matching incoming message, retrying on timeout.
+    /// </summary>
+    /// <remarks>
+    /// An attempt that times out is sent again after a delay based on <see cref="RetryDelay"/>, and
+    /// <paramref name="timeoutMs"/> is split evenly across the attempts that remain. Incoming messages
+    /// that do not match are ignored.
+    /// </remarks>
+    /// <typeparam name="TResponse">The type the response message is parsed as.</typeparam>
+    /// <param name="outName">The name of the outgoing message to send.</param>
+    /// <param name="request">The values to write to the outgoing message, in order.</param>
+    /// <param name="inName">The name of the incoming message to wait for.</param>
+    /// <param name="match">A predicate that selects the response, or <see langword="null"/> to accept the first message received.</param>
+    /// <param name="timeoutMs">The time to wait for a matching response across all attempts, in milliseconds.</param>
+    /// <param name="block">Whether the matched response is blocked from reaching the client.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="maxAttempts">The maximum number of times the request is sent.</param>
+    /// <returns>A task that completes with the matching response.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is not positive or <paramref name="maxAttempts"/> is less than 1.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a message name is not known to the current client.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when no matching response arrives within <paramref name="timeoutMs"/>.</exception>
+    /// <exception cref="RequestDisconnectedException">Thrown when the hotel connection is unavailable or closes before the response arrives.</exception>
+    /// <exception cref="ResponseParseException">Thrown when an awaited message cannot be parsed as <typeparamref name="TResponse"/>.</exception>
+    /// <exception cref="ResponseMatchException">Thrown when <paramref name="match"/> throws an exception.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is canceled.</exception>
     public Task<TResponse> RequestAsync<TResponse>(
         string outName,
         object[] request,
@@ -138,6 +244,31 @@ public sealed class RequestBroker : GameStateManager
             cancellationToken,
             maxAttempts);
 
+    /// <summary>
+    /// Sends an outgoing message built from values and waits for a matching incoming message, retrying on timeout.
+    /// </summary>
+    /// <remarks>
+    /// An attempt that times out is sent again after a delay based on <see cref="RetryDelay"/>, and
+    /// <paramref name="timeoutMs"/> is split evenly across the attempts that remain. Incoming messages
+    /// that do not match are ignored.
+    /// </remarks>
+    /// <typeparam name="TResponse">The type the response message is parsed as.</typeparam>
+    /// <param name="outgoingKey">The key of the outgoing message to send.</param>
+    /// <param name="request">The values to write to the outgoing message, in order.</param>
+    /// <param name="incomingKey">The key of the incoming message to wait for.</param>
+    /// <param name="match">A predicate that selects the response, or <see langword="null"/> to accept the first message received.</param>
+    /// <param name="timeoutMs">The time to wait for a matching response across all attempts, in milliseconds.</param>
+    /// <param name="block">Whether the matched response is blocked from reaching the client.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="maxAttempts">The maximum number of times the request is sent.</param>
+    /// <returns>A task that completes with the matching response.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is not positive or <paramref name="maxAttempts"/> is less than 1.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a message key is not known to the current client.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when no matching response arrives within <paramref name="timeoutMs"/>.</exception>
+    /// <exception cref="RequestDisconnectedException">Thrown when the hotel connection is unavailable or closes before the response arrives.</exception>
+    /// <exception cref="ResponseParseException">Thrown when an awaited message cannot be parsed as <typeparamref name="TResponse"/>.</exception>
+    /// <exception cref="ResponseMatchException">Thrown when <paramref name="match"/> throws an exception.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is canceled.</exception>
     public Task<TResponse> RequestAsync<TResponse>(
         MessageKey outgoingKey,
         object[] request,
@@ -159,6 +290,28 @@ public sealed class RequestBroker : GameStateManager
             outgoingKey,
             incomingKey);
 
+    /// <summary>
+    /// Sends an outgoing message written by a composer and waits for a matching incoming message.
+    /// </summary>
+    /// <remarks>
+    /// The request is sent once. Incoming messages that do not match are ignored.
+    /// </remarks>
+    /// <typeparam name="TResponse">The type the response message is parsed as.</typeparam>
+    /// <param name="outName">The name of the outgoing message to send.</param>
+    /// <param name="request">The composer that writes the outgoing message.</param>
+    /// <param name="inName">The name of the incoming message to wait for.</param>
+    /// <param name="match">A predicate that selects the response, or <see langword="null"/> to accept the first message received.</param>
+    /// <param name="timeoutMs">The time to wait for a matching response, in milliseconds.</param>
+    /// <param name="block">Whether the matched response is blocked from reaching the client.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the matching response.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is not positive.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a message name is not known to the current client.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when no matching response arrives within <paramref name="timeoutMs"/>.</exception>
+    /// <exception cref="RequestDisconnectedException">Thrown when the hotel connection is unavailable or closes before the response arrives.</exception>
+    /// <exception cref="ResponseParseException">Thrown when an awaited message cannot be parsed as <typeparamref name="TResponse"/>.</exception>
+    /// <exception cref="ResponseMatchException">Thrown when <paramref name="match"/> throws an exception.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is canceled.</exception>
     public Task<TResponse> RequestAsync<TResponse>(
         string outName,
         IComposer request,
@@ -177,6 +330,28 @@ public sealed class RequestBroker : GameStateManager
             cancellationToken,
             1);
 
+    /// <summary>
+    /// Sends an outgoing message written by a composer and waits for a matching incoming message.
+    /// </summary>
+    /// <remarks>
+    /// The request is sent once. Incoming messages that do not match are ignored.
+    /// </remarks>
+    /// <typeparam name="TResponse">The type the response message is parsed as.</typeparam>
+    /// <param name="outgoingKey">The key of the outgoing message to send.</param>
+    /// <param name="request">The composer that writes the outgoing message.</param>
+    /// <param name="incomingKey">The key of the incoming message to wait for.</param>
+    /// <param name="match">A predicate that selects the response, or <see langword="null"/> to accept the first message received.</param>
+    /// <param name="timeoutMs">The time to wait for a matching response, in milliseconds.</param>
+    /// <param name="block">Whether the matched response is blocked from reaching the client.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the matching response.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is not positive.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a message key is not known to the current client.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when no matching response arrives within <paramref name="timeoutMs"/>.</exception>
+    /// <exception cref="RequestDisconnectedException">Thrown when the hotel connection is unavailable or closes before the response arrives.</exception>
+    /// <exception cref="ResponseParseException">Thrown when an awaited message cannot be parsed as <typeparamref name="TResponse"/>.</exception>
+    /// <exception cref="ResponseMatchException">Thrown when <paramref name="match"/> throws an exception.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is canceled.</exception>
     public Task<TResponse> RequestAsync<TResponse>(
         MessageKey outgoingKey,
         IComposer request,
@@ -195,6 +370,31 @@ public sealed class RequestBroker : GameStateManager
             cancellationToken,
             1);
 
+    /// <summary>
+    /// Sends an outgoing message written by a composer and waits for a matching incoming message, retrying on timeout.
+    /// </summary>
+    /// <remarks>
+    /// An attempt that times out is sent again after a delay based on <see cref="RetryDelay"/>, and
+    /// <paramref name="timeoutMs"/> is split evenly across the attempts that remain. Incoming messages
+    /// that do not match are ignored.
+    /// </remarks>
+    /// <typeparam name="TResponse">The type the response message is parsed as.</typeparam>
+    /// <param name="outName">The name of the outgoing message to send.</param>
+    /// <param name="request">The composer that writes the outgoing message.</param>
+    /// <param name="inName">The name of the incoming message to wait for.</param>
+    /// <param name="match">A predicate that selects the response, or <see langword="null"/> to accept the first message received.</param>
+    /// <param name="timeoutMs">The time to wait for a matching response across all attempts, in milliseconds.</param>
+    /// <param name="block">Whether the matched response is blocked from reaching the client.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="maxAttempts">The maximum number of times the request is sent.</param>
+    /// <returns>A task that completes with the matching response.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is not positive or <paramref name="maxAttempts"/> is less than 1.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a message name is not known to the current client.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when no matching response arrives within <paramref name="timeoutMs"/>.</exception>
+    /// <exception cref="RequestDisconnectedException">Thrown when the hotel connection is unavailable or closes before the response arrives.</exception>
+    /// <exception cref="ResponseParseException">Thrown when an awaited message cannot be parsed as <typeparamref name="TResponse"/>.</exception>
+    /// <exception cref="ResponseMatchException">Thrown when <paramref name="match"/> throws an exception.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is canceled.</exception>
     public Task<TResponse> RequestAsync<TResponse>(
         string outName,
         IComposer request,
@@ -214,6 +414,31 @@ public sealed class RequestBroker : GameStateManager
             cancellationToken,
             maxAttempts);
 
+    /// <summary>
+    /// Sends an outgoing message written by a composer and waits for a matching incoming message, retrying on timeout.
+    /// </summary>
+    /// <remarks>
+    /// An attempt that times out is sent again after a delay based on <see cref="RetryDelay"/>, and
+    /// <paramref name="timeoutMs"/> is split evenly across the attempts that remain. Incoming messages
+    /// that do not match are ignored.
+    /// </remarks>
+    /// <typeparam name="TResponse">The type the response message is parsed as.</typeparam>
+    /// <param name="outgoingKey">The key of the outgoing message to send.</param>
+    /// <param name="request">The composer that writes the outgoing message.</param>
+    /// <param name="incomingKey">The key of the incoming message to wait for.</param>
+    /// <param name="match">A predicate that selects the response, or <see langword="null"/> to accept the first message received.</param>
+    /// <param name="timeoutMs">The time to wait for a matching response across all attempts, in milliseconds.</param>
+    /// <param name="block">Whether the matched response is blocked from reaching the client.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="maxAttempts">The maximum number of times the request is sent.</param>
+    /// <returns>A task that completes with the matching response.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is not positive or <paramref name="maxAttempts"/> is less than 1.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a message key is not known to the current client.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when no matching response arrives within <paramref name="timeoutMs"/>.</exception>
+    /// <exception cref="RequestDisconnectedException">Thrown when the hotel connection is unavailable or closes before the response arrives.</exception>
+    /// <exception cref="ResponseParseException">Thrown when an awaited message cannot be parsed as <typeparamref name="TResponse"/>.</exception>
+    /// <exception cref="ResponseMatchException">Thrown when <paramref name="match"/> throws an exception.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is canceled.</exception>
     public Task<TResponse> RequestAsync<TResponse>(
         MessageKey outgoingKey,
         IComposer request,
@@ -235,6 +460,33 @@ public sealed class RequestBroker : GameStateManager
             outgoingKey,
             incomingKey);
 
+    /// <summary>
+    /// Sends an outgoing message through its contract and waits for a matching incoming message.
+    /// </summary>
+    /// <remarks>
+    /// The response is parsed with <paramref name="incomingContract"/>. An attempt that times out is sent
+    /// again after a delay based on <see cref="RetryDelay"/>, and <paramref name="timeoutMs"/> is split
+    /// evenly across the attempts that remain. Incoming messages that do not match are ignored.
+    /// </remarks>
+    /// <typeparam name="TRequest">The type of the outgoing message.</typeparam>
+    /// <typeparam name="TResponse">The type of the response message.</typeparam>
+    /// <param name="outgoingContract">The contract of the outgoing message.</param>
+    /// <param name="request">The message to send.</param>
+    /// <param name="incomingContract">The contract of the incoming message to wait for.</param>
+    /// <param name="match">A predicate that selects the response, or <see langword="null"/> to accept the first message received.</param>
+    /// <param name="timeoutMs">The time to wait for a matching response across all attempts, in milliseconds.</param>
+    /// <param name="block">Whether the matched response is blocked from reaching the client.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="maxAttempts">The maximum number of times the request is sent.</param>
+    /// <returns>A task that completes with the matching response.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="outgoingContract"/>, <paramref name="request"/> or <paramref name="incomingContract"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is not positive or <paramref name="maxAttempts"/> is less than 1.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a message is not known to the current client.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when no matching response arrives within <paramref name="timeoutMs"/>.</exception>
+    /// <exception cref="RequestDisconnectedException">Thrown when the hotel connection is unavailable or closes before the response arrives.</exception>
+    /// <exception cref="ResponseParseException">Thrown when an awaited message cannot be parsed as <typeparamref name="TResponse"/>.</exception>
+    /// <exception cref="ResponseMatchException">Thrown when <paramref name="match"/> throws an exception.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is canceled.</exception>
     public Task<TResponse> RequestAsync<TRequest, TResponse>(
         MessageContract<TRequest> outgoingContract,
         TRequest request,
@@ -577,24 +829,45 @@ public sealed class RequestBroker : GameStateManager
         return Math.Max(1, (int)Math.Ceiling(remaining_ms / attempts_left));
     }
 
+    /// <summary>
+    /// Sends an outgoing message written by a composer without waiting for a response.
+    /// </summary>
+    /// <param name="name">The name of the outgoing message.</param>
+    /// <param name="composer">The composer that writes the message.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the broker is not attached, or the connection is closing.</exception>
     public void SendComposer(string name, IComposer composer) =>
         SendMessage(name, composer);
 
+    /// <summary>
+    /// Sends an outgoing message written by a composer without waiting for a response.
+    /// </summary>
+    /// <param name="key">The key of the outgoing message.</param>
+    /// <param name="composer">The composer that writes the message.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the broker is not attached, or the connection is closing.</exception>
     public void SendComposer(MessageKey key, IComposer composer) =>
         SendMessage(key, composer);
 
+    /// <summary>
+    /// Sends an outgoing message through its contract without waiting for a response.
+    /// </summary>
+    /// <typeparam name="T">The type of the message.</typeparam>
+    /// <param name="contract">The contract of the outgoing message.</param>
+    /// <param name="composer">The message to send.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the broker is not attached, or the connection is closing.</exception>
     public void SendComposer<T>(MessageContract<T> contract, T composer)
         where T : IParserComposer<T> =>
         SendMessage(contract, composer);
 
     /// <summary>
-    /// Sends one outgoing message that nothing is waiting on an answer to.
+    /// Sends an outgoing message built from values without waiting for a response.
     /// </summary>
     /// <remarks>
-    /// The same write the requests use, without the wait — so anything outside the game layer that
-    /// needs to say something to the hotel goes through the one path that knows how each client
-    /// wants it written, rather than building a packet of its own.
+    /// The values are written in order with the wire format of the current client, the same way
+    /// requests are written.
     /// </remarks>
+    /// <param name="name">The name of the outgoing message.</param>
+    /// <param name="values">The values to write to the message, in order.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the broker is not attached, or the connection is closing.</exception>
     public void SendToServer(string name, params object[] values) => Send(name, values);
 
     private void SendRequest(string name, object[] values) =>
@@ -629,6 +902,7 @@ public sealed class RequestBroker : GameStateManager
         return new WireKey(client, header);
     }
 
+    /// <inheritdoc/>
     protected override void Reset()
     {
         CancellationTokenSource previous;
@@ -643,6 +917,7 @@ public sealed class RequestBroker : GameStateManager
         _last_request_ticks.Clear();
     }
 
+    /// <inheritdoc/>
     public override void Dispose()
     {
         if (Interlocked.Exchange(ref _dispose_state, 1) != 0)

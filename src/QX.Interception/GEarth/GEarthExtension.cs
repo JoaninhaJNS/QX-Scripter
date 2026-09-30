@@ -7,6 +7,11 @@ using Qx.Protocol;
 
 namespace Qx.Interception.GEarth;
 
+/// <summary>Represents a G-Earth extension that intercepts the hotel traffic G-Earth relays.</summary>
+/// <remarks>
+/// The extension connects to G-Earth on <c>127.0.0.1</c> and answers every intercepted packet, passing it
+/// through unchanged when it cannot be parsed or a callback fails.
+/// </remarks>
 public class GEarthExtension : IInterceptor, IDisposable
 {
     private const string Category = "gearth";
@@ -24,6 +29,13 @@ public class GEarthExtension : IInterceptor, IDisposable
     private int _activations;
     private bool _disposed;
 
+    /// <summary>Initializes a new instance of the <see cref="GEarthExtension"/> class.</summary>
+    /// <param name="options">The connection settings and the info reported to G-Earth.</param>
+    /// <param name="messages">The message manager to use, or <see langword="null"/> to create one from the embedded message map.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when the port is outside 1 to 65535, the port search count is below 1 or the handshake timeout is not positive.
+    /// </exception>
     public GEarthExtension(GEarthOptions options, MessageManager? messages = null)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -38,46 +50,83 @@ public class GEarthExtension : IInterceptor, IDisposable
         _dispatcher.CallbackFailed += (intercept, error) => InterceptFailed?.Invoke(intercept, error);
     }
 
+    /// <inheritdoc/>
     public MessageManager Messages { get; }
+    /// <summary>Gets or sets the selector that picks the message catalog when a session starts.</summary>
+    /// <remarks>
+    /// When no selector is set, or it returns <see langword="null"/>, throws or picks a catalog for another
+    /// client, the catalog G-Earth sent in its handshake is used, if there was one.
+    /// </remarks>
     public ISessionCatalogSelector? SessionCatalogSelector { get; set; }
+    /// <summary>Gets or sets the readiness source that is awaited before a session's catalog is selected.</summary>
     public IMessageCatalogReadiness? CatalogReadiness { get; set; }
+    /// <inheritdoc/>
     public Session? Session { get; private set; }
+    /// <inheritdoc/>
     public bool IsConnected => Session is not null;
+    /// <summary>Gets whether the connection to G-Earth is established and past the handshake.</summary>
     public bool IsInterceptorConnected { get; private set; }
+    /// <summary>Gets how many times the user has activated the extension in G-Earth.</summary>
     public int Activations => Volatile.Read(ref _activations);
+    /// <summary>Gets the port of the connected G-Earth instance, or 0 when not connected.</summary>
     public int ConnectedPort => Volatile.Read(ref _connected_port);
 
+    /// <inheritdoc/>
     public event Action<Session>? Connected;
+    /// <inheritdoc/>
     public event Action? Disconnected;
+    /// <summary>Occurs when G-Earth sends the init frame to the extension.</summary>
     public event Action? Initialized;
+    /// <summary>Occurs when the user activates the extension in G-Earth.</summary>
     public event Action? Activated;
+    /// <summary>Occurs when the connection to G-Earth is established and the handshake succeeded.</summary>
     public event Action? InterceptorConnected;
+    /// <summary>Occurs when an established connection to G-Earth closes.</summary>
     public event Action? InterceptorDisconnected;
+    /// <inheritdoc/>
     public event Action<Intercept>? Intercepted;
 
-    /// <summary>
-    /// Raised when an intercept callback throws. The failure is isolated, so the remaining
-    /// callbacks registered for the same message still run.
-    /// </summary>
+    /// <summary>Occurs when an intercept callback throws.</summary>
+    /// <remarks>
+    /// The failure is isolated, so the remaining callbacks registered for the same message still run.
+    /// </remarks>
     public event Action<Intercept, Exception>? InterceptFailed;
 
-    /// <summary>
-    /// Message identifiers that could not be resolved against the loaded catalog. Callbacks
-    /// registered under these identifiers are bound to nothing and never run.
-    /// </summary>
+    /// <summary>Gets the message identifiers that could not be resolved against the loaded catalog.</summary>
+    /// <remarks>Callbacks registered under these identifiers are bound to nothing and never run.</remarks>
     public IReadOnlyList<Identifier> UnresolvedInterceptors => _dispatcher.UnresolvedIdentifiers;
 
+    /// <summary>Gets the semantic message keys that could not be resolved against the loaded catalog.</summary>
+    /// <remarks>Callbacks registered under these keys are bound to nothing and never run.</remarks>
     public IReadOnlyList<MessageKey> UnresolvedSemanticInterceptors => _dispatcher.UnresolvedKeys;
 
+    /// <inheritdoc/>
     public IDisposable Intercept(Header header, Action<Intercept> callback) => _dispatcher.Add(header, callback);
+    /// <summary>Registers a callback for packets of a named message.</summary>
+    /// <remarks>The identifier is resolved again whenever the session catalog changes.</remarks>
+    /// <param name="identifier">The message to intercept.</param>
+    /// <param name="callback">The callback that receives each matching packet.</param>
+    /// <returns>A handle that removes the callback when disposed.</returns>
     public IDisposable Intercept(Identifier identifier, Action<Intercept> callback) => _dispatcher.Add(identifier, callback, Messages);
+    /// <summary>Registers a callback for packets of a semantic message.</summary>
+    /// <remarks>The key is resolved again whenever the session catalog changes.</remarks>
+    /// <param name="key">The semantic message key to intercept.</param>
+    /// <param name="callback">The callback that receives each matching packet.</param>
+    /// <returns>A handle that removes the callback when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="key"/> is empty.</exception>
     public IDisposable Intercept(MessageKey key, Action<Intercept> callback) => _dispatcher.Add(key, callback, Messages);
 
+    /// <summary>Resolves every identifier and semantic key registration again against <see cref="Messages"/>.</summary>
     public void RebindInterceptors() => _dispatcher.Rebind(Messages, HasActiveCatalog());
 
     private bool HasActiveCatalog() =>
         Messages.ActiveClient != ClientType.None && Messages.HasCatalog(Messages.ActiveClient);
 
+    /// <summary>Waits until <see cref="CatalogReadiness"/> reports that the message catalog is ready.</summary>
+    /// <remarks>Completes immediately when <see cref="CatalogReadiness"/> is <see langword="null"/>.</remarks>
+    /// <param name="cancellation_token">A token that cancels the wait.</param>
+    /// <returns>A task that completes when the catalog is ready.</returns>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellation_token"/> is canceled.</exception>
     public async Task WaitForCatalogBuildAsync(CancellationToken cancellation_token = default)
     {
         cancellation_token.ThrowIfCancellationRequested();
@@ -86,6 +135,17 @@ public class GEarthExtension : IInterceptor, IDisposable
         await readiness.WaitUntilReadyAsync(cancellation_token).ConfigureAwait(false);
     }
 
+    /// <summary>Connects to G-Earth and runs the extension until the connection closes.</summary>
+    /// <remarks>
+    /// G-Earth must send its first control frame within <see cref="GEarthOptions.HandshakeTimeout"/>. When
+    /// <see cref="GEarthOptions.SearchPorts"/> is set, the ports from <see cref="GEarthOptions.Port"/> onwards
+    /// are tried in order until one answers.
+    /// </remarks>
+    /// <param name="cancellationToken">A token that stops the extension.</param>
+    /// <returns>A task that completes when G-Earth closes the connection.</returns>
+    /// <exception cref="ObjectDisposedException">Thrown when the extension is disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the extension is already running.</exception>
+    /// <exception cref="IOException">Thrown when port search is on and no G-Earth instance answered.</exception>
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -698,6 +758,9 @@ public class GEarthExtension : IInterceptor, IDisposable
         }
     }
 
+    /// <summary>Sends a packet to the client or the server within the current session.</summary>
+    /// <param name="packet">The packet to send.</param>
+    /// <exception cref="InvalidOperationException">Thrown when no session is active.</exception>
     public void Send(IPacket packet)
     {
         Session? expected_session;
@@ -706,17 +769,25 @@ public class GEarthExtension : IInterceptor, IDisposable
         Send(packet, expected_session);
     }
 
+    /// <inheritdoc/>
     public InterceptorSessionCatalog CaptureSessionCatalog()
     {
         lock (_catalog_sync)
             return new InterceptorSessionCatalog(Session, Messages.ActiveCatalogBinding);
     }
 
+    /// <summary>Sends a packet only when <paramref name="expected_session"/> is still the active session.</summary>
+    /// <param name="packet">The packet to send.</param>
+    /// <param name="expected_session">The session the packet belongs to.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <paramref name="expected_session"/> is <see langword="null"/> or not the active session.
+    /// </exception>
     public void Send(IPacket packet, Session? expected_session)
     {
         Send(packet, expected_session, null, false, null);
     }
 
+    /// <inheritdoc/>
     public void Send(
         IPacket packet,
         Session? expected_session,
@@ -725,6 +796,7 @@ public class GEarthExtension : IInterceptor, IDisposable
         Send(packet, expected_session, expected_catalog, true, null);
     }
 
+    /// <inheritdoc/>
     public void Send(
         IPacket packet,
         Session? expected_session,
@@ -800,6 +872,7 @@ public class GEarthExtension : IInterceptor, IDisposable
         return true;
     }
 
+    /// <summary>Closes the connection to G-Earth, which ends <see cref="RunAsync"/>.</summary>
     public void Dispose()
     {
         _writeLock.Wait();

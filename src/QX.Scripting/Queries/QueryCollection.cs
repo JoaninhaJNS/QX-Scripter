@@ -3,15 +3,35 @@ using Qx.Model;
 
 namespace Qx.Scripting;
 
+/// <summary>
+/// Represents a read-only snapshot of items that can be filtered and sorted.
+/// </summary>
+/// <remarks>
+/// The items are copied into an array when the query is created, so later changes to the source
+/// sequence do not change the query. Filter and sort methods on derived queries return a new
+/// query and leave the current one unchanged.
+/// </remarks>
+/// <typeparam name="T">The type of the items.</typeparam>
 public abstract class QueryCollection<T> : IReadOnlyList<T>
 {
     private readonly T[] _items;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="QueryCollection{T}"/> class with the specified items.
+    /// </summary>
+    /// <param name="items">The items to capture.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="items"/> is <see langword="null"/>.</exception>
     protected QueryCollection(IEnumerable<T> items)
         : this(items, null)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="QueryCollection{T}"/> class with copies of the specified items.
+    /// </summary>
+    /// <param name="items">The items to capture.</param>
+    /// <param name="snapshot">A function that copies each item, or <see langword="null"/> to capture the items as they are.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="items"/> is <see langword="null"/>.</exception>
     protected QueryCollection(IEnumerable<T> items, Func<T, T>? snapshot)
     {
         ArgumentNullException.ThrowIfNull(items);
@@ -20,14 +40,33 @@ public abstract class QueryCollection<T> : IReadOnlyList<T>
             : items.Select(snapshot).ToArray();
     }
 
+    /// <summary>
+    /// Gets the number of items in the query.
+    /// </summary>
     public int Count => _items.Length;
 
+    /// <summary>
+    /// Gets the item at the specified index.
+    /// </summary>
+    /// <param name="index">The zero-based index of the item.</param>
+    /// <exception cref="IndexOutOfRangeException">Thrown when <paramref name="index"/> is negative or not less than <see cref="Count"/>.</exception>
     public T this[int index] => _items[index];
 
+    /// <summary>
+    /// Gets the items in the query, in order.
+    /// </summary>
     protected IEnumerable<T> Items => _items;
 
+    /// <summary>
+    /// Copies the items to a new array.
+    /// </summary>
+    /// <returns>A new array with the items in query order.</returns>
     public T[] ToArray() => [.. _items];
 
+    /// <summary>
+    /// Returns an enumerator that iterates through the items in order.
+    /// </summary>
+    /// <returns>An enumerator for the items.</returns>
     public IEnumerator<T> GetEnumerator() =>
         ((IEnumerable<T>)_items).GetEnumerator();
 

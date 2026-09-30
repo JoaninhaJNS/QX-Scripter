@@ -181,17 +181,23 @@ internal static class ReflectionFormat
     /// <summary>
     /// Builds the ECMA-334 documentation comment identifier for <paramref name="type"/>, the
     /// <c>T:</c> key under which the C# compiler writes the type into the generated XML
-    /// documentation file. Generic types keep their metadata arity (<c>Outer`1.Inner`1</c>)
-    /// and nested types are joined with dots.
+    /// documentation file.
     /// </summary>
+    /// <remarks>
+    /// Generic types keep their metadata arity (<c>Outer`1.Inner`1</c>) and nested types are
+    /// joined with dots.
+    /// </remarks>
     public static string DocumentationId(Type type) => "T:" + DefinitionId(type);
 
     /// <summary>
     /// Builds the ECMA-334 documentation comment identifier for a member, matching the keys the
-    /// C# compiler emits into the generated XML documentation file. Handles constructors
-    /// (<c>#ctor</c>), generic arity, indexer and method parameter lists, ref/in/out parameters
-    /// (<c>@</c>), arrays, pointers and conversion operator return suffixes.
+    /// C# compiler emits into the generated XML documentation file.
     /// </summary>
+    /// <remarks>
+    /// Handles constructors (<c>#ctor</c>), generic arity, indexer and method parameter lists,
+    /// ref, in and out parameters (<c>@</c>), arrays, pointers and conversion operator return
+    /// suffixes.
+    /// </remarks>
     /// <returns>
     /// The identifier, or an empty string when the member kind has no documentation identifier.
     /// </returns>

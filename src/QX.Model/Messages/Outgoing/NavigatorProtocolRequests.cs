@@ -2,8 +2,12 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Outgoing;
 
+/// <summary>Requests the navigator's initial data, such as its views, saved searches and collapsed categories.</summary>
+/// <remarks>Sent as the Flash <c>NewNavigatorInit</c> message, which carries no fields.</remarks>
 public sealed record NavigatorMetadataRequest : IParserComposer<NavigatorMetadataRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorMetadataRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -13,6 +17,8 @@ public sealed record NavigatorMetadataRequest : IParserComposer<NavigatorMetadat
         return new();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -26,8 +32,12 @@ public sealed record NavigatorMetadataRequest : IParserComposer<NavigatorMetadat
     }
 }
 
+/// <summary>Requests the room categories that rooms can be filed under.</summary>
+/// <remarks>Sent as the Flash <c>GetUserFlatCats</c> message, which carries no fields.</remarks>
 public sealed record FlatCategoriesRequest : IParserComposer<FlatCategoriesRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FlatCategoriesRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -37,6 +47,8 @@ public sealed record FlatCategoriesRequest : IParserComposer<FlatCategoriesReque
         return new();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -50,8 +62,12 @@ public sealed record FlatCategoriesRequest : IParserComposer<FlatCategoriesReque
     }
 }
 
+/// <summary>Requests a fixed navigator room list that takes no search input.</summary>
+/// <remarks>Sent as one of the Flash <c>MyRoomsSearch</c>, <c>MyFavouriteRoomsSearch</c>, <c>MyRoomRightsSearch</c>, <c>MyRoomHistorySearch</c>, <c>MyFrequentRoomHistorySearch</c>, <c>MyFriendsRoomsSearch</c>, <c>RoomsWhereMyFriendsAreSearch</c> or <c>MyGuildBasesSearch</c> messages, which carry no fields.</remarks>
 public sealed record NavigatorEmptySearchRequest : IParserComposer<NavigatorEmptySearchRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorEmptySearchRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -61,21 +77,31 @@ public sealed record NavigatorEmptySearchRequest : IParserComposer<NavigatorEmpt
         return new();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(NavigatorEmptySearchRequest value, in PacketWriter p) { }
 }
 
+/// <summary>Requests the results of a navigator view search.</summary>
+/// <remarks>Sent as the Flash <c>NewNavigatorSearch</c> message. Composing throws when a string is <see langword="null"/> or exceeds 65535 bytes.</remarks>
+/// <param name="SearchCode">The code of the view or category to search, such as <c>hotel_view</c>.</param>
+/// <param name="Filter">The filter text in the navigator's prefix syntax, such as <c>owner:name</c>, or an empty string for no filter.</param>
 public sealed record NavigatorViewSearchRequest(string SearchCode, string Filter)
     : IParserComposer<NavigatorViewSearchRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorViewSearchRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NavigatorViewSearchRequest ParseFlash(in PacketReader p) =>
         new(p.ReadString(), p.ReadString());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -88,15 +114,22 @@ public sealed record NavigatorViewSearchRequest(string SearchCode, string Filter
     }
 }
 
+/// <summary>Requests rooms that match a search text.</summary>
+/// <remarks>Sent as the Flash <c>RoomTextSearch</c> message. Composing throws when a string is <see langword="null"/> or exceeds 65535 bytes.</remarks>
+/// <param name="Text">The search text, optionally with a field prefix such as <c>owner:</c>, <c>roomname:</c>, <c>tag:</c> or <c>group:</c>.</param>
 public sealed record NavigatorTextSearchRequest(string Text)
     : IParserComposer<NavigatorTextSearchRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorTextSearchRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NavigatorTextSearchRequest ParseFlash(in PacketReader p) =>
         new(p.ReadString());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -107,15 +140,23 @@ public sealed record NavigatorTextSearchRequest(string Text)
     }
 }
 
+/// <summary>Requests the popular rooms, optionally narrowed to one tag.</summary>
+/// <remarks>Sent as the Flash <c>PopularRoomsSearch</c> message. Composing throws when a string is <see langword="null"/> or exceeds 65535 bytes.</remarks>
+/// <param name="Tag">The room tag, or an empty string for the most popular rooms overall.</param>
+/// <param name="AdIndex">The promoted room slot sent with the request, -1 or greater.</param>
 public sealed record NavigatorTagSearchRequest(string Tag, int AdIndex)
     : IParserComposer<NavigatorTagSearchRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorTagSearchRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NavigatorTagSearchRequest ParseFlash(in PacketReader p) =>
         new(p.ReadString(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -127,15 +168,22 @@ public sealed record NavigatorTagSearchRequest(string Tag, int AdIndex)
     }
 }
 
+/// <summary>Requests the highest scoring rooms or the group base rooms.</summary>
+/// <remarks>Sent as the Flash <c>RoomsWithHighestScoreSearch</c> or <c>GuildBaseSearch</c> message, which share this layout.</remarks>
+/// <param name="AdIndex">The promoted room slot sent with the request, -1 or greater.</param>
 public sealed record NavigatorAdSearchRequest(int AdIndex)
     : IParserComposer<NavigatorAdSearchRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorAdSearchRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NavigatorAdSearchRequest ParseFlash(in PacketReader p) =>
         new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -143,15 +191,23 @@ public sealed record NavigatorAdSearchRequest(int AdIndex)
         p.WriteInt(value.AdIndex);
 }
 
+/// <summary>Sent when the user saves a navigator search.</summary>
+/// <remarks>Sent as the Flash <c>NavigatorAddSavedSearch</c> message. Composing throws when a string is <see langword="null"/> or exceeds 65535 bytes.</remarks>
+/// <param name="SearchCode">The code of the view the search belongs to, such as <c>hotel_view</c>.</param>
+/// <param name="Filter">The filter text in the navigator's prefix syntax, or an empty string for no filter.</param>
 public sealed record AddSavedSearchRequest(string SearchCode, string Filter)
     : IParserComposer<AddSavedSearchRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static AddSavedSearchRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static AddSavedSearchRequest ParseFlash(in PacketReader p) =>
         new(p.ReadString(), p.ReadString());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -181,15 +237,22 @@ public sealed record AddSavedSearchRequest(string SearchCode, string Filter)
     }
 }
 
+/// <summary>Sent when the user deletes a saved navigator search.</summary>
+/// <remarks>Sent as the Flash <c>NavigatorDeleteSavedSearch</c> message.</remarks>
+/// <param name="SavedSearchId">The id of the saved search.</param>
 public sealed record DeleteSavedSearchRequest(int SavedSearchId)
     : IParserComposer<DeleteSavedSearchRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static DeleteSavedSearchRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static DeleteSavedSearchRequest ParseFlash(in PacketReader p) =>
         new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -197,15 +260,22 @@ public sealed record DeleteSavedSearchRequest(int SavedSearchId)
         p.WriteInt(value.SavedSearchId);
 }
 
+/// <summary>Sent when the user collapses a navigator category.</summary>
+/// <remarks>Sent as the Flash <c>NavigatorAddCollapsedCategory</c> message.</remarks>
+/// <param name="SearchCode">The code of the category.</param>
 public sealed record AddCollapsedCategoryRequest(string SearchCode)
     : IParserComposer<AddCollapsedCategoryRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static AddCollapsedCategoryRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static AddCollapsedCategoryRequest ParseFlash(in PacketReader p) =>
         new(p.ReadString());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -213,15 +283,22 @@ public sealed record AddCollapsedCategoryRequest(string SearchCode)
         p.WriteString(value.SearchCode);
 }
 
+/// <summary>Sent when the user expands a collapsed navigator category.</summary>
+/// <remarks>Sent as the Flash <c>NavigatorRemoveCollapsedCategory</c> message.</remarks>
+/// <param name="SearchCode">The code of the category.</param>
 public sealed record RemoveCollapsedCategoryRequest(string SearchCode)
     : IParserComposer<RemoveCollapsedCategoryRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static RemoveCollapsedCategoryRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static RemoveCollapsedCategoryRequest ParseFlash(in PacketReader p) =>
         new(p.ReadString());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -229,15 +306,22 @@ public sealed record RemoveCollapsedCategoryRequest(string SearchCode)
         p.WriteString(value.SearchCode);
 }
 
+/// <summary>Sent when the user sets the home room.</summary>
+/// <remarks>Sent as the Flash <c>UpdateHomeRoom</c> message.</remarks>
+/// <param name="RoomId">The id of the room, written as a 32 bit integer.</param>
 public sealed record SetHomeRoomRequest(Id RoomId)
     : IParserComposer<SetHomeRoomRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SetHomeRoomRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static SetHomeRoomRequest ParseFlash(in PacketReader p) =>
         new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -248,6 +332,14 @@ public sealed record SetHomeRoomRequest(Id RoomId)
     }
 }
 
+/// <summary>Sent when the user creates a room.</summary>
+/// <remarks>Sent as the Flash <c>CreateFlat</c> message. Composing throws when a string is <see langword="null"/> or exceeds 65535 bytes.</remarks>
+/// <param name="Name">The name of the room.</param>
+/// <param name="Description">The description of the room.</param>
+/// <param name="Model">The name of the floor plan model.</param>
+/// <param name="Category">The id of the room category.</param>
+/// <param name="MaximumVisitors">The maximum number of visitors.</param>
+/// <param name="TradeMode">The trading mode of the room, as a <see cref="RoomTradeMode"/> value.</param>
 public sealed record CreateRoomRequest(
     string Name,
     string Description,
@@ -256,6 +348,8 @@ public sealed record CreateRoomRequest(
     int MaximumVisitors,
     int TradeMode) : IParserComposer<CreateRoomRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CreateRoomRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -268,6 +362,8 @@ public sealed record CreateRoomRequest(
             p.ReadInt(),
             p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -302,15 +398,22 @@ public sealed record CreateRoomRequest(
     }
 }
 
+/// <summary>Sent when the user deletes an owned room.</summary>
+/// <remarks>Sent as the Flash <c>DeleteRoom</c> message.</remarks>
+/// <param name="RoomId">The id of the room, written as a 32 bit integer.</param>
 public sealed record DeleteRoomRequest(Id RoomId)
     : IParserComposer<DeleteRoomRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static DeleteRoomRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static DeleteRoomRequest ParseFlash(in PacketReader p) =>
         new(p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

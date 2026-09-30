@@ -4,21 +4,34 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
+/// <summary>Represents the side of a wall an item hangs on, <c>l</c> for left or <c>r</c> for right.</summary>
 public readonly record struct WallOrientation
 {
+    /// <summary>The left wall orientation, <c>l</c>.</summary>
     public static readonly WallOrientation Left = new('l');
+    /// <summary>The right wall orientation, <c>r</c>.</summary>
     public static readonly WallOrientation Right = new('r');
 
+    /// <summary>The orientation character, <c>l</c> or <c>r</c>, or <c>'\0'</c> for the default value.</summary>
     public readonly char Value;
 
     private WallOrientation(char value) => Value = value;
 
+    /// <summary>Gets whether this is the left orientation.</summary>
     public bool IsLeft => Value == 'l';
+    /// <summary>Gets whether this is the right orientation.</summary>
     public bool IsRight => Value == 'r';
+    /// <summary>Gets the opposite orientation, which is <see cref="Left"/> for anything but <see cref="Left"/>.</summary>
     public WallOrientation Opposite => IsLeft ? Right : Left;
 
+    /// <summary>Returns the orientation character as a string.</summary>
+    /// <returns><c>l</c> or <c>r</c>.</returns>
     public override string ToString() => Value.ToString();
 
+    /// <summary>Converts an orientation character to a <see cref="WallOrientation"/>.</summary>
+    /// <param name="c">The character, <c>l</c> or <c>r</c>.</param>
+    /// <returns><see cref="Left"/> or <see cref="Right"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="c"/> is not <c>l</c> or <c>r</c>.</exception>
     public static WallOrientation FromChar(char c) => c switch
     {
         'l' => Left,
@@ -26,36 +39,75 @@ public readonly record struct WallOrientation
         _ => throw new ArgumentException($"Invalid wall orientation '{c}'. Must be 'l' or 'r'.")
     };
 
+    /// <summary>Converts an orientation character to a <see cref="WallOrientation"/>.</summary>
+    /// <param name="c">The character, <c>l</c> or <c>r</c>.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="c"/> is not <c>l</c> or <c>r</c>.</exception>
     public static implicit operator WallOrientation(char c) => FromChar(c);
+    /// <summary>Converts an orientation to its character.</summary>
+    /// <param name="o">The orientation.</param>
     public static implicit operator char(WallOrientation o) => o.Value;
+    /// <summary>Converts an orientation to its character as a string.</summary>
+    /// <param name="o">The orientation.</param>
     public static implicit operator string(WallOrientation o) => o.ToString();
 }
 
+/// <summary>Represents where a wall item hangs.</summary>
+/// <remarks>The text form is <c>:w=x,y l=x,y o</c>, for example <c>:w=3,5 l=12,40 r</c>.</remarks>
+/// <param name="Wall">The wall tile the item hangs on.</param>
+/// <param name="Offset">The item's offset on the wall tile.</param>
+/// <param name="Orientation">Whether the item hangs on a left or a right wall.</param>
 public readonly record struct WallLocation(Point Wall, Point Offset, WallOrientation Orientation) : IParserComposer<WallLocation>
 {
+    /// <summary>The location <c>:w=0,0 l=0,0 l</c>.</summary>
     public static readonly WallLocation Zero = new((0, 0), (0, 0), WallOrientation.Left);
 
+    /// <summary>Initializes a new instance of the <see cref="WallLocation"/> struct from its coordinates.</summary>
+    /// <param name="wx">The x coordinate of the wall tile.</param>
+    /// <param name="wy">The y coordinate of the wall tile.</param>
+    /// <param name="lx">The x offset on the wall tile.</param>
+    /// <param name="ly">The y offset on the wall tile.</param>
+    /// <param name="orientation">Whether the item hangs on a left or a right wall.</param>
     public WallLocation(int wx, int wy, int lx, int ly, WallOrientation orientation)
         : this((wx, wy), (lx, ly), orientation) { }
 
+    /// <summary>Returns the same location on the opposite wall orientation.</summary>
+    /// <returns>A copy with <see cref="WallOrientation.Opposite"/> as its orientation.</returns>
     public WallLocation Flip() => this with { Orientation = Orientation.Opposite };
+    /// <summary>Returns the same location with a given wall orientation.</summary>
+    /// <param name="orientation">The orientation to use.</param>
+    /// <returns>A copy with the given orientation.</returns>
     public WallLocation Orient(WallOrientation orientation) => this with { Orientation = orientation };
 
+    /// <summary>Returns the location in the text form the hotel uses.</summary>
+    /// <returns>A string in the form <c>:w=x,y l=x,y o</c>.</returns>
     public override string ToString() => FormattableString.Invariant(
         $":w={Wall.X},{Wall.Y} l={Offset.X},{Offset.Y} {Orientation.Value}");
 
+    /// <summary>Writes the location to a packet as its text form.</summary>
+    /// <param name="p">The packet to write to.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteString(ToString());
     }
 
+    /// <summary>Reads a location from a packet as its text form.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="FormatException">Thrown when the text is not a valid wall location.</exception>
     public static WallLocation Parse(in PacketReader p) => ParseString(p.ReadString());
 
+    /// <summary>Parses a location from its text form.</summary>
+    /// <param name="value">The text, in the form <c>:w=x,y l=x,y o</c>.</param>
+    /// <returns>The parsed location.</returns>
+    /// <exception cref="FormatException">Thrown when the text is not a valid wall location.</exception>
     public static WallLocation ParseString(string value) =>
         TryParse(value, out WallLocation location)
             ? location
             : throw new FormatException($"Invalid wall location format: '{value}'.");
 
+    /// <summary>Tries to parse a location from its text form.</summary>
+    /// <param name="value">The text, in the form <c>:w=x,y l=x,y o</c>.</param>
+    /// <param name="location">The parsed location, or the default value when parsing fails.</param>
+    /// <returns><see langword="true"/> when the text was parsed; otherwise, <see langword="false"/>.</returns>
     public static bool TryParse(string value, out WallLocation location)
     {
         location = default;
@@ -96,6 +148,9 @@ public readonly record struct WallLocation(Point Wall, Point Offset, WallOrienta
         return true;
     }
 
+    /// <summary>Converts a location's text form to a <see cref="WallLocation"/>.</summary>
+    /// <param name="s">The text, in the form <c>:w=x,y l=x,y o</c>.</param>
+    /// <exception cref="FormatException">Thrown when the text is not a valid wall location.</exception>
     public static implicit operator WallLocation(string s) => ParseString(s);
 }
 

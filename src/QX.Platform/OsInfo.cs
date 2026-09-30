@@ -4,16 +4,20 @@ using System.Runtime.InteropServices;
 
 namespace Qx.Platform;
 
-/// <summary>The operating system family QX runs on.</summary>
+/// <summary>Specifies the operating system family QX runs on.</summary>
 public enum OsKind
 {
+    /// <summary>Microsoft Windows.</summary>
     Windows,
+    /// <summary>Apple macOS.</summary>
     MacOS,
+    /// <summary>A Linux distribution.</summary>
     Linux,
+    /// <summary>Any other operating system.</summary>
     Other
 }
 
-/// <summary>How a Linux desktop session draws its windows, which decides what QX can read from it.</summary>
+/// <summary>Specifies how a Linux desktop session draws its windows, which decides what QX can read from it.</summary>
 public enum DisplayServer
 {
     /// <summary>Windows and macOS, which have one native display system.</summary>
@@ -32,7 +36,7 @@ public enum DisplayServer
     None
 }
 
-/// <summary>The operating system QX runs on: its family, version, name and display system.</summary>
+/// <summary>Represents the operating system QX runs on: its family, version, name and display system.</summary>
 public sealed class OsInfo
 {
     OsInfo(OsKind kind, Version version, string name, DisplayServer display)
@@ -43,36 +47,42 @@ public sealed class OsInfo
         Display = display;
     }
 
-    /// <summary>The system QX is running on.</summary>
+    /// <summary>Gets the system QX is running on.</summary>
     public static OsInfo Current { get; } = Detect();
 
-    /// <summary>The operating system family.</summary>
+    /// <summary>Gets the operating system family.</summary>
     public OsKind Kind { get; }
 
+    /// <summary>Gets whether the system is Windows.</summary>
     public bool IsWindows => Kind is OsKind.Windows;
 
+    /// <summary>Gets whether the system is macOS.</summary>
     public bool IsMacOS => Kind is OsKind.MacOS;
 
+    /// <summary>Gets whether the system is Linux.</summary>
     public bool IsLinux => Kind is OsKind.Linux;
 
     /// <summary>
-    /// The version of the system itself: the Windows build such as 10.0.26200, the macOS release
+    /// Gets the version of the system itself: the Windows build such as 10.0.26200, the macOS release
     /// such as 15.2, or the distribution release on Linux, falling back to the kernel version.
     /// </summary>
     public Version Version { get; }
 
-    /// <summary>A readable name such as "Windows 11 (build 26200)", "macOS 15.2" or "Ubuntu 24.04 LTS".</summary>
+    /// <summary>Gets a readable name such as "Windows 11 (build 26200)", "macOS 15.2" or "Ubuntu 24.04 LTS".</summary>
     public string Name { get; }
 
-    /// <summary>The processor architecture of the system, such as "x64" or "arm64".</summary>
+    /// <summary>Gets the processor architecture of the system in lower case, such as "x64" or "arm64".</summary>
     public string Architecture => RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
 
-    /// <summary>The display system of the session.</summary>
+    /// <summary>Gets the display system of the session.</summary>
+    /// <remarks>On Linux it is taken from the <c>DISPLAY</c> and <c>WAYLAND_DISPLAY</c> environment variables.</remarks>
     public DisplayServer Display { get; }
 
-    /// <summary>The raw description the runtime reports.</summary>
+    /// <summary>Gets the raw description the runtime reports.</summary>
     public string Description => RuntimeInformation.OSDescription;
 
+    /// <summary>Returns the readable name followed by the architecture, such as "Windows 11 (build 26200) x64".</summary>
+    /// <returns>The system name and architecture.</returns>
     public override string ToString() => $"{Name} {Architecture}";
 
     static OsInfo Detect()

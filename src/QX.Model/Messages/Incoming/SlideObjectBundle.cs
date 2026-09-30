@@ -2,17 +2,36 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents a floor item moved by a roller.</summary>
+/// <param name="Id">The ID of the floor item.</param>
+/// <param name="FromZ">The item's height before the move.</param>
+/// <param name="ToZ">The item's height after the move.</param>
 public readonly record struct SlideObject(Id Id, float FromZ, float ToZ);
 
+/// <summary>Represents an avatar moved by a roller.</summary>
+/// <param name="Index">The room index of the avatar.</param>
+/// <param name="FromZ">The avatar's height before the move.</param>
+/// <param name="ToZ">The avatar's height after the move.</param>
 public sealed record SlideAvatar(Id Index, float FromZ, float ToZ);
 
+/// <summary>Specifies whether a roller move carries an avatar and how it moves.</summary>
 public enum AvatarSlideType
 {
+    /// <summary>No avatar moves.</summary>
     None = 0,
+    /// <summary>A walking avatar moves.</summary>
     WalkingAvatar = 1,
+    /// <summary>A standing avatar moves.</summary>
     StandingAvatar = 2
 }
 
+/// <summary>Represents the <c>SlideObjectBundle</c> message, received when a roller moves floor items and an avatar to the next tile.</summary>
+/// <param name="From">The tile the objects move from.</param>
+/// <param name="To">The tile the objects move to.</param>
+/// <param name="Objects">The floor items that move.</param>
+/// <param name="RollerId">The ID of the roller that moves the objects.</param>
+/// <param name="Type">The kind of avatar move, <see cref="AvatarSlideType.None"/> when no avatar moves.</param>
+/// <param name="Avatar">The avatar that moves, or <see langword="null"/> when the type is <see cref="AvatarSlideType.None"/>.</param>
 public sealed record SlideObjectBundle(
     Point From,
     Point To,
@@ -21,9 +40,24 @@ public sealed record SlideObjectBundle(
     AvatarSlideType Type,
     SlideAvatar? Avatar) : IParserComposer<SlideObjectBundle>
 {
+    /// <summary>Gets whether the packet carries the avatar part after the roller ID.</summary>
+    /// <remarks>
+    /// The parser sets this to <see langword="false"/> when the packet ends after the roller ID. Composing
+    /// then leaves the avatar part out, and throws <see cref="InvalidDataException"/> if
+    /// <see cref="SlideObjectBundle.Type"/> is not <see cref="AvatarSlideType.None"/> or
+    /// <see cref="SlideObjectBundle.Avatar"/> is set.
+    /// </remarks>
     public bool HasAvatarSlideData { get; init; } = true;
+    /// <summary>Gets the avatar move type as its integer value.</summary>
     public int MoveType => (int)Type;
 
+    /// <summary>Initializes a new instance of the <see cref="SlideObjectBundle"/> class with the avatar move type as an integer.</summary>
+    /// <param name="From">The tile the objects move from.</param>
+    /// <param name="To">The tile the objects move to.</param>
+    /// <param name="Objects">The floor items that move.</param>
+    /// <param name="RollerId">The ID of the roller that moves the objects.</param>
+    /// <param name="MoveType">The avatar move type as its <see cref="AvatarSlideType"/> integer value.</param>
+    /// <param name="Avatar">The avatar that moves, or <see langword="null"/> when no avatar moves.</param>
     public SlideObjectBundle(
         Point From,
         Point To,
@@ -35,6 +69,8 @@ public sealed record SlideObjectBundle(
     {
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SlideObjectBundle Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -66,6 +102,8 @@ public sealed record SlideObjectBundle(
         };
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

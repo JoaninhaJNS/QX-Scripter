@@ -2,16 +2,27 @@ using Qx.Messages;
 
 namespace Qx.Interception;
 
+/// <summary>Defines a connection to the hotel that sends packets and reports the session lifecycle.</summary>
 public interface IConnection
 {
+    /// <summary>Gets whether a hotel session is active.</summary>
     bool IsConnected { get; }
+    /// <summary>Gets the active hotel session, or <see langword="null"/> when there is none.</summary>
     Session? Session { get; }
 
+    /// <summary>Occurs when a hotel session starts.</summary>
     event Action<Session>? Connected;
+    /// <summary>Occurs when the hotel session ends.</summary>
     event Action? Disconnected;
 
+    /// <summary>Sends a packet to the client or the server, depending on the direction of its header.</summary>
+    /// <param name="packet">The packet to send.</param>
     void Send(IPacket packet);
 
+    /// <summary>Sends a packet only when <paramref name="expected_session"/> is still the active session.</summary>
+    /// <param name="packet">The packet to send.</param>
+    /// <param name="expected_session">The session the packet belongs to.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the active session is not <paramref name="expected_session"/>.</exception>
     void Send(IPacket packet, Session? expected_session)
     {
         if (!ReferenceEquals(Session, expected_session))

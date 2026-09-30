@@ -2,26 +2,27 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
-/// <summary>What the local user may do with a habbicon.</summary>
+/// <summary>Specifies what the local user may do with a habbicon.</summary>
 public enum HabbiconState
 {
-    /// <summary>Not owned. Buyable when the icon carries a price.</summary>
+    /// <summary>Not owned.</summary>
+    /// <remarks>Buyable when the icon carries a price.</remarks>
     Locked = 0,
     /// <summary>Earned and waiting to be claimed.</summary>
     Claimable = 1,
     /// <summary>Owned.</summary>
     Owned = 2,
-    /// <summary>Owned and marked as a favourite.</summary>
+    /// <summary>Owned and marked as a favorite.</summary>
     Favorite = 3
 }
 
 /// <summary>
-/// One habbicon: the small pictures that can be sent in a private conversation.
+/// Represents one habbicon, one of the small pictures that can be sent in a private conversation.
 /// </summary>
 /// <param name="HabbiconId">The icon's identifier.</param>
 /// <param name="Name">The icon's name.</param>
 /// <param name="CollectionId">The collection the icon belongs to.</param>
-/// <param name="State">Whether the icon is locked, claimable, owned or favourited.</param>
+/// <param name="State">Whether the icon is locked, claimable, owned or favorited.</param>
 /// <param name="PriceCredits">The price in credits, zero when it is not sold for credits.</param>
 /// <param name="PriceActivityPoints">The price in the seasonal currency, zero when unpriced.</param>
 /// <param name="ActivityPointType">Which seasonal currency <paramref name="PriceActivityPoints"/> is in.</param>
@@ -36,6 +37,8 @@ public sealed record Habbicon(
 {
     private string name = Name ?? throw new ArgumentNullException(nameof(Name));
 
+    /// <summary>Gets the icon's name.</summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
     public string Name
     {
         get => name;
@@ -46,19 +49,22 @@ public sealed record Habbicon(
         }
     }
 
-    /// <summary>Whether the local user owns the icon, favourited or not.</summary>
+    /// <summary>Gets whether the local user owns the icon, favorited or not.</summary>
     public bool IsOwned => State is HabbiconState.Owned or HabbiconState.Favorite;
 
-    /// <summary>Whether the icon is earned and still waiting to be claimed.</summary>
+    /// <summary>Gets whether the icon is earned and still waiting to be claimed.</summary>
     public bool IsClaimable => State is HabbiconState.Claimable;
 
     /// <summary>
-    /// Whether the icon can be bought right now: not owned, and carrying a price in at least one
-    /// currency. An unpriced locked icon is earned rather than sold.
+    /// Gets whether the icon can be bought right now: not owned, and carrying a price in at least one
+    /// currency.
     /// </summary>
+    /// <remarks>An unpriced locked icon is earned rather than sold.</remarks>
     public bool IsPurchasable =>
         State is HabbiconState.Locked && (PriceCredits > 0 || PriceActivityPoints > 0);
 
+    /// <summary>Parses a habbicon from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static Habbicon Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -72,6 +78,8 @@ public sealed record Habbicon(
         return value;
     }
 
+    /// <summary>Composes the habbicon into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -149,7 +157,7 @@ internal readonly record struct HabbiconWireSnapshot(
     int ActivityPointType);
 
 /// <summary>
-/// A habbicon collection: a themed set that pays out a reward icon once it is complete.
+/// Represents a habbicon collection: a themed set that pays out a reward icon once it is complete.
 /// </summary>
 /// <param name="CollectionId">The collection's identifier.</param>
 /// <param name="Name">The collection's name.</param>
@@ -177,6 +185,8 @@ public sealed record HabbiconCollection(
     private IReadOnlyList<Habbicon> habbicons =
         HabbiconWire.FreezeReferences(Habbicons, nameof(Habbicons));
 
+    /// <summary>Gets the collection's name.</summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
     public string Name
     {
         get => name;
@@ -187,6 +197,7 @@ public sealed record HabbiconCollection(
         }
     }
 
+    /// <summary>Gets the icons in the set, as a read only copy.</summary>
     public IReadOnlyList<Habbicon> Habbicons
     {
         get => habbicons;
@@ -194,7 +205,7 @@ public sealed record HabbiconCollection(
     }
 
     /// <summary>
-    /// Whether the completion reward is waiting to be claimed.
+    /// Gets whether the completion reward is waiting to be claimed.
     /// </summary>
     /// <remarks>
     /// A set with no reward icon reports <see langword="false"/> whatever the state says, which is
@@ -203,6 +214,8 @@ public sealed record HabbiconCollection(
     public bool RewardIsClaimable =>
         RewardHabbiconId > 0 && RewardState is HabbiconState.Claimable;
 
+    /// <summary>Parses a habbicon collection from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static HabbiconCollection Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -216,6 +229,8 @@ public sealed record HabbiconCollection(
         return value;
     }
 
+    /// <summary>Composes the habbicon collection into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -328,7 +343,8 @@ internal sealed record HabbiconCollectionWireSnapshot(
     IReadOnlyList<HabbiconWireSnapshot> Habbicons);
 
 /// <summary>
-/// The local user's habbicon states, plus the icons they used most recently.
+/// Represents the <c>UserHabbicons</c> message, received with the local user's habbicon states and the icons they
+/// used most recently.
 /// </summary>
 /// <remarks>
 /// Carries only identifier and state per icon; the names and prices come from
@@ -345,20 +361,26 @@ public sealed record UserHabbicons(
     private IReadOnlyList<int> recent_habbicon_ids =
         HabbiconWire.FreezeValues(RecentHabbiconIds, nameof(RecentHabbiconIds));
 
+    /// <summary>Gets one entry per icon the hotel has a state for, as a read only copy.</summary>
     public IReadOnlyList<UserHabbiconState> Habbicons
     {
         get => habbicons;
         init => habbicons = HabbiconWire.FreezeReferences(value, nameof(Habbicons));
     }
 
+    /// <summary>Gets the icons used most recently, newest first, as a read only copy.</summary>
     public IReadOnlyList<int> RecentHabbiconIds
     {
         get => recent_habbicon_ids;
         init => recent_habbicon_ids = HabbiconWire.FreezeValues(value, nameof(RecentHabbiconIds));
     }
 
+    /// <summary>Gets whether the message carried the recent icon list.</summary>
+    /// <remarks>The Flash parser always reads the list, so a parsed message reports <see langword="true"/>.</remarks>
     public bool RecentHabbiconIdsPresent { get; init; } = true;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static UserHabbicons Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -396,6 +418,8 @@ public sealed record UserHabbicons(
         return new UserHabbicons(habbicons, recent);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -430,12 +454,14 @@ public sealed record UserHabbicons(
     }
 }
 
-/// <summary>The state of one icon in the local user's collection.</summary>
+/// <summary>Represents the state of one icon in the local user's collection.</summary>
 /// <param name="HabbiconId">Which icon.</param>
 /// <param name="State">Its state.</param>
 public sealed record UserHabbiconState(int HabbiconId, HabbiconState State)
     : IParserComposer<UserHabbiconState>
 {
+    /// <summary>Parses an icon state from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static UserHabbiconState Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -448,6 +474,8 @@ public sealed record UserHabbiconState(int HabbiconId, HabbiconState State)
         return value;
     }
 
+    /// <summary>Composes the icon state into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -472,12 +500,17 @@ public sealed record UserHabbiconState(int HabbiconId, HabbiconState State)
     }
 }
 
-/// <summary>One icon's state changed, for example after a purchase or a claim.</summary>
+/// <summary>
+/// Represents the <c>UserHabbiconStatusChanged</c> message, received when one icon's state changes, for example after
+/// a purchase or a claim.
+/// </summary>
 /// <param name="HabbiconId">Which icon.</param>
 /// <param name="State">Its new state.</param>
 public sealed record UserHabbiconStatusChanged(int HabbiconId, HabbiconState State)
     : IParserComposer<UserHabbiconStatusChanged>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static UserHabbiconStatusChanged Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -495,6 +528,8 @@ public sealed record UserHabbiconStatusChanged(int HabbiconId, HabbiconState Sta
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -509,7 +544,10 @@ public sealed record UserHabbiconStatusChanged(int HabbiconId, HabbiconState Sta
     }
 }
 
-/// <summary>The habbicon shop: every collection with the icons it holds.</summary>
+/// <summary>
+/// Represents the <c>HabbiconShopData</c> message, received with the habbicon shop: every collection with the icons it
+/// holds.
+/// </summary>
 /// <param name="Collections">The collections on offer.</param>
 public sealed record HabbiconShopData(IReadOnlyList<HabbiconCollection> Collections)
     : IParserComposer<HabbiconShopData>
@@ -517,12 +555,15 @@ public sealed record HabbiconShopData(IReadOnlyList<HabbiconCollection> Collecti
     private IReadOnlyList<HabbiconCollection> collections =
         HabbiconWire.FreezeReferences(Collections, nameof(Collections));
 
+    /// <summary>Gets the collections on offer, as a read only copy.</summary>
     public IReadOnlyList<HabbiconCollection> Collections
     {
         get => collections;
         init => collections = HabbiconWire.FreezeReferences(value, nameof(Collections));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static HabbiconShopData Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -543,6 +584,8 @@ public sealed record HabbiconShopData(IReadOnlyList<HabbiconCollection> Collecti
         return new HabbiconShopData(collections);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -568,12 +611,17 @@ public sealed record HabbiconShopData(IReadOnlyList<HabbiconCollection> Collecti
     }
 }
 
-/// <summary>Detail for a single icon, in answer to a request for it.</summary>
+/// <summary>
+/// Represents the <c>HabbiconInfo</c> message, received with the detail for a single icon in answer to a request for
+/// it.
+/// </summary>
 /// <param name="Habbicon">The icon.</param>
 public sealed record HabbiconInfo(Habbicon Habbicon) : IParserComposer<HabbiconInfo>
 {
     private Habbicon habbicon = Habbicon ?? throw new ArgumentNullException(nameof(Habbicon));
 
+    /// <summary>Gets the icon.</summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
     public Habbicon Habbicon
     {
         get => habbicon;
@@ -584,6 +632,8 @@ public sealed record HabbiconInfo(Habbicon Habbicon) : IParserComposer<HabbiconI
         }
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static HabbiconInfo Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -597,6 +647,8 @@ public sealed record HabbiconInfo(Habbicon Habbicon) : IParserComposer<HabbiconI
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -611,12 +663,14 @@ public sealed record HabbiconInfo(Habbicon Habbicon) : IParserComposer<HabbiconI
     }
 }
 
-/// <summary>Someone in the room used a habbicon.</summary>
+/// <summary>Represents the <c>RoomUseHabbicon</c> message, received when someone in the room uses a habbicon.</summary>
 /// <param name="RoomIndex">The room index of the avatar who used it.</param>
 /// <param name="HabbiconId">Which icon was used.</param>
 public sealed record RoomUseHabbicon(int RoomIndex, int HabbiconId)
     : IParserComposer<RoomUseHabbicon>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static RoomUseHabbicon Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -634,6 +688,8 @@ public sealed record RoomUseHabbicon(int RoomIndex, int HabbiconId)
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

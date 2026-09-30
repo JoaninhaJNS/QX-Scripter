@@ -80,6 +80,19 @@ internal interface IHabbiconOperations
         CancellationToken cancellation_token);
 }
 
+/// <summary>
+/// Manages the habbicon shop and the habbicons owned by the local user.
+/// </summary>
+/// <remarks>
+/// <para>
+/// All members are safe to call from any thread. Reads return copies of an immutable snapshot, and
+/// events are raised in the order the state changed, after the change is stored. An event is not
+/// raised when the hotel session changed before it could be delivered.
+/// </para>
+/// <para>
+/// The state is cleared when the hotel connection closes and when a new session connects.
+/// </para>
+/// </remarks>
 public sealed class HabbiconManager : GameStateManager
 {
     private readonly object operations_sync = new();
@@ -98,44 +111,107 @@ public sealed class HabbiconManager : GameStateManager
     private bool delivering;
     private int delivery_thread_id;
 
+    /// <summary>
+    /// Gets the habbicon collections from the last shop snapshot.
+    /// </summary>
+    /// <remarks>
+    /// The icons carry the state the shop reported. Use <see cref="Icons"/> for icons merged with
+    /// the local user's own states. Empty until the shop is loaded.
+    /// </remarks>
     public IReadOnlyList<HabbiconCollection> Collections =>
         State.Collections.Select(CloneCollection).ToArray();
 
+    /// <summary>
+    /// Gets the local user's habbicon states keyed by habbicon id.
+    /// </summary>
+    /// <remarks>
+    /// Only claimable, owned and favorite icons are listed. A locked icon has no entry.
+    /// </remarks>
     public IReadOnlyDictionary<int, HabbiconState> OwnedStates =>
         new ReadOnlyDictionary<int, HabbiconState>(new Dictionary<int, HabbiconState>(State.UserStates));
 
+    /// <summary>
+    /// Gets the ids of the habbicons the local user used most recently, newest first.
+    /// </summary>
     public IReadOnlyList<int> RecentHabbiconIds => State.RecentHabbiconIds.ToArray();
 
+    /// <summary>
+    /// Gets whether the habbicon shop snapshot has been received.
+    /// </summary>
     public bool IsShopLoaded => State.ShopLoaded;
 
+    /// <summary>
+    /// Gets whether the local user's habbicon inventory has been received.
+    /// </summary>
     public bool IsUserLoaded => State.UserLoaded;
 
+    /// <summary>
+    /// Gets whether habbicons are enabled on the hotel.
+    /// </summary>
+    /// <remarks>
+    /// Read from the <c>habbicons.enabled</c> flag in the hotel's game data.
+    /// </remarks>
     public bool IsEnabled
     {
         get => State.Enabled;
         internal set => StoreEnabled(value);
     }
 
+    /// <summary>
+    /// Gets every habbicon in the shop with the local user's state applied.
+    /// </summary>
     public IReadOnlyList<Habbicon> Icons => IconsFor(State);
 
+    /// <summary>
+    /// Gets the habbicons the local user owns, favorite or not.
+    /// </summary>
     public IReadOnlyList<Habbicon> Owned => Icons.Where(icon => icon.IsOwned).ToArray();
 
+    /// <summary>
+    /// Gets the habbicons the local user has marked as a favorite.
+    /// </summary>
     public IReadOnlyList<Habbicon> Favorites =>
         Icons.Where(icon => icon.State is HabbiconState.Favorite).ToArray();
 
+    /// <summary>
+    /// Gets the habbicons the local user has earned and not claimed yet.
+    /// </summary>
     public IReadOnlyList<Habbicon> Claimable => Icons.Where(icon => icon.IsClaimable).ToArray();
 
+    /// <summary>
+    /// Occurs when a habbicon shop snapshot is received and passes the new collections.
+    /// </summary>
     public event Action<IReadOnlyList<HabbiconCollection>>? ShopDataChanged;
+    /// <summary>
+    /// Occurs when the local user's habbicon inventory is received and passes the inventory.
+    /// </summary>
     public event Action<UserHabbicons>? UserHabbiconsChanged;
+    /// <summary>
+    /// Occurs when the state of one of the local user's habbicons changes and passes the update.
+    /// </summary>
     public event Action<UserHabbiconStatusChanged>? StatusChanged;
+    /// <summary>
+    /// Occurs when the local user gains a habbicon and passes its id.
+    /// </summary>
+    /// <remarks>
+    /// Raised for an icon that is new to the inventory and for a claimable icon that became owned.
+    /// Not raised for the first inventory snapshot of a session.
+    /// </remarks>
     public event Action<int>? IconGained;
+    /// <summary>
+    /// Occurs when the details of a habbicon are received and passes the habbicon.
+    /// </summary>
     public event Action<Habbicon>? InfoReceived;
+    /// <summary>
+    /// Occurs when an avatar in the room uses a habbicon and passes the use.
+    /// </summary>
     public event Action<RoomUseHabbicon>? UsedInRoom;
     internal event Action<HabbiconStateUpdate>? StateCommitted;
     internal event Action<HabbiconStateUpdate>? StateChanged;
 
     internal HabbiconStateData State => Volatile.Read(ref state);
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         CommitReset(CurrentSession);
@@ -163,20 +239,62 @@ public sealed class HabbiconManager : GameStateManager
             (message, generation) => StoreRoomUse(message, generation));
     }
 
+    /// <summary>
+    /// Requests the habbicon shop data from the server.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void RequestShopData() => Operations().RequestShopData();
 
+    /// <summary>
+    /// Requests the details of a habbicon from the server.
+    /// </summary>
+    /// <param name="habbiconId">The id of the habbicon.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void RequestInfo(int habbiconId) => Operations().RequestInfo(habbiconId);
 
+    /// <summary>
+    /// Sends a request to buy a habbicon.
+    /// </summary>
+    /// <param name="habbiconId">The id of the habbicon.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void Buy(int habbiconId) => Operations().Buy(habbiconId);
 
+    /// <summary>
+    /// Sends a request to buy a whole habbicon collection.
+    /// </summary>
+    /// <param name="collectionId">The id of the collection.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void BuyCollection(int collectionId) => Operations().BuyCollection(collectionId);
 
+    /// <summary>
+    /// Sends a request to claim an earned habbicon.
+    /// </summary>
+    /// <param name="habbiconId">The id of the habbicon.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void Claim(int habbiconId) => Operations().Claim(habbiconId);
 
+    /// <summary>
+    /// Sends a request to mark an owned habbicon as a favorite.
+    /// </summary>
+    /// <param name="habbiconId">The id of the habbicon.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void Favorite(int habbiconId) => Operations().Favorite(habbiconId);
 
+    /// <summary>
+    /// Sends a request to remove a habbicon from the favorites.
+    /// </summary>
+    /// <param name="habbiconId">The id of the habbicon.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void Unfavorite(int habbiconId) => Operations().Unfavorite(habbiconId);
 
+    /// <summary>
+    /// Gets the habbicon collections, requesting the shop data first when it is not loaded.
+    /// </summary>
+    /// <param name="timeoutMs">The time to wait for the shop data, in milliseconds.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the habbicon collections.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public Task<IReadOnlyList<HabbiconCollection>> EnsureShopLoadedAsync(
         int timeoutMs = 10000,
         CancellationToken cancellationToken = default)
@@ -299,6 +417,7 @@ public sealed class HabbiconManager : GameStateManager
 
     internal bool IsCurrentPublication(HabbiconStateUpdate update) => UpdateCurrent(update);
 
+    /// <inheritdoc/>
     protected override void Reset() => CommitReset(CurrentSession);
 
     private void BindSession(Session session) => CommitReset(session);

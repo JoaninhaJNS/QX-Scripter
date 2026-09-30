@@ -58,6 +58,14 @@ internal readonly record struct EarningClaimCorrelation(
     long RequestEpoch,
     int OutstandingRequests);
 
+/// <summary>Manages the earnings vault of the current session.</summary>
+/// <remarks>
+/// <para>All members are safe to call from any thread.</para>
+/// <para>
+/// Events are raised after the state is updated. The state is cleared when the hotel connection
+/// closes and when a new session starts.
+/// </para>
+/// </remarks>
 public sealed class EarningsManager : GameStateManager
 {
     private sealed class ClaimRequestTracker
@@ -89,19 +97,23 @@ public sealed class EarningsManager : GameStateManager
     private bool delivering;
     private int delivery_thread_id;
 
-    /// <summary>Everything the vault is holding, as the hotel last reported it.</summary>
+    /// <summary>Gets the contents of the vault as the server last reported it.</summary>
+    /// <remarks>
+    /// A successful claim removes the claimed category from the held status without waiting for a
+    /// new report. The status is empty until the vault is received.
+    /// </remarks>
     public EarningStatus Status => State.Status;
 
-    /// <summary>Whether the hotel has sent the vault this session.</summary>
+    /// <summary>Gets whether the server has sent the vault in this session.</summary>
     public bool IsLoaded => State.Loaded;
 
     /// <summary>
-    /// Whether a notification is answered by asking the hotel for the vault again.
+    /// Gets or sets whether a reward notification from the server triggers a new request for the vault.
     /// </summary>
     /// <remarks>
-    /// The client refreshes only while its earnings window is open. The equivalent here is having
-    /// asked once: nothing is sent until something has read the vault, after which it is kept
-    /// current. Turn this off to stop the manager sending anything on its own.
+    /// Defaults to <see langword="true"/>. A request is only sent once the vault has been received in
+    /// this session, which matches the client, which refreshes only while its earnings window is open.
+    /// Set it to <see langword="false"/> to stop the manager sending requests on its own.
     /// </remarks>
     public bool RefreshOnNotification
     {
@@ -109,19 +121,23 @@ public sealed class EarningsManager : GameStateManager
         set => Volatile.Write(ref refresh_on_notification, value ? 1 : 0);
     }
 
-    /// <summary>Raised when the vault arrived or was changed by a claim.</summary>
+    /// <summary>Occurs when the vault is received or changed by a successful claim.</summary>
+    /// <remarks>The argument is the new value of <see cref="Status"/>.</remarks>
     public event Action<EarningStatus>? StatusChanged;
 
-    /// <summary>Raised when the hotel answered a claim, whether it went through or not.</summary>
+    /// <summary>Occurs when the server answers a claim, whether it succeeded or not.</summary>
+    /// <remarks>The argument is the claim result sent by the server.</remarks>
     public event Action<EarningClaimResult>? Claimed;
 
-    /// <summary>Raised when the hotel says a category gained something.</summary>
+    /// <summary>Occurs when the server reports that a category has a new reward.</summary>
+    /// <remarks>The argument is the category that gained a reward.</remarks>
     public event Action<EarningCategory>? RewardAvailable;
     internal event Action<EarningStateUpdate>? StateCommitted;
     internal event Action<EarningStateUpdate>? StateChanged;
 
     internal EarningState State => Volatile.Read(ref state);
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         CommitReset(CurrentSession);
@@ -137,33 +153,40 @@ public sealed class EarningsManager : GameStateManager
         OnIncoming(MessageContracts.Earnings.Notification, ApplyNotification);
     }
 
-    /// <summary>Asks the hotel for the vault.</summary>
+    /// <summary>Requests the vault from the server.</summary>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response updates
+    /// <see cref="Status"/> and raises <see cref="StatusChanged"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void Request() => Operations().RequestStatus();
 
-    /// <summary>
-    /// Claims one category.
-    /// </summary>
-    /// <remarks>
-    /// The vault is not changed here. The hotel answers with a result, and the held copy follows
-    /// that answer, so a refused claim leaves the figures standing.
-    /// </remarks>
+    /// <summary>Claims the rewards of one category.</summary>
     /// <param name="category">
     /// The category to claim. <see cref="EarningCategory.All"/> claims every category, which is the
-    /// same request the client's claim-all button sends.
+    /// same request the client's claim all button sends.
     /// </param>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The held vault is only changed when the
+    /// server reports the claim as successful, so a refused claim leaves <see cref="Status"/> unchanged.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void Claim(EarningCategory category) => Operations().Claim(category);
 
-    /// <summary>Claims every category in one request.</summary>
+    /// <summary>Claims the rewards of every category in one request.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public void ClaimAll() => Claim(EarningCategory.All);
 
+    /// <summary>Gets whether the connected client supports earnings.</summary>
+    /// <remarks>Always <see langword="true"/>.</remarks>
     public bool IsSupported => true;
 
-    /// <summary>
-    /// Returns the vault, asking the hotel for it when it has not been seen.
-    /// </summary>
-    /// <param name="timeoutMs">Total budget in milliseconds.</param>
-    /// <param name="cancellationToken">Cancels the wait.</param>
-    /// <exception cref="TimeoutException">The hotel did not answer in time.</exception>
+    /// <summary>Gets the vault, requesting it from the server if it has not been received in this session.</summary>
+    /// <param name="timeoutMs">The time to wait for the vault, in milliseconds.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the contents of the vault.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="TimeoutException">Thrown when the server does not send the vault in time.</exception>
     public Task<EarningStatus> EnsureLoadedAsync(
         int timeoutMs = 10000,
         CancellationToken cancellationToken = default)
@@ -330,6 +353,7 @@ public sealed class EarningsManager : GameStateManager
     internal static int NormalizeCategory(EarningCategory category) =>
         unchecked((sbyte)(int)category);
 
+    /// <inheritdoc/>
     protected override void Reset() => CommitReset(CurrentSession);
 
     private void BindSession(Session session) => CommitReset(session);

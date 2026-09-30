@@ -2,19 +2,21 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
-/// <summary>
-/// How the recycler stands: whether one is running and how long it has left.
-/// </summary>
-/// <param name="Status">The recycler's state as the hotel numbers it.</param>
-/// <param name="TimeoutSeconds">Seconds until the running session ends.</param>
+/// <summary>Represents the <c>RecyclerStatus</c> message, received with the state of the recycler and the time it has left.</summary>
+/// <param name="Status">The recycler state code as the hotel numbers it.</param>
+/// <param name="TimeoutSeconds">The time in seconds until the running recycler session ends.</param>
 public sealed record RecyclerStatus(int Status, int TimeoutSeconds) : IParserComposer<RecyclerStatus>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static RecyclerStatus Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static RecyclerStatus ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -25,19 +27,21 @@ public sealed record RecyclerStatus(int Status, int TimeoutSeconds) : IParserCom
     }
 }
 
-/// <summary>
-/// A recycler session ended, and what it produced.
-/// </summary>
-/// <param name="Status">How it ended as the hotel numbers it.</param>
-/// <param name="PrizeId">What was won, when the session produced anything.</param>
+/// <summary>Represents the <c>RecyclerFinished</c> message, received when a recycler session ends.</summary>
+/// <param name="Status">The result code as the hotel numbers it.</param>
+/// <param name="PrizeId">The identifier of the prize that was won, when the session produced one.</param>
 public sealed record RecyclerFinished(int Status, int PrizeId) : IParserComposer<RecyclerFinished>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static RecyclerFinished Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static RecyclerFinished ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

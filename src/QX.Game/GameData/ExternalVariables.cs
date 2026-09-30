@@ -5,8 +5,8 @@ using System.Text.RegularExpressions;
 namespace Qx.Game;
 
 /// <summary>
-/// The hotel's <c>external_variables</c> configuration, which drives large parts of client
-/// behaviour that never appears on the wire: feature switches, limits, prices and endpoint URLs.
+/// Represents the hotel's <c>external_variables</c> configuration, which drives large parts of client
+/// behavior that never appears on the wire: feature switches, limits, prices and endpoint URLs.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -17,7 +17,7 @@ namespace Qx.Game;
 /// </para>
 /// <para>
 /// The three accessors deliberately differ from one another exactly as they do in the client:
-    /// only <see cref="Get(string)"/> interpolates and rewrites URLs, while <see cref="Flag"/> and
+/// only <see cref="Get(string)"/> interpolates and rewrites URLs, while <see cref="Flag"/> and
 /// <see cref="Number"/> read the raw entry.
 /// </para>
 /// </remarks>
@@ -32,7 +32,7 @@ public sealed partial class ExternalVariables : IReadOnlyDictionary<string, stri
     [GeneratedRegex(@"\$\{([^}]*)\}")]
     private static partial Regex Placeholder();
 
-    /// <summary>Whether the values are served over a secure connection.</summary>
+    /// <summary>Gets whether the values are served over a secure connection.</summary>
     /// <remarks>
     /// The client tracks this to upgrade the protocol of every URL it hands out. Habbo is served
     /// over TLS, so this defaults to <see langword="true"/> and only exists to keep
@@ -40,40 +40,55 @@ public sealed partial class ExternalVariables : IReadOnlyDictionary<string, stri
     /// </remarks>
     public bool IsSecure { get; init; } = true;
 
+    /// <summary>Gets the number of entries.</summary>
     public int Count => _entries.Count;
 
+    /// <summary>Gets the configuration keys, which are compared case-sensitively.</summary>
     public IEnumerable<string> Keys => _entries.Keys;
 
+    /// <summary>Gets the raw, uninterpolated values.</summary>
     public IEnumerable<string> Values => _entries.Values;
 
-    /// <summary>The raw, uninterpolated entry, or <see langword="null"/> when absent.</summary>
+    /// <summary>Gets the raw, uninterpolated entry, or <see langword="null"/> when absent.</summary>
     /// <remarks>Prefer <see cref="Get(string)"/>, which resolves <c>${...}</c> references.</remarks>
+    /// <param name="key">The key to read, matched case-sensitively.</param>
     public string? this[string key] => _entries.GetValueOrDefault(key);
 
     string IReadOnlyDictionary<string, string>.this[string key] => _entries[key];
 
+    /// <summary>Gets whether an entry exists for a key.</summary>
+    /// <param name="key">The key to check, matched case-sensitively.</param>
     public bool ContainsKey(string key) => _entries.ContainsKey(key);
 
+    /// <summary>Gets the raw, uninterpolated entry for a key.</summary>
+    /// <param name="key">The key to read, matched case-sensitively.</param>
+    /// <param name="value">The raw entry, or <see langword="null"/> when the key is absent.</param>
+    /// <returns><see langword="true"/> when the key exists; otherwise, <see langword="false"/>.</returns>
     public bool TryGetValue(string key, out string value) => _entries.TryGetValue(key, out value!);
 
+    /// <summary>Returns an enumerator over the raw key and value pairs.</summary>
+    /// <returns>An enumerator over every entry, without interpolation.</returns>
     public IEnumerator<KeyValuePair<string, string>> GetEnumerator() => _entries.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     /// <summary>
-    /// Whether an entry was declared while the file was marked read-only, which is the hotel's way
+    /// Gets whether an entry was declared while the file was marked read-only, which is the hotel's way
     /// of saying a later source must not override it.
     /// </summary>
     /// <param name="key">The key to check.</param>
     public bool IsReadOnly(string key) => _readonly_keys.Contains(key);
 
     /// <summary>
-    /// The value of a key the way the client would use it, with <c>${...}</c> references resolved
-    /// and URLs normalised.
+    /// Gets the value of a key the way the client would use it, with <c>${...}</c> references resolved
+    /// and URLs normalized.
     /// </summary>
     /// <remarks>
     /// Returns an empty string for a missing key and for one whose interpolation could not be
-    /// completed, which is what the client does — it has no separate "not configured" state.
+    /// completed, which is what the client does, since it has no separate "not configured" state.
+    /// A value starting with <c>//</c> gets the session's scheme prepended, and while
+    /// <see cref="IsSecure"/> is <see langword="true"/> every <c>http://</c> becomes
+    /// <c>https://</c> and every <c>:8090/</c> becomes <c>:8443/</c>.
     /// </remarks>
     /// <param name="key">The key to read.</param>
     public string Get(string key) => Get(key, active: null);
@@ -89,7 +104,7 @@ public sealed partial class ExternalVariables : IReadOnlyDictionary<string, stri
     }
 
     /// <summary>
-    /// The value of a key with its <c>%name%</c> markers filled in from a caller-supplied table.
+    /// Gets the value of a key with its <c>%name%</c> markers filled in from a caller-supplied table.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -134,10 +149,11 @@ public sealed partial class ExternalVariables : IReadOnlyDictionary<string, stri
         return value;
     }
 
-    /// <summary>
-    /// A configuration switch. Only <c>1</c> and <c>true</c> in any casing are true; anything else,
-    /// including a missing key, is false.
-    /// </summary>
+    /// <summary>Gets whether a configuration switch is on.</summary>
+    /// <remarks>
+    /// Only <c>1</c> and <c>true</c> in any casing are true; anything else, including a missing
+    /// key, is false. The raw entry is read, so <c>${...}</c> references are not resolved.
+    /// </remarks>
     /// <param name="key">The key to read.</param>
     public bool Flag(string key)
     {
@@ -147,14 +163,16 @@ public sealed partial class ExternalVariables : IReadOnlyDictionary<string, stri
     }
 
     /// <summary>
-    /// A numeric setting, falling back to <paramref name="fallback"/> only when the key is absent.
+    /// Gets a numeric setting, falling back to <paramref name="fallback"/> only when the key is absent.
     /// </summary>
     /// <remarks>
     /// A present but unparsable value yields zero rather than the fallback. That is not a
     /// convenience decision: the client casts with ActionScript's <c>int()</c>, which runs the
     /// string through <c>Number()</c> and turns the resulting <c>NaN</c> into zero. A limit that
     /// the hotel misconfigures therefore reads as zero in the client, and code that mirrors the
-    /// client has to see the same zero to agree with it.
+    /// client has to see the same zero to agree with it. Hexadecimal values with a <c>0x</c>
+    /// prefix are accepted, fractional values are truncated toward zero, and the raw entry is
+    /// read without resolving <c>${...}</c> references.
     /// </remarks>
     /// <param name="key">The key to read.</param>
     /// <param name="fallback">The value to use when the key is not configured.</param>
@@ -166,8 +184,12 @@ public sealed partial class ExternalVariables : IReadOnlyDictionary<string, stri
     }
 
     /// <summary>
-    /// A comma separated list, with empty elements dropped and the rest trimmed.
+    /// Gets a comma separated list, with empty elements dropped and the rest trimmed.
     /// </summary>
+    /// <remarks>
+    /// The value is read through <see cref="Get(string)"/>, so references are resolved first. A
+    /// missing key yields an empty list.
+    /// </remarks>
     /// <param name="key">The key to read.</param>
     public IReadOnlyList<string> List(string key)
     {
@@ -200,6 +222,7 @@ public sealed partial class ExternalVariables : IReadOnlyDictionary<string, stri
     /// the precedence the client uses. Around thirty published URLs are written as
     /// <c>${url.prefix}/…</c> and resolve to nothing without it.
     /// </param>
+    /// <returns>The parsed configuration.</returns>
     public static ExternalVariables Load(
         string content,
         bool isSecure = true,

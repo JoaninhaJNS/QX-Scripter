@@ -2,6 +2,27 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
+/// <summary>Represents the details of a group.</summary>
+/// <param name="Id">The group identifier.</param>
+/// <param name="IsGuild">The guild flag the hotel sends with the group.</param>
+/// <param name="Type">The group type as the hotel numbers it.</param>
+/// <param name="Name">The group name.</param>
+/// <param name="Description">The group description.</param>
+/// <param name="BadgeCode">The group's badge code.</param>
+/// <param name="RoomId">The identifier of the group's home room.</param>
+/// <param name="RoomName">The name of the group's home room.</param>
+/// <param name="MemberStatus">The local user's membership status as the hotel numbers it.</param>
+/// <param name="MemberCount">The number of members.</param>
+/// <param name="IsFavourite">Whether this is the local user's favorite group.</param>
+/// <param name="Created">The creation date as the hotel formats it.</param>
+/// <param name="IsOwner">Whether the local user owns the group.</param>
+/// <param name="IsAdmin">Whether the local user is an administrator of the group.</param>
+/// <param name="OwnerName">The name of the group's owner.</param>
+/// <param name="OpenDetails">Whether the client should open the group details window for this response.</param>
+/// <param name="MembersCanDecorate">Whether members may decorate the group's home room.</param>
+/// <param name="PendingMemberCount">The number of pending membership requests.</param>
+/// <param name="HasBoard">Whether the group has a forum board.</param>
+/// <param name="MemberLimit">The member limit, or <see langword="null"/> when the packet does not carry it.</param>
 public sealed record GroupData(
     Id Id,
     bool IsGuild,
@@ -24,6 +45,11 @@ public sealed record GroupData(
     bool HasBoard,
     int? MemberLimit = null) : IParserComposer<GroupData>
 {
+    /// <summary>Reads group details from a packet.</summary>
+    /// <remarks><see cref="MemberLimit"/> is read only when at least 4 bytes remain after the fixed fields.</remarks>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when bytes remain after the last field.</exception>
     public static GroupData Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -55,6 +81,10 @@ public sealed record GroupData(
         return value;
     }
 
+    /// <summary>Writes the group details to a packet, including <see cref="MemberLimit"/> when it has a value.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when an identifier does not fit in 32 bits or a string is too long.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

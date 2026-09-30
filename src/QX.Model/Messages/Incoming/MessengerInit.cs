@@ -2,6 +2,13 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the <c>MessengerInit</c> message, received when the friend list is initialized.</summary>
+/// <param name="UserLimit">The user's own friend list limit.</param>
+/// <param name="NormalLimit">The friend list limit for normal users.</param>
+/// <param name="ExtendedLimit">The extended friend list limit.</param>
+/// <param name="Categories">The user's friend categories.</param>
+/// <param name="FriendCount">The number of friends, or 0 when the packet does not carry the counts.</param>
+/// <param name="FriendRequestCount">The number of pending friend requests, or 0 when the packet does not carry the counts.</param>
 public sealed record MessengerInit(
     int UserLimit,
     int NormalLimit,
@@ -10,8 +17,15 @@ public sealed record MessengerInit(
     int FriendCount = 0,
     int FriendRequestCount = 0) : IParserComposer<MessengerInit>
 {
+    /// <summary>Gets whether the packet carried <see cref="FriendCount"/> and <see cref="FriendRequestCount"/>.</summary>
+    /// <remarks>
+    /// The parser reads the two counts only when at least 8 bytes remain after the categories. When
+    /// <see langword="false"/>, composing leaves the counts out.
+    /// </remarks>
     public bool HasCounts { get; init; }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static MessengerInit Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -35,6 +49,8 @@ public sealed record MessengerInit(
         };
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

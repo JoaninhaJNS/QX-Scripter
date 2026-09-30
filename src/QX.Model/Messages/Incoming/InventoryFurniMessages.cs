@@ -2,10 +2,19 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the <c>FurniList</c> message, received with one fragment of the user's furni inventory.</summary>
+/// <remarks>
+/// The server splits a large inventory into several fragments. The inventory is complete once every
+/// fragment from 0 to <see cref="Total"/> minus one has been received.
+/// </remarks>
 public sealed record FurniList : IParserComposer<FurniList>
 {
     private IReadOnlyList<InventoryItem> _items = Array.Empty<InventoryItem>();
 
+    /// <summary>Initializes a new instance of the <see cref="FurniList"/> class.</summary>
+    /// <param name="total">The total number of fragments.</param>
+    /// <param name="index">The zero based index of this fragment.</param>
+    /// <param name="items">The items in this fragment.</param>
     public FurniList(int total, int index, IReadOnlyList<InventoryItem> items)
     {
         Total = total;
@@ -13,16 +22,21 @@ public sealed record FurniList : IParserComposer<FurniList>
         Items = items;
     }
 
+    /// <summary>Gets the total number of fragments the inventory is split into.</summary>
     public int Total { get; init; }
 
+    /// <summary>Gets the zero based index of this fragment.</summary>
     public int Index { get; init; }
 
+    /// <summary>Gets the items in this fragment.</summary>
     public IReadOnlyList<InventoryItem> Items
     {
         get => _items;
         init => _items = InventoryWire.FreezeReferences(value, nameof(Items));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FurniList Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -43,6 +57,8 @@ public sealed record FurniList : IParserComposer<FurniList>
         return new FurniList(total, index, items);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -59,18 +75,24 @@ public sealed record FurniList : IParserComposer<FurniList>
     }
 }
 
+/// <summary>Represents the <c>FurniListAddOrUpdate</c> message, received when furni is added to or updated in the user's inventory.</summary>
 public sealed record FurniListAddOrUpdate : IParserComposer<FurniListAddOrUpdate>
 {
     private IReadOnlyList<InventoryItem> _items = Array.Empty<InventoryItem>();
 
+    /// <summary>Initializes a new instance of the <see cref="FurniListAddOrUpdate"/> class.</summary>
+    /// <param name="items">The added or updated items.</param>
     public FurniListAddOrUpdate(IReadOnlyList<InventoryItem> items) => Items = items;
 
+    /// <summary>Gets the added or updated items.</summary>
     public IReadOnlyList<InventoryItem> Items
     {
         get => _items;
         init => _items = InventoryWire.FreezeReferences(value, nameof(Items));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FurniListAddOrUpdate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -88,6 +110,8 @@ public sealed record FurniListAddOrUpdate : IParserComposer<FurniListAddOrUpdate
         return new FurniListAddOrUpdate(items);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -101,8 +125,12 @@ public sealed record FurniListAddOrUpdate : IParserComposer<FurniListAddOrUpdate
     }
 }
 
+/// <summary>Represents the <c>FurniListRemove</c> message, received when an item is removed from the user's furni inventory.</summary>
+/// <param name="ItemId">The inventory item ID of the removed item, as in <see cref="InventoryItem.ItemId"/>.</param>
 public sealed record FurniListRemove(Id ItemId) : IParserComposer<FurniListRemove>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FurniListRemove Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -113,6 +141,8 @@ public sealed record FurniListRemove(Id ItemId) : IParserComposer<FurniListRemov
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -120,18 +150,24 @@ public sealed record FurniListRemove(Id ItemId) : IParserComposer<FurniListRemov
         p.WriteInt(InventoryWire.Int32Id(value.ItemId));
 }
 
+/// <summary>Represents the <c>FurniListRemoveMultiple</c> message, received when several items are removed from the user's furni inventory.</summary>
 public sealed record FurniListRemoveMultiple : IParserComposer<FurniListRemoveMultiple>
 {
     private IReadOnlyList<Id> _item_ids = Array.Empty<Id>();
 
+    /// <summary>Initializes a new instance of the <see cref="FurniListRemoveMultiple"/> class.</summary>
+    /// <param name="item_ids">The inventory item IDs of the removed items.</param>
     public FurniListRemoveMultiple(IReadOnlyList<Id> item_ids) => ItemIds = item_ids;
 
+    /// <summary>Gets the inventory item IDs of the removed items, as in <see cref="InventoryItem.ItemId"/>.</summary>
     public IReadOnlyList<Id> ItemIds
     {
         get => _item_ids;
         init => _item_ids = InventoryWire.FreezeValues(value, nameof(ItemIds));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FurniListRemoveMultiple Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -149,6 +185,8 @@ public sealed record FurniListRemoveMultiple : IParserComposer<FurniListRemoveMu
         return new FurniListRemoveMultiple(item_ids);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -163,8 +201,13 @@ public sealed record FurniListRemoveMultiple : IParserComposer<FurniListRemoveMu
     }
 }
 
+/// <summary>Represents the <c>PostItPlaced</c> message, received when the user places a post-it from a pad in their inventory.</summary>
+/// <param name="ItemId">The inventory item ID of the post-it pad, as in <see cref="InventoryItem.ItemId"/>.</param>
+/// <param name="ItemsLeft">The number of post-its left on the pad.</param>
 public sealed record PostItPlaced(Id ItemId, int ItemsLeft) : IParserComposer<PostItPlaced>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PostItPlaced Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -175,6 +218,8 @@ public sealed record PostItPlaced(Id ItemId, int ItemsLeft) : IParserComposer<Po
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -186,8 +231,11 @@ public sealed record PostItPlaced(Id ItemId, int ItemsLeft) : IParserComposer<Po
     }
 }
 
+/// <summary>Represents the <c>FurniListInvalidate</c> message, received when the user's furni inventory is out of date and must be requested again.</summary>
 public sealed record FurniListInvalidate : IParserComposer<FurniListInvalidate>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FurniListInvalidate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -197,6 +245,8 @@ public sealed record FurniListInvalidate : IParserComposer<FurniListInvalidate>
         return new();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

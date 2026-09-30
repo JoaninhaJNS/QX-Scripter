@@ -4,8 +4,12 @@ using ForumThreadData = Qx.Model.Forums.ForumThread;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the server's reply with the details of a group forum.</summary>
+/// <param name="Data">The forum details, including the viewer's permissions.</param>
 public sealed record ForumData(ForumDetails Data) : IParserComposer<ForumData>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ForumData Parse(in PacketReader p)
     {
         ForumStringBudget budget = ForumProtocol.NewStringBudget();
@@ -17,6 +21,8 @@ public sealed record ForumData(ForumDetails Data) : IParserComposer<ForumData>
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -29,8 +35,12 @@ public sealed record ForumData(ForumDetails Data) : IParserComposer<ForumData>
     }
 }
 
+/// <summary>Represents the details of a group forum, with the same layout as <see cref="ForumData"/>.</summary>
+/// <param name="Data">The forum details, including the viewer's permissions.</param>
 public sealed record ForumStats(ForumDetails Data) : IParserComposer<ForumStats>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ForumStats Parse(in PacketReader p)
     {
         ForumStringBudget budget = ForumProtocol.NewStringBudget();
@@ -42,6 +52,8 @@ public sealed record ForumStats(ForumDetails Data) : IParserComposer<ForumStats>
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -54,6 +66,11 @@ public sealed record ForumStats(ForumDetails Data) : IParserComposer<ForumStats>
     }
 }
 
+/// <summary>Represents a page of the forum directory.</summary>
+/// <param name="ListCode">The directory list the page belongs to.</param>
+/// <param name="TotalAmount">The total number of forums in the list.</param>
+/// <param name="StartIndex">The zero based index of the first forum on the page.</param>
+/// <param name="Forums">The forums on the page. The list is copied and may hold at most 65535 entries.</param>
 public sealed record ForumsList(
     ForumListCode ListCode,
     int TotalAmount,
@@ -63,14 +80,18 @@ public sealed record ForumsList(
     private IReadOnlyList<ForumSummary> forums =
         ForumProtocol.FreezeReferences(Forums, nameof(Forums));
 
+    /// <summary>Gets the forums on the page, as a read only copy.</summary>
     public IReadOnlyList<ForumSummary> Forums
     {
         get => forums;
         init => forums = ForumProtocol.FreezeReferences(value, nameof(Forums));
     }
 
+    /// <summary>Gets the number of forums on the page.</summary>
     public int Amount => Forums.Count;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ForumsList Parse(in PacketReader p)
     {
         ForumsList value = FlashWire.Parse(in p, ParseFlash);
@@ -99,6 +120,8 @@ public sealed record ForumsList(
         return new ForumsList(list_code, total_amount, start_index, forums);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -118,6 +141,10 @@ public sealed record ForumsList(
     }
 }
 
+/// <summary>Represents a page of threads in a group forum.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="StartIndex">The zero based index of the first thread on the page.</param>
+/// <param name="Threads">The threads on the page. The list is copied and may hold at most 65535 entries.</param>
 public sealed record ForumThreads(
     Id GroupId,
     int StartIndex,
@@ -126,14 +153,18 @@ public sealed record ForumThreads(
     private IReadOnlyList<ForumThreadData> threads =
         ForumProtocol.FreezeReferences(Threads, nameof(Threads));
 
+    /// <summary>Gets the threads on the page, as a read only copy.</summary>
     public IReadOnlyList<ForumThreadData> Threads
     {
         get => threads;
         init => threads = ForumProtocol.FreezeReferences(value, nameof(Threads));
     }
 
+    /// <summary>Gets the number of threads on the page.</summary>
     public int Amount => Threads.Count;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ForumThreads Parse(in PacketReader p)
     {
         ForumThreads value = FlashWire.Parse(in p, ParseFlash);
@@ -161,6 +192,8 @@ public sealed record ForumThreads(
         return new ForumThreads(group_id, start_index, threads);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -180,6 +213,11 @@ public sealed record ForumThreads(
     }
 }
 
+/// <summary>Represents a page of messages in a group forum thread.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="ThreadId">The thread the messages belong to.</param>
+/// <param name="StartIndex">The zero based index of the first message on the page.</param>
+/// <param name="Messages">The messages on the page. The list is copied and may hold at most 65535 entries.</param>
 public sealed record ThreadMessages(
     Id GroupId,
     Id ThreadId,
@@ -189,14 +227,18 @@ public sealed record ThreadMessages(
     private IReadOnlyList<ForumPost> messages =
         ForumProtocol.FreezeReferences(Messages, nameof(Messages));
 
+    /// <summary>Gets the messages on the page, as a read only copy.</summary>
     public IReadOnlyList<ForumPost> Messages
     {
         get => messages;
         init => messages = ForumProtocol.FreezeReferences(value, nameof(Messages));
     }
 
+    /// <summary>Gets the number of messages on the page.</summary>
     public int Amount => Messages.Count;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ThreadMessages Parse(in PacketReader p)
     {
         ThreadMessages value = FlashWire.Parse(in p, ParseFlash);
@@ -210,6 +252,8 @@ public sealed record ThreadMessages(
             static (group_id, thread_id, start_index, messages) =>
                 new ThreadMessages(group_id, thread_id, start_index, messages));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -261,6 +305,11 @@ public sealed record ThreadMessages(
     }
 }
 
+/// <summary>Represents a page of messages in a group forum thread, with the same layout as <see cref="ThreadMessages"/>.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="ThreadId">The thread the messages belong to.</param>
+/// <param name="StartIndex">The zero based index of the first message on the page.</param>
+/// <param name="Messages">The messages on the page. The list is copied and may hold at most 65535 entries.</param>
 public sealed record ForumThreadMessages(
     Id GroupId,
     Id ThreadId,
@@ -270,14 +319,18 @@ public sealed record ForumThreadMessages(
     private IReadOnlyList<ForumPost> messages =
         ForumProtocol.FreezeReferences(Messages, nameof(Messages));
 
+    /// <summary>Gets the messages on the page, as a read only copy.</summary>
     public IReadOnlyList<ForumPost> Messages
     {
         get => messages;
         init => messages = ForumProtocol.FreezeReferences(value, nameof(Messages));
     }
 
+    /// <summary>Gets the number of messages on the page.</summary>
     public int Amount => Messages.Count;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ForumThreadMessages Parse(in PacketReader p)
     {
         ForumThreadMessages value = FlashWire.Parse(in p, ParseFlash);
@@ -291,6 +344,8 @@ public sealed record ForumThreadMessages(
             static (group_id, thread_id, start_index, messages) =>
                 new ForumThreadMessages(group_id, thread_id, start_index, messages));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -303,10 +358,15 @@ public sealed record ForumThreadMessages(
             in p);
 }
 
+/// <summary>Represents the server's notice that a thread was created in a group forum.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="Thread">The created thread.</param>
 public sealed record PostThread(
     Id GroupId,
     ForumThreadData Thread) : IParserComposer<PostThread>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PostThread Parse(in PacketReader p)
     {
         PostThread value = FlashWire.Parse(in p, ParseFlash);
@@ -324,6 +384,8 @@ public sealed record PostThread(
         return new(group_id, ForumThreadData.ParseFlashWire(in p, 0, ref budget));
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -352,10 +414,15 @@ public sealed record PostThread(
     }
 }
 
+/// <summary>Represents the server's notice that a forum thread was created, with the same layout as <see cref="PostThread"/>.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="Thread">The created thread.</param>
 public sealed record PostForumThreadOk(
     Id GroupId,
     ForumThreadData Thread) : IParserComposer<PostForumThreadOk>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PostForumThreadOk Parse(in PacketReader p)
     {
         PostForumThreadOk value = FlashWire.Parse(in p, ParseFlash);
@@ -366,6 +433,8 @@ public sealed record PostForumThreadOk(
     private static PostForumThreadOk ParseFlash(in PacketReader p) =>
         PostThread.ParseThread<PostForumThreadOk>(in p, static (group_id, thread) => new(group_id, thread));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -373,11 +442,18 @@ public sealed record PostForumThreadOk(
         PostThread.ComposeThread(value.GroupId, value.Thread, in p);
 }
 
+/// <summary>Represents the server's notice that a message was posted in a forum thread.</summary>
+/// <remarks>The layout matches the incoming form of <see cref="PostMessage"/>.</remarks>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="ThreadId">The thread the message was posted in.</param>
+/// <param name="Message">The posted message.</param>
 public sealed record PostForumMessageOk(
     Id GroupId,
     Id ThreadId,
     ForumPost Message) : IParserComposer<PostForumMessageOk>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PostForumMessageOk Parse(in PacketReader p)
     {
         PostForumMessageOk value = FlashWire.Parse(in p, ParseFlash);
@@ -388,6 +464,8 @@ public sealed record PostForumMessageOk(
     private static PostForumMessageOk ParseFlash(in PacketReader p) =>
         ParseMessage<PostForumMessageOk>(in p, static (group_id, thread_id, message) => new(group_id, thread_id, message));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -426,10 +504,15 @@ public sealed record PostForumMessageOk(
     }
 }
 
+/// <summary>Represents a single forum thread with the id of its group, with the same layout as <see cref="PostThread"/>.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="Thread">The thread.</param>
 public sealed record ForumThread(
     Id GroupId,
     ForumThreadData Thread) : IParserComposer<ForumThread>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ForumThread Parse(in PacketReader p)
     {
         ForumThread value = FlashWire.Parse(in p, ParseFlash);
@@ -440,6 +523,8 @@ public sealed record ForumThread(
     private static ForumThread ParseFlash(in PacketReader p) =>
         PostThread.ParseThread<ForumThread>(in p, static (group_id, thread) => new(group_id, thread));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -447,11 +532,17 @@ public sealed record ForumThread(
         PostThread.ComposeThread(value.GroupId, value.Thread, in p);
 }
 
+/// <summary>Represents the server's notice that a forum message changed, such as after moderation.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="ThreadId">The thread the message belongs to.</param>
+/// <param name="Message">The updated message.</param>
 public sealed record UpdateMessage(
     Id GroupId,
     Id ThreadId,
     ForumPost Message) : IParserComposer<UpdateMessage>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static UpdateMessage Parse(in PacketReader p)
     {
         UpdateMessage value = FlashWire.Parse(in p, ParseFlash);
@@ -462,6 +553,8 @@ public sealed record UpdateMessage(
     private static UpdateMessage ParseFlash(in PacketReader p) =>
         PostForumMessageOk.ParseMessage<UpdateMessage>(in p, static (group_id, thread_id, message) => new(group_id, thread_id, message));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -469,11 +562,17 @@ public sealed record UpdateMessage(
         PostForumMessageOk.ComposeMessage(value.GroupId, value.ThreadId, value.Message, in p);
 }
 
+/// <summary>Represents a single forum message with its group and thread ids, with the same layout as <see cref="UpdateMessage"/>.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="ThreadId">The thread the message belongs to.</param>
+/// <param name="Message">The message.</param>
 public sealed record ForumMessage(
     Id GroupId,
     Id ThreadId,
     ForumPost Message) : IParserComposer<ForumMessage>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ForumMessage Parse(in PacketReader p)
     {
         ForumMessage value = FlashWire.Parse(in p, ParseFlash);
@@ -484,6 +583,8 @@ public sealed record ForumMessage(
     private static ForumMessage ParseFlash(in PacketReader p) =>
         PostForumMessageOk.ParseMessage<ForumMessage>(in p, static (group_id, thread_id, message) => new(group_id, thread_id, message));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

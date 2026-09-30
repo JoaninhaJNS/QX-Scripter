@@ -3,23 +3,39 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
+/// <summary>Represents a furni hanging on a room wall.</summary>
 public sealed class WallItem : Furni, IParserComposer<WallItem>
 {
+    /// <summary>Gets the item type, which is always <see cref="ItemType.Wall"/>.</summary>
     public override ItemType Type => ItemType.Wall;
 
+    /// <summary>Gets or sets where on the wall the item hangs.</summary>
     public WallLocation Location { get; set; } = WallLocation.Zero;
+    /// <summary>Gets or sets the item's data string.</summary>
     public string Data { get; set; } = "";
 
+    /// <summary>Gets the x coordinate of the wall tile the item hangs on.</summary>
     public int WX => Location.Wall.X;
+    /// <summary>Gets the y coordinate of the wall tile the item hangs on.</summary>
     public int WY => Location.Wall.Y;
+    /// <summary>Gets the x offset of the item on its wall tile.</summary>
     public int LX => Location.Offset.X;
+    /// <summary>Gets the y offset of the item on its wall tile.</summary>
     public int LY => Location.Offset.Y;
+    /// <summary>Gets whether the item hangs on a left or a right wall.</summary>
     public WallOrientation Orientation => Location.Orientation;
 
+    /// <summary>Gets <see cref="Data"/> as an integer, or -1 when it is not one.</summary>
     public override int State => int.TryParse(Data, out int state) ? state : -1;
 
+    /// <summary>Initializes a new instance of the <see cref="WallItem"/> class.</summary>
     public WallItem() { }
 
+    /// <summary>Reads a wall item from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the item identifier is not a valid integer.</exception>
+    /// <exception cref="FormatException">Thrown when the wall location string is not valid.</exception>
     public static WallItem Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -41,6 +57,9 @@ public sealed class WallItem : Furni, IParserComposer<WallItem>
         };
     }
 
+    /// <summary>Writes the wall item to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -60,5 +79,7 @@ public sealed class WallItem : Furni, IParserComposer<WallItem>
         p.WriteId(OwnerId);
     }
 
+    /// <summary>Returns the item's identifier and kind.</summary>
+    /// <returns>A string in the form <c>WallItem#Id/Kind</c>.</returns>
     public override string ToString() => $"{nameof(WallItem)}#{Id}/{Kind}";
 }

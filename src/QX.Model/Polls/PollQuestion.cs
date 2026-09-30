@@ -2,16 +2,27 @@ using Qx.Messages;
 
 namespace Qx.Model.Polls;
 
+/// <summary>Specifies how a poll question is answered.</summary>
 public enum PollQuestionType
 {
+    /// <summary>A single choice question shown as radio buttons.</summary>
     RadioButtons = 1,
+    /// <summary>A multiple choice question shown as checkboxes.</summary>
     Checkboxes = 2,
+    /// <summary>A free text question with a single line text field.</summary>
     TextLine = 3,
+    /// <summary>A free text question with a multi line text area.</summary>
     TextArea = 4
 }
 
+/// <summary>Represents one choice of a poll question.</summary>
+/// <param name="Value">The value sent back in a response when the choice is picked.</param>
+/// <param name="Text">The display text of the choice.</param>
+/// <param name="Type">The choice type as sent by the server.</param>
 public sealed record PollChoice(string Value, string Text, int Type) : IParserComposer<PollChoice>
 {
+    /// <summary>Parses a poll choice from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PollChoice Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -20,6 +31,8 @@ public sealed record PollChoice(string Value, string Text, int Type) : IParserCo
     private static PollChoice ParseChoice(in PacketReader p) =>
         new(p.ReadString(), p.ReadString(), p.ReadInt());
 
+    /// <summary>Composes the poll choice into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -42,6 +55,18 @@ public sealed record PollChoice(string Value, string Text, int Type) : IParserCo
     }
 }
 
+/// <summary>Represents one question of a poll.</summary>
+/// <param name="QuestionId">The question id, which a response names.</param>
+/// <param name="SortOrder">The sort order of the question in the poll.</param>
+/// <param name="Type">The way the question is answered.</param>
+/// <param name="Text">The question text.</param>
+/// <param name="Category">The question category as sent by the server.</param>
+/// <param name="Choices">The choices of a choice question, empty for text questions.</param>
+/// <param name="FlashAnswerType">The answer type field of the Flash layout, or <see langword="null"/> to compose 0.</param>
+/// <param name="FlashAnswerCount">
+/// The answer count field of the Flash layout, which must equal the number of choices for choice
+/// questions, or <see langword="null"/> to compose the number of choices.
+/// </param>
 public sealed record PollQuestion(
     Id QuestionId,
     int SortOrder,
@@ -52,9 +77,13 @@ public sealed record PollQuestion(
     int? FlashAnswerType = null,
     int? FlashAnswerCount = null) : IParserComposer<PollQuestion>
 {
+    /// <summary>Gets whether the question accepts several answers, which is when it is a checkbox question.</summary>
     public bool AllowsMultipleAnswers => Type is PollQuestionType.Checkboxes;
+    /// <summary>Gets whether the question is answered by picking choices rather than by entering text.</summary>
     public bool HasChoices => Type is PollQuestionType.RadioButtons or PollQuestionType.Checkboxes;
 
+    /// <summary>Parses a poll question from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PollQuestion Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -97,6 +126,9 @@ public sealed record PollQuestion(
             answer_count);
     }
 
+    /// <summary>Composes the poll question into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidDataException">Thrown when the answer count does not match the choices of a choice question, or a text question has choices.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -144,10 +176,15 @@ public sealed record PollQuestion(
         type is PollQuestionType.RadioButtons or PollQuestionType.Checkboxes;
 }
 
+/// <summary>Represents a poll question together with its follow-up questions.</summary>
+/// <param name="Question">The main question.</param>
+/// <param name="Children">The follow-up questions, in wire order.</param>
 public sealed record PollQuestionGroup(
     PollQuestion Question,
     IReadOnlyList<PollQuestion> Children) : IParserComposer<PollQuestionGroup>
 {
+    /// <summary>Parses a poll question group from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PollQuestionGroup Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -164,6 +201,8 @@ public sealed record PollQuestionGroup(
         return new PollQuestionGroup(question, PollWire.Freeze(children));
     }
 
+    /// <summary>Composes the poll question group into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -189,10 +228,15 @@ public sealed record PollQuestionGroup(
     }
 }
 
+/// <summary>Represents the answers to one poll question.</summary>
+/// <param name="QuestionId">The id of the question being answered.</param>
+/// <param name="Answers">The answers, the choice values for choice questions or the entered text for text questions.</param>
 public sealed record PollResponse(
     Id QuestionId,
     IReadOnlyList<string> Answers) : IParserComposer<PollResponse>
 {
+    /// <summary>Parses a poll response from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PollResponse Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -214,6 +258,8 @@ public sealed record PollResponse(
         return PollWire.Freeze(answers);
     }
 
+    /// <summary>Composes the poll response into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

@@ -2,8 +2,14 @@ using System.Collections;
 
 namespace Qx.Model;
 
+/// <summary>Represents an immutable union of <see cref="Area"/> rectangles.</summary>
+/// <remarks>
+/// Tile queries treat the set as one shape, so tiles covered by several areas count once.
+/// Enumerating the set yields its distinct areas.
+/// </remarks>
 public sealed class AreaSet : IReadOnlyCollection<Area>
 {
+    /// <summary>The largest number of tiles <see cref="Tiles"/> will materialize.</summary>
     public const int TileMaterializationLimit = 1_000_000;
 
     private readonly Area[] _areas;
@@ -13,12 +19,30 @@ public sealed class AreaSet : IReadOnlyCollection<Area>
     private readonly Lazy<IReadOnlyList<Point>> _tiles;
     private readonly long _tile_count;
 
+    /// <summary>Gets the number of distinct areas in the set.</summary>
     public int Count => _areas.Length;
+    /// <summary>Gets the number of distinct tiles the set covers.</summary>
     public long TileCount => _tile_count;
+    /// <summary>Gets the distinct areas in the order they were first given.</summary>
     public IReadOnlyList<Area> Areas => _area_view;
+    /// <summary>Gets every tile the set covers, ordered by y and then by x.</summary>
+    /// <remarks>The list is built on first access and cached.</remarks>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the set covers more than <see cref="TileMaterializationLimit"/> tiles; use
+    /// <see cref="EnumerateTiles"/> instead.
+    /// </exception>
     public IReadOnlyList<Point> Tiles => _tiles.Value;
+    /// <summary>
+    /// Gets the smallest area that contains every area in the set, or <see langword="null"/> when
+    /// the set is empty or the bounds exceed the coordinate range.
+    /// </summary>
+    /// <remarks>The bounds use the height of the first area's origin.</remarks>
     public Area? Bounds { get; }
 
+    /// <summary>Initializes a new instance of the <see cref="AreaSet"/> class.</summary>
+    /// <param name="areas">The areas to combine; duplicates are removed.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="areas"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when any area is empty.</exception>
     public AreaSet(IEnumerable<Area> areas)
     {
         ArgumentNullException.ThrowIfNull(areas);
@@ -62,11 +86,18 @@ public sealed class AreaSet : IReadOnlyCollection<Area>
             LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
+    /// <summary>Initializes a new instance of the <see cref="AreaSet"/> class.</summary>
+    /// <param name="areas">The areas to combine; duplicates are removed.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="areas"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when any area is empty.</exception>
     public AreaSet(params Area[] areas)
         : this((IEnumerable<Area>)areas)
     {
     }
 
+    /// <summary>Gets whether any area in the set covers a tile.</summary>
+    /// <param name="x">The tile x coordinate.</param>
+    /// <param name="y">The tile y coordinate.</param>
     public bool Contains(int x, int y)
     {
         if (_geometry_bounds is not { } bounds || !bounds.Contains(x, y))
@@ -78,10 +109,17 @@ public sealed class AreaSet : IReadOnlyCollection<Area>
                Contains(_bands[band_index].Intervals, x);
     }
 
+    /// <summary>Gets whether any area in the set covers a tile.</summary>
+    /// <param name="point">The tile coordinates.</param>
     public bool Contains(Point point) => Contains(point.X, point.Y);
 
+    /// <summary>Gets whether any area in the set covers a tile, ignoring its height.</summary>
+    /// <param name="tile">The tile.</param>
     public bool Contains(Tile tile) => Contains(tile.X, tile.Y);
 
+    /// <summary>Gets whether the set covers every tile of an area.</summary>
+    /// <remarks>The tiles may be covered by several areas of the set together.</remarks>
+    /// <param name="area">The area to check.</param>
     public bool Contains(Area area)
     {
         if (_geometry_bounds is not { } bounds || !bounds.Contains(area))
@@ -109,6 +147,8 @@ public sealed class AreaSet : IReadOnlyCollection<Area>
         return cursor == bottom;
     }
 
+    /// <summary>Gets whether the set covers at least one tile of an area.</summary>
+    /// <param name="area">The area to check.</param>
     public bool Intersects(Area area)
     {
         if (_geometry_bounds is not { } bounds || !bounds.Intersects(area))
@@ -133,26 +173,51 @@ public sealed class AreaSet : IReadOnlyCollection<Area>
         return false;
     }
 
+    /// <summary>Creates a set that also contains another area.</summary>
+    /// <param name="area">The area to add.</param>
+    /// <returns>A new set; this set is unchanged.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="area"/> is empty.</exception>
     public AreaSet Union(Area area) => new(_areas.Append(area));
 
+    /// <summary>Creates a set that also contains other areas.</summary>
+    /// <param name="areas">The areas to add.</param>
+    /// <returns>A new set; this set is unchanged.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="areas"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when any added area is empty.</exception>
     public AreaSet Union(IEnumerable<Area> areas)
     {
         ArgumentNullException.ThrowIfNull(areas);
         return new AreaSet(_areas.Concat(areas));
     }
 
+    /// <summary>Creates a set that also contains the areas of another set.</summary>
+    /// <param name="areas">The set to add.</param>
+    /// <returns>A new set; this set is unchanged.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="areas"/> is <see langword="null"/>.</exception>
     public AreaSet Union(AreaSet areas)
     {
         ArgumentNullException.ThrowIfNull(areas);
         return Union(areas._areas);
     }
 
+    /// <summary>Moves every area in the set by an offset.</summary>
+    /// <param name="offset">The number of tiles to move along x and y.</param>
+    /// <returns>A new set with the moved areas.</returns>
     public AreaSet Translate(Point offset) =>
         new(_areas.Select(area => area.Translate(offset)));
 
+    /// <summary>Grows every area in the set by the same number of tiles on every side.</summary>
+    /// <param name="amount">The number of tiles to add on each side.</param>
+    /// <returns>A new set with the expanded areas.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="amount"/> is negative.</exception>
     public AreaSet Expand(int amount) =>
         new(_areas.Select(area => area.Expand(amount)));
 
+    /// <summary>Enumerates every tile the set covers, ordered by y and then by x, without caching them.</summary>
+    /// <param name="maximum_tile_count">The largest number of tiles the caller accepts.</param>
+    /// <returns>The covered tiles.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maximum_tile_count"/> is negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when <see cref="TileCount"/> exceeds <paramref name="maximum_tile_count"/>.</exception>
     public IEnumerable<Point> EnumerateTiles(long maximum_tile_count)
     {
         if (maximum_tile_count < 0)
@@ -165,11 +230,18 @@ public sealed class AreaSet : IReadOnlyCollection<Area>
         return EnumerateTilesCore();
     }
 
+    /// <summary>Returns an enumerator over the distinct areas in the set.</summary>
+    /// <returns>An enumerator that yields the areas in the order of <see cref="Areas"/>.</returns>
     public IEnumerator<Area> GetEnumerator() =>
         ((IEnumerable<Area>)_areas).GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+    /// <summary>Creates a set from the given areas.</summary>
+    /// <param name="areas">The areas to combine; duplicates are removed.</param>
+    /// <returns>The new set.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="areas"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when any area is empty.</exception>
     public static AreaSet Of(params Area[] areas) => new(areas);
 
     private static SweepGeometry BuildGeometry(Area[] areas)

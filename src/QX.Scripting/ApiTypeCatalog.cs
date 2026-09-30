@@ -8,24 +8,41 @@ using System.Xml.Linq;
 
 namespace Qx.Scripting;
 
+/// <summary>Represents an assembly whose exported types are listed in an <see cref="ApiTypeCatalog"/>.</summary>
+/// <param name="Name">The simple name of the assembly.</param>
+/// <param name="Version">The assembly version, or <see langword="null"/> when it has none.</param>
+/// <param name="TypeCount">The number of public types the assembly exports.</param>
 public sealed record ApiAssembly(string Name, string? Version, int TypeCount);
 
-/// <summary>A single <c>&lt;param&gt;</c> entry lifted from the generated XML documentation.</summary>
+/// <summary>Represents a single <c>&lt;param&gt;</c> entry read from the generated XML documentation.</summary>
+/// <param name="Name">The parameter name.</param>
+/// <param name="Text">The parameter description as flattened text.</param>
 public sealed record ApiDocParameter(string Name, string Text);
 
 /// <summary>
-/// A single <c>&lt;exception&gt;</c> entry lifted from the generated XML documentation.
-/// <paramref name="Type"/> is the documented exception type with the doc-comment prefix
-/// (<c>T:</c>) stripped.
+/// Represents a single <c>&lt;exception&gt;</c> entry read from the generated XML documentation.
 /// </summary>
+/// <param name="Type">
+/// The documented exception type, with the documentation ID prefix such as <c>T:</c> removed.
+/// </param>
+/// <param name="Text">The condition under which the exception is thrown as flattened text, or an empty string.</param>
 public sealed record ApiDocException(string Type, string Text);
 
 /// <summary>
-/// Documentation attached to a catalog type or member, read from the XML documentation file the
-/// compiler emits next to the assembly. Every part is optional; the whole record is absent when
-/// the member carries no documentation or the assembly has no XML file. All text arrives with
-/// whitespace collapsed to single spaces.
+/// Represents the documentation attached to a catalog type or member, read from the XML
+/// documentation file the compiler emits next to the assembly.
 /// </summary>
+/// <remarks>
+/// Every part is optional; the whole record is absent when the member carries no documentation or
+/// the assembly has no XML file. All text arrives with whitespace collapsed to single spaces and
+/// with cross references replaced by the name of their target. Parts that are
+/// <see langword="null"/> are left out when the record is serialized to JSON.
+/// </remarks>
+/// <param name="Summary">The summary text, or <see langword="null"/> when there is none.</param>
+/// <param name="Returns">The returns text, or <see langword="null"/> when there is none.</param>
+/// <param name="Remarks">The remarks text, or <see langword="null"/> when there are none.</param>
+/// <param name="Parameters">The documented parameters, or <see langword="null"/> when none are documented.</param>
+/// <param name="Exceptions">The documented exceptions, or <see langword="null"/> when none are documented.</param>
 public sealed record ApiDoc(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Summary = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Returns = null,
@@ -33,6 +50,22 @@ public sealed record ApiDoc(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<ApiDocParameter>? Parameters = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<ApiDocException>? Exceptions = null);
 
+/// <summary>Represents a short reference to a type in an <see cref="ApiTypeCatalog"/>.</summary>
+/// <param name="Name">
+/// The display name in C# syntax, with generic parameters and, for a nested type, the declaring
+/// type, such as <c>List&lt;T&gt;</c> or <c>Outer.Inner</c>.
+/// </param>
+/// <param name="FullName">
+/// The namespace qualified name with nested types joined by dots; generic types keep their arity
+/// suffix, such as <c>`1</c>.
+/// </param>
+/// <param name="Kind">
+/// The type kind: <c>class</c>, <c>static class</c>, <c>struct</c>, <c>interface</c>,
+/// <c>enum</c> or <c>delegate</c>.
+/// </param>
+/// <param name="Assembly">The simple name of the assembly that exports the type.</param>
+/// <param name="Namespace">The namespace, or <see langword="null"/> for a type in the global namespace.</param>
+/// <param name="Documentation">The XML documentation of the type, or <see langword="null"/> when none is available.</param>
 public sealed record ApiTypeReference(
     string Name,
     string FullName,
@@ -41,6 +74,21 @@ public sealed record ApiTypeReference(
     string? Namespace,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ApiDoc? Documentation = null);
 
+/// <summary>Represents a public member of a type in an <see cref="ApiTypeCatalog"/>.</summary>
+/// <param name="Kind">
+/// The member kind: <c>constructor</c>, <c>property</c>, <c>method</c>, <c>event</c>,
+/// <c>field</c>, or <c>value</c> for an enum member.
+/// </param>
+/// <param name="Name">The member name; for a constructor, the display name of the type.</param>
+/// <param name="Signature">The member declaration in C# syntax, including default parameter values.</param>
+/// <param name="IsStatic">
+/// <see langword="true"/> if the member is static, which enum values always are; otherwise,
+/// <see langword="false"/>.
+/// </param>
+/// <param name="DeclaredBy">
+/// The full name of the type that declares the member, or an empty string when it is unknown.
+/// </param>
+/// <param name="Documentation">The XML documentation of the member, or <see langword="null"/> when none is available.</param>
 public sealed record ApiMember(
     string Kind,
     string Name,
@@ -49,6 +97,29 @@ public sealed record ApiMember(
     string DeclaredBy,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ApiDoc? Documentation = null);
 
+/// <summary>Represents the full description of a type in an <see cref="ApiTypeCatalog"/>, including its public members.</summary>
+/// <param name="Name">The display name in C# syntax.</param>
+/// <param name="FullName">The namespace qualified name with nested types joined by dots.</param>
+/// <param name="Kind">
+/// The type kind: <c>class</c>, <c>static class</c>, <c>struct</c>, <c>interface</c>,
+/// <c>enum</c> or <c>delegate</c>.
+/// </param>
+/// <param name="Assembly">The simple name of the assembly that exports the type.</param>
+/// <param name="Namespace">The namespace, or <see langword="null"/> for a type in the global namespace.</param>
+/// <param name="Signature">
+/// The type declaration in C# syntax, with its base type, interfaces and generic constraints.
+/// </param>
+/// <param name="BaseType">
+/// The display name of the base type, or <see langword="null"/> when it is <see cref="object"/>,
+/// <see cref="ValueType"/>, <see cref="Enum"/> or <see cref="MulticastDelegate"/>.
+/// </param>
+/// <param name="Interfaces">The display names of every interface the type implements, sorted.</param>
+/// <param name="Members">
+/// The public constructors, properties, methods, events and fields, or the values of an enum,
+/// ordered by kind and then by name. Interfaces also list the members of the interfaces they
+/// inherit.
+/// </param>
+/// <param name="Documentation">The XML documentation of the type, or <see langword="null"/> when none is available.</param>
 public sealed record ApiTypeDetails(
     string Name,
     string FullName,
@@ -61,6 +132,22 @@ public sealed record ApiTypeDetails(
     IReadOnlyList<ApiMember> Members,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ApiDoc? Documentation = null);
 
+/// <summary>Represents the result of looking up a type by name in an <see cref="ApiTypeCatalog"/>.</summary>
+/// <param name="Query">The name as it was passed to the lookup.</param>
+/// <param name="Type">
+/// The details of the matching type, or <see langword="null"/> when the name is ambiguous or
+/// unknown.
+/// </param>
+/// <param name="Ambiguous">
+/// <see langword="true"/> if the name matched more than one type; otherwise, <see langword="false"/>.
+/// </param>
+/// <param name="NotFound">
+/// <see langword="true"/> if no type matched the name; otherwise, <see langword="false"/>.
+/// </param>
+/// <param name="Candidates">
+/// The candidate types: every matching type sorted by full name when the name is ambiguous, up to
+/// 15 types whose name contains the query when nothing matched, and none on a unique match.
+/// </param>
 public sealed record ApiTypeLookup(
     string Query,
     ApiTypeDetails? Type,
@@ -68,6 +155,25 @@ public sealed record ApiTypeLookup(
     bool NotFound,
     IReadOnlyList<ApiTypeReference> Candidates);
 
+/// <summary>
+/// Represents a member found by <see cref="ApiTypeCatalog.SearchMembers(string, string?, int)"/>,
+/// together with the type it is listed on.
+/// </summary>
+/// <param name="Type">The full name of the type the member is listed on.</param>
+/// <param name="DeclaredBy">
+/// The full name of the type that declares the member, which differs from
+/// <paramref name="Type"/> for inherited interface members.
+/// </param>
+/// <param name="Kind">
+/// The member kind: <c>constructor</c>, <c>property</c>, <c>method</c>, <c>event</c>,
+/// <c>field</c>, or <c>value</c> for an enum member.
+/// </param>
+/// <param name="Name">The member name; for a constructor, the display name of the type.</param>
+/// <param name="Signature">The member declaration in C# syntax.</param>
+/// <param name="IsStatic">
+/// <see langword="true"/> if the member is static; otherwise, <see langword="false"/>.
+/// </param>
+/// <param name="Documentation">The XML documentation of the member, or <see langword="null"/> when none is available.</param>
 public sealed record ApiMemberReference(
     string Type,
     string DeclaredBy,
@@ -77,6 +183,15 @@ public sealed record ApiMemberReference(
     bool IsStatic,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ApiDoc? Documentation = null);
 
+/// <summary>
+/// Provides search and lookup over the public types of a set of assemblies, with their members
+/// and XML documentation.
+/// </summary>
+/// <remarks>
+/// Types that cannot be loaded are skipped. The member index behind
+/// <see cref="SearchMembers(string, string?, int)"/> is built on its first call and reused
+/// afterwards.
+/// </remarks>
 public sealed class ApiTypeCatalog
 {
     private const BindingFlags MemberFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
@@ -87,11 +202,24 @@ public sealed class ApiTypeCatalog
     private readonly IReadOnlyList<(Type Type, string Assembly)> _types;
     private readonly Lazy<IReadOnlyList<ApiMemberReference>> _memberIndex;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApiTypeCatalog"/> class over the assemblies
+    /// listed in <see cref="ScriptEngine.ReferenceAssemblies"/>.
+    /// </summary>
     public ApiTypeCatalog()
         : this(ScriptEngine.ReferenceAssemblies)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApiTypeCatalog"/> class over the specified
+    /// assemblies.
+    /// </summary>
+    /// <param name="assemblies">
+    /// The assemblies whose exported types are listed. <see langword="null"/> entries and
+    /// duplicates are ignored.
+    /// </param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="assemblies"/> is <see langword="null"/>.</exception>
     public ApiTypeCatalog(IEnumerable<Assembly> assemblies)
     {
         ArgumentNullException.ThrowIfNull(assemblies);
@@ -124,21 +252,43 @@ public sealed class ApiTypeCatalog
             LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
+    /// <summary>Gets the assemblies in the catalog, ordered by name.</summary>
     public IReadOnlyList<ApiAssembly> Assemblies { get; }
 
     /// <summary>
-    /// Reads the compiler-generated XML documentation for <paramref name="member"/> (a type,
-    /// method, constructor, property, event or field). The documentation file is resolved next to
-    /// the declaring assembly and parsed once per assembly; a missing, unreadable or malformed
-    /// file yields <see langword="null"/> rather than an exception.
+    /// Reads the compiler generated XML documentation for a type, method, constructor, property,
+    /// event or field.
     /// </summary>
+    /// <remarks>
+    /// The documentation file is looked up next to the declaring assembly, then in the application
+    /// base directory, and parsed once per assembly. A missing, unreadable or malformed file yields
+    /// <see langword="null"/> rather than an exception.
+    /// </remarks>
+    /// <param name="member">The member to read the documentation for.</param>
     /// <returns>The documentation, or <see langword="null"/> when the member is undocumented.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="member"/> is <see langword="null"/>.</exception>
     public static ApiDoc? DocumentationFor(MemberInfo member)
     {
         ArgumentNullException.ThrowIfNull(member);
         return Describe(member);
     }
 
+    /// <summary>
+    /// Searches the catalog for types whose display name or full name contains the query.
+    /// </summary>
+    /// <remarks>Matching is case-insensitive, and blank filters count as <see langword="null"/>.</remarks>
+    /// <param name="query">The text to look for in the type names, or <see langword="null"/> to list every type.</param>
+    /// <param name="assembly">
+    /// The text the assembly name must contain, or <see langword="null"/> for every assembly.
+    /// </param>
+    /// <param name="limit">
+    /// The maximum number of results. Zero or less uses the default of 50, and the value is capped
+    /// at 500.
+    /// </param>
+    /// <returns>
+    /// The matching types: exact name matches first, then name prefix matches, then the rest, each
+    /// sorted by name.
+    /// </returns>
     public IReadOnlyList<ApiTypeReference> SearchTypes(
         string? query = null,
         string? assembly = null,
@@ -170,6 +320,19 @@ public sealed class ApiTypeCatalog
             .ToArray();
     }
 
+    /// <summary>
+    /// Looks up a type by its full name, falling back to its short or display name.
+    /// </summary>
+    /// <remarks>
+    /// The name is trimmed, <c>+</c> becomes <c>.</c> and <c>global::</c> is removed. Matching is
+    /// case-insensitive, and full name matches take precedence over short name matches.
+    /// </remarks>
+    /// <param name="name">The full name, short name or display name of the type.</param>
+    /// <returns>
+    /// The lookup result: the type details on a unique match, the candidates when the name is
+    /// ambiguous, or up to 15 suggestions when nothing matched.
+    /// </returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is <see langword="null"/>, empty or whitespace.</exception>
     public ApiTypeLookup GetType(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -213,6 +376,27 @@ public sealed class ApiTypeCatalog
         return new ApiTypeLookup(name, null, false, true, suggestions);
     }
 
+    /// <summary>
+    /// Searches the public members of every catalog type by member name, signature or type name.
+    /// </summary>
+    /// <remarks>The member index is built on the first call and reused afterwards.</remarks>
+    /// <param name="query">
+    /// The text to look for, case-insensitively, in the member name, the signature and the full
+    /// name of the type the member is listed on.
+    /// </param>
+    /// <param name="kind">
+    /// The member kind to restrict to, such as <c>method</c> or <c>property</c>, or
+    /// <see langword="null"/> for every kind.
+    /// </param>
+    /// <param name="limit">
+    /// The maximum number of results. Zero or less uses the default of 60, and the value is capped
+    /// at 500.
+    /// </param>
+    /// <returns>
+    /// The matching members: exact name matches first, then name prefix and name substring
+    /// matches, then signature and type name matches.
+    /// </returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="query"/> is <see langword="null"/>, empty or whitespace.</exception>
     public IReadOnlyList<ApiMemberReference> SearchMembers(
         string query,
         string? kind = null,
@@ -289,15 +473,69 @@ public sealed class ApiTypeCatalog
             Describe(type));
     }
 
-    private static ApiDoc? Describe(MemberInfo? member)
+    private static ApiDoc? Describe(MemberInfo? member) => Describe(member, 0);
+
+    /// <summary>
+    /// Finds a member's documentation and follows <c>inheritdoc</c> to the overridden member or
+    /// the implemented interface member, which is what the compiler leaves unresolved.
+    /// </summary>
+    private static ApiDoc? Describe(MemberInfo? member, int depth)
     {
-        if (member is null)
+        const int max_depth = 8;
+        if (member is null || depth > max_depth)
             return null;
         Assembly? assembly = (member as Type ?? member.DeclaringType)?.Assembly;
         if (assembly is null)
             return null;
         XmlDocSet docs = XmlDocSet.ForAssembly(assembly);
-        return docs.IsEmpty ? null : docs.Find(ReflectionFormat.DocumentationId(member));
+        if (docs.IsEmpty)
+            return null;
+        string id = ReflectionFormat.DocumentationId(member);
+        ApiDoc? own = docs.Find(id);
+        if (own?.Summary is not null || !docs.Inherits(id, out string? source))
+            return own;
+        if (source is not null)
+            return docs.Find(source) ?? own;
+        return Inherited(member)
+            .Select(inherited => Describe(inherited, depth + 1))
+            .FirstOrDefault(doc => doc?.Summary is not null) ?? own;
+    }
+
+    private static IEnumerable<MemberInfo> Inherited(MemberInfo member) => member switch
+    {
+        Type type => [.. new[] { type.BaseType }.OfType<Type>(), .. type.GetInterfaces()],
+        MethodInfo method => Overridden(method),
+        PropertyInfo property => (property.GetMethod ?? property.SetMethod) is { } accessor
+            ? Overridden(accessor).Select(Owner).OfType<PropertyInfo>()
+            : [],
+        EventInfo @event => @event.AddMethod is { } adder
+            ? Overridden(adder).Select(Owner).OfType<EventInfo>()
+            : [],
+        _ => []
+    };
+
+    private static IEnumerable<MethodInfo> Overridden(MethodInfo method)
+    {
+        MethodInfo definition = method.GetBaseDefinition();
+        if (definition != method)
+            yield return definition;
+        if (method.DeclaringType is not { IsInterface: false } type)
+            yield break;
+        foreach (Type contract in type.GetInterfaces())
+        {
+            InterfaceMapping map = type.GetInterfaceMap(contract);
+            int index = Array.IndexOf(map.TargetMethods, method);
+            if (index >= 0)
+                yield return map.InterfaceMethods[index];
+        }
+    }
+
+    private static MemberInfo? Owner(MethodInfo accessor)
+    {
+        const BindingFlags every = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
+        Type? type = accessor.DeclaringType;
+        return (MemberInfo?)type?.GetProperties(every).FirstOrDefault(property => property.GetMethod == accessor || property.SetMethod == accessor)
+            ?? type?.GetEvents(every).FirstOrDefault(@event => @event.AddMethod == accessor);
     }
 
     private static IReadOnlyList<ApiMember> Members(Type type)
@@ -508,22 +746,38 @@ public sealed class ApiTypeCatalog
 }
 
 /// <summary>
-/// The parsed contents of one compiler-generated XML documentation file, keyed by ECMA-334
-/// documentation comment identifier. Instances are immutable and cached per assembly; every
-/// failure path (no file, unreadable file, malformed XML) collapses to <see cref="Empty"/> so
-/// that documentation is never able to break catalog construction.
+/// Contains the parsed contents of one compiler generated XML documentation file, keyed by
+/// ECMA-334 documentation comment identifier.
 /// </summary>
+/// <remarks>
+/// Instances are immutable and cached per assembly; every failure path (no file, unreadable file,
+/// malformed XML) collapses to <see cref="Empty"/> so that documentation is never able to break
+/// catalog construction.
+/// </remarks>
 internal sealed class XmlDocSet
 {
-    public static readonly XmlDocSet Empty = new(new Dictionary<string, ApiDoc>(0, StringComparer.Ordinal));
+    public static readonly XmlDocSet Empty = new(
+        new Dictionary<string, ApiDoc>(0, StringComparer.Ordinal),
+        new Dictionary<string, string?>(0, StringComparer.Ordinal));
 
     private static readonly ConcurrentDictionary<Assembly, Lazy<XmlDocSet>> Cache = new();
 
     private readonly IReadOnlyDictionary<string, ApiDoc> _entries;
+    private readonly IReadOnlyDictionary<string, string?> _inheriting;
 
-    private XmlDocSet(IReadOnlyDictionary<string, ApiDoc> entries) => _entries = entries;
+    private XmlDocSet(IReadOnlyDictionary<string, ApiDoc> entries, IReadOnlyDictionary<string, string?> inheriting)
+    {
+        _entries = entries;
+        _inheriting = inheriting;
+    }
 
-    public bool IsEmpty => _entries.Count == 0;
+    public bool IsEmpty => _entries.Count == 0 && _inheriting.Count == 0;
+
+    /// <summary>
+    /// Gets whether the entry for <paramref name="id"/> takes its text from <c>inheritdoc</c>, and
+    /// the documentation id it names, or <see langword="null"/> when it inherits implicitly.
+    /// </summary>
+    public bool Inherits(string id, out string? source) => _inheriting.TryGetValue(id, out source);
 
     public int Count => _entries.Count;
 
@@ -543,7 +797,7 @@ internal sealed class XmlDocSet
             .Value;
 
     /// <summary>
-    /// Parses an XML documentation file. Returns <see cref="Empty"/> when the path is null, the
+    /// Parses an XML documentation file, or returns <see cref="Empty"/> when the path is null, the
     /// file does not exist, cannot be read, or does not parse.
     /// </summary>
     public static XmlDocSet Load(string? path)
@@ -570,11 +824,14 @@ internal sealed class XmlDocSet
     }
 
     /// <summary>
-    /// Locates the XML documentation file for an assembly. Prefers the file next to the loaded
-    /// module and falls back to the application base directory, which is where a self-extracting
-    /// single-file host places bundled content. Returns <see langword="null"/> when the assembly
-    /// has no physical file and no matching file exists next to the host.
+    /// Locates the XML documentation file for an assembly.
     /// </summary>
+    /// <remarks>
+    /// Prefers the file next to the loaded module and falls back to the application base
+    /// directory, which is where a self-extracting single-file host places bundled content.
+    /// Returns <see langword="null"/> when the assembly has no physical file and no matching file
+    /// exists next to the host.
+    /// </remarks>
     [UnconditionalSuppressMessage(
         "SingleFile",
         "IL3002",
@@ -630,16 +887,19 @@ internal sealed class XmlDocSet
             return Empty;
 
         var parsed = new Dictionary<string, ApiDoc>(StringComparer.Ordinal);
+        var inheriting = new Dictionary<string, string?>(StringComparer.Ordinal);
         foreach (XElement entry in entries)
         {
             string? id = entry.Attribute("name")?.Value;
             if (string.IsNullOrWhiteSpace(id))
                 continue;
+            if (entry.Element("inheritdoc") is { } inheritdoc)
+                inheriting[id.Trim()] = inheritdoc.Attribute("cref")?.Value.Trim();
             if (Describe(entry) is { } doc)
                 parsed.TryAdd(id.Trim(), doc);
         }
 
-        return parsed.Count == 0 ? Empty : new XmlDocSet(parsed);
+        return parsed.Count == 0 && inheriting.Count == 0 ? Empty : new XmlDocSet(parsed, inheriting);
     }
 
     private static ApiDoc? Describe(XElement entry)

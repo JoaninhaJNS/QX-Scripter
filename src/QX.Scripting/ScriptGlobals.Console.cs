@@ -84,21 +84,29 @@ public partial class ScriptGlobals
         entry.SenderFigure,
         entry.LegacyCompact);
 
-    /// <summary>Everyone the local user has blocked, whose chat the client hides.</summary>
+    /// <summary>Gets the ids of everyone the local user has blocked, whose chat the client hides.</summary>
+    /// <remarks>
+    /// Reads the cached block list, which is empty when this session never saw the hotel send
+    /// it. Use <see cref="GetBlockedUsers(int)"/> when the answer has to be right.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the block list kept changing while it was being read.</exception>
     public IReadOnlyCollection<long> BlockedUsers =>
         ReadProfileIds(ApplicationMemberIds.ProfileBlocksList)
             .Select(user_id => (long)user_id)
             .ToArray();
 
-    /// <summary>Whether a user is on the local user's block list.</summary>
+    /// <summary>Gets whether a user is on the local user's cached block list.</summary>
     /// <param name="userId">The user to check.</param>
+    /// <returns><see langword="true"/> when the user is blocked; otherwise, <see langword="false"/>.</returns>
     public bool IsBlocked(Id userId) =>
         ReadProfileIds(ApplicationMemberIds.ProfileBlocksList).Contains(userId);
 
-    /// <summary>The wardrobe figure parts the local user owns beyond the default set.</summary>
+    /// <summary>Gets the ids of the wardrobe figure sets the local user owns beyond the default set.</summary>
     public IReadOnlyCollection<int> OwnedFigureSets =>
         ReadFigureSets().Select(entry => entry.FigureSetId).ToArray();
 
+    /// <summary>Gets the metadata value of each owned figure set, keyed by figure set id.</summary>
+    /// <remarks>The Flash client sends no metadata, so every value is 0 there.</remarks>
     public IReadOnlyDictionary<int, int> OwnedFigureSetMetadata
     {
         get
@@ -111,8 +119,8 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// The sanctions recorded against the local user, or <see langword="null"/> until the hotel
-    /// reports them.
+    /// Gets the sanctions recorded against the local user, or <see langword="null"/> until the
+    /// hotel reports them.
     /// </summary>
     public MySanctionStatus? MySanctions
     {
@@ -175,7 +183,7 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Subscribes to a room avatar's favourite-group badge changing.
+    /// Subscribes to a room avatar's favorite-group badge changing.
     /// </summary>
     /// <remarks>
     /// The avatar is named by its room index, so resolve it through the room rather than the
@@ -217,16 +225,19 @@ public partial class ScriptGlobals
         OnIn(MessageContracts.Recycler.Finished, handler);
 
     /// <summary>
-    /// Returns the block list, asking the hotel for it when this session never saw it.
+    /// Requests the block list from the hotel and returns the ids of the blocked users.
     /// </summary>
     /// <remarks>
     /// The hotel sends the list once, early on. QX can be attached to a session that is already
-    /// running, in which case it never saw that message and <see cref="BlockedUsers"/> reads empty -
-    /// which is indistinguishable from "nobody is blocked". Use this when the answer has to be
-    /// right rather than merely available.
+    /// running, in which case it never saw that message and <see cref="BlockedUsers"/> reads
+    /// empty, which is indistinguishable from "nobody is blocked". Use <c>GetBlockedUsers</c>
+    /// when the answer has to be right rather than merely available. The reply also reaches the
+    /// game client and refreshes <see cref="BlockedUsers"/>.
     /// </remarks>
-    /// <param name="timeoutMs">Total budget in milliseconds.</param>
-    /// <exception cref="TimeoutException">The hotel did not answer in time.</exception>
+    /// <param name="timeoutMs">The total timeout in milliseconds, across one automatic retry.</param>
+    /// <returns>The ids of the blocked users.</returns>
+    /// <exception cref="TimeoutException">Thrown when the hotel did not answer in time.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no hotel session is active, the session changed, or the list kept changing while it was being read.</exception>
     public async Task<IReadOnlyCollection<long>> GetBlockedUsers(int timeoutMs = 10000)
     {
         ProfileIdPage first_page = await Application.InvokeAsync<ProfileIdRefreshRequest, ProfileIdPage>(

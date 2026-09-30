@@ -7,24 +7,29 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// The game leaderboards: the all-time and weekly boards for players, friends and groups.
+    /// Gets the game leaderboard manager, which tracks the all-time and weekly boards for players,
+    /// friends and groups.
     /// </summary>
     /// <remarks>Flash only.</remarks>
     public LeaderboardManager Leaderboards => Game.Leaderboards;
 
     /// <summary>
-    /// Asks for a leaderboard and waits for the window to come back.
+    /// Requests a leaderboard and waits for the window to come back.
     /// </summary>
     /// <remarks>
-    /// The window is centred on the local user's own rank, which is what the client asks for when
+    /// The window is centered on the local user's own rank, which is what the client asks for when
     /// a board is first opened. Page through it with <see cref="NextLeaderboardPage"/> and
-    /// <see cref="PreviousLeaderboardPage"/>.
+    /// <see cref="PreviousLeaderboardPage"/>. The request is sent once without a retry, and the
+    /// reply is not blocked from the game client.
     /// </remarks>
-    /// <param name="gameTypeId">Which game's board.</param>
-    /// <param name="scope">Everyone, friends, or groups.</param>
-    /// <param name="weekly">Whether to ask for the weekly board rather than the all-time one.</param>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
-    /// <exception cref="TimeoutException">The hotel did not answer in time.</exception>
+    /// <param name="gameTypeId">The game whose board to request.</param>
+    /// <param name="scope">The slice of the board: everyone, friends, or groups.</param>
+    /// <param name="weekly"><see langword="true"/> to request the weekly board; otherwise, <see langword="false"/> for the all-time one.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds.</param>
+    /// <returns>The window of rows the hotel sent.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the leaderboard state changed while it was read.</exception>
+    /// <exception cref="TimeoutException">Thrown when the hotel did not answer in time.</exception>
     public async Task<Leaderboard> GetLeaderboard(
         int gameTypeId,
         LeaderboardScope scope = LeaderboardScope.Total,
@@ -54,14 +59,20 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Asks for the rows after the window last received and waits for them.
+    /// Requests the rows after the window last received and waits for them.
     /// </summary>
-    /// <param name="scope">Which slice.</param>
-    /// <param name="weekly">Whether the weekly board.</param>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <remarks>
+    /// The request is for the same game as the window last received for that slice.
+    /// </remarks>
+    /// <param name="scope">The slice of the board.</param>
+    /// <param name="weekly"><see langword="true"/> for the weekly board; otherwise, <see langword="false"/>.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds.</param>
     /// <returns>
     /// The next window, or <see langword="null"/> when the board already ends at the window held.
     /// </returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the leaderboard state changed while it was read.</exception>
+    /// <exception cref="TimeoutException">Thrown when the hotel did not answer in time.</exception>
     public async Task<Leaderboard?> NextLeaderboardPage(
         LeaderboardScope scope = LeaderboardScope.Total,
         bool weekly = false,
@@ -98,13 +109,19 @@ public partial class ScriptGlobals
             weekly).ConfigureAwait(false));
     }
 
-    /// <summary>Asks for the rows before the window last received and waits for them.</summary>
-    /// <param name="scope">Which slice.</param>
-    /// <param name="weekly">Whether the weekly board.</param>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <summary>Requests the rows before the window last received and waits for them.</summary>
+    /// <remarks>
+    /// The request is for the same game as the window last received for that slice.
+    /// </remarks>
+    /// <param name="scope">The slice of the board.</param>
+    /// <param name="weekly"><see langword="true"/> for the weekly board; otherwise, <see langword="false"/>.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds.</param>
     /// <returns>
     /// The previous window, or <see langword="null"/> when the window held already starts at the top.
     /// </returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the leaderboard state changed while it was read.</exception>
+    /// <exception cref="TimeoutException">Thrown when the hotel did not answer in time.</exception>
     public async Task<Leaderboard?> PreviousLeaderboardPage(
         LeaderboardScope scope = LeaderboardScope.Total,
         bool weekly = false,
@@ -144,18 +161,23 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Walks a whole leaderboard from the top and returns every row.
+    /// Walks a whole leaderboard and returns its rows, up to a limit.
     /// </summary>
     /// <remarks>
-    /// The hotel only ever sends a window, so this pages until the rows run out. Boards can be
-    /// long: <paramref name="maxRows"/> caps the walk so a script cannot page forever against a
-    /// board that keeps growing underneath it.
+    /// The hotel only ever sends a window, so this pages until the rows run out. The opening
+    /// window sits around the local user, so the walk goes up to the top first and then down.
+    /// Boards can be long: <paramref name="maxRows"/> caps the walk so a script cannot page
+    /// forever against a board that keeps growing underneath it.
     /// </remarks>
-    /// <param name="gameTypeId">Which game's board.</param>
-    /// <param name="scope">Which slice.</param>
-    /// <param name="weekly">Whether the weekly board.</param>
-    /// <param name="maxRows">The most rows to collect.</param>
-    /// <param name="timeoutMs">How long to wait for each answer.</param>
+    /// <param name="gameTypeId">The game whose board to walk.</param>
+    /// <param name="scope">The slice of the board.</param>
+    /// <param name="weekly"><see langword="true"/> for the weekly board; otherwise, <see langword="false"/>.</param>
+    /// <param name="maxRows">The maximum number of rows to collect.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for each request.</param>
+    /// <returns>The rows ordered by rank, at most <paramref name="maxRows"/> of them.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxRows"/> or <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the leaderboard state changed while it was read.</exception>
+    /// <exception cref="TimeoutException">Thrown when the hotel did not answer in time.</exception>
     public async Task<IReadOnlyList<LeaderboardEntry>> GetFullLeaderboard(
         int gameTypeId,
         LeaderboardScope scope = LeaderboardScope.Total,
@@ -200,20 +222,32 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Which week the weekly boards ask for, zero being the running week.
+    /// Sets which week the weekly boards ask for, zero being the running week.
     /// </summary>
-    /// <param name="offset">How many weeks back. Clamped to what the hotel still keeps.</param>
+    /// <remarks>
+    /// No request is sent; the offset applies to the next weekly board request.
+    /// </remarks>
+    /// <param name="offset">
+    /// The number of weeks back, capped at the maximum offset of the last weekly period received.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> is negative.</exception>
     public void SetLeaderboardWeek(int offset) =>
         Application.Invoke<LeaderboardWeekOffsetRequest, LeaderboardWeekOffsetResult>(
             ApplicationMemberIds.LeaderboardsWeekOffsetSet,
             new LeaderboardWeekOffsetRequest(offset),
             Ct);
 
-    /// <summary>The week the last weekly board covered.</summary>
+    /// <summary>
+    /// Gets the week the last weekly board covered, or <see langword="null"/> when none was received.
+    /// </summary>
     public WeeklyLeaderboardPeriod? LeaderboardWeek => Game.Leaderboards.Period;
 
-    /// <summary>Runs a callback whenever any leaderboard window arrives.</summary>
-    /// <param name="handler">Receives the slice, whether it was weekly, and the window.</param>
+    /// <summary>Registers a handler that runs whenever any leaderboard window arrives.</summary>
+    /// <remarks>
+    /// No handle is returned, so the handler stays registered until the script stops.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the slice, whether it was weekly, and the window.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnLeaderboard(Action<LeaderboardScope, bool, Leaderboard> handler)
     {
         _ = Subscribe(

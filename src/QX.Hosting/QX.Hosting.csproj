@@ -16,4 +16,8 @@
     <ProjectReference Include="..\QX.Scripting\QX.Scripting.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\website\docs\*.md;..\..\website\docs\toc.yml" LogicalName="Qx.Docs.%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

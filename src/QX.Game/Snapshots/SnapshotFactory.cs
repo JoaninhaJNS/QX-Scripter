@@ -5,22 +5,22 @@ using Qx.Interception;
 namespace Qx.Game.Snapshots;
 
 /// <summary>
-/// Projects live game state into the immutable snapshot records that every read query and
-/// every MCP read tool serialises.
+/// Provides projections of live game state into the immutable snapshot records that every read
+/// query and every MCP read tool serializes.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Every method here is a pure projection: it copies out of the live managers and returns a
 /// detached value. Nothing blocks, nothing touches the network and nothing waits for data to
-/// arrive. Whatever has not been received yet simply shows up as <see langword="null"/> or as
+/// arrive. Whatever has not been received yet shows up as <see langword="null"/> or as
 /// an empty collection, which is why the callers pair these snapshots with a
 /// <see cref="QueryMetadataSnapshot"/> that says whether that emptiness is real.
 /// </para>
 /// <para>
 /// Two independent limits guard the projections. The <c>sourceItemLimit</c> parameters are a
-/// safety valve against an unbounded or runaway source: reaching
+/// safety valve against an unbounded or runaway source: a source with more than
 /// <see cref="DefaultSourceItemLimit"/> items throws
-/// <see cref="SnapshotSourceLimitExceededException"/> rather than materialising forever. The
+/// <see cref="SnapshotSourceLimitExceededException"/> rather than materializing forever. The
 /// <c>maxItems</c>, <c>maxItemsPerType</c> and <c>maxTiles</c> parameters are the ordinary
 /// output cap and silently drop items, which the returned snapshot then reports through its
 /// own truncation flag and its returned-versus-total counts. Collections without a
@@ -36,7 +36,7 @@ public static partial class SnapshotFactory
     /// <param name="session">The open hotel session, or <see langword="null"/> when none is open.</param>
     /// <param name="interceptorConnected">Whether the packet interceptor is attached.</param>
     /// <param name="messageCatalogLoaded">Whether the message-name catalog is available.</param>
-    /// <param name="wireProfileAnalyzed">Whether the connected client build has been analysed.</param>
+    /// <param name="wireProfileAnalyzed">Whether the connected client build has been analyzed.</param>
     /// <param name="wireProfileExact">Whether the analysis matched this build exactly rather than falling back.</param>
     /// <param name="missingWireCapabilities">
     /// Wire capabilities the connected build lacks; <see langword="null"/> is treated as none.
@@ -68,7 +68,7 @@ public static partial class SnapshotFactory
     /// <summary>Projects a navigator room record, flattening its enumerations to their wire values.</summary>
     /// <param name="data">The room record to project.</param>
     /// <returns>The room data snapshot, with tags copied into a detached array.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="data"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="data"/> is <see langword="null"/>.</exception>
     public static RoomDataSnapshot From(RoomData data)
     {
         ArgumentNullException.ThrowIfNull(data);
@@ -110,7 +110,7 @@ public static partial class SnapshotFactory
     /// The access snapshot. The queue, failure, kick and exit blocks are
     /// <see langword="null"/> when nothing of that kind has happened.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="room"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="room"/> is <see langword="null"/>.</exception>
     public static RoomAccessSnapshot RoomAccess(RoomManager room)
     {
         ArgumentNullException.ThrowIfNull(room);
@@ -154,7 +154,7 @@ public static partial class SnapshotFactory
     /// <summary>Projects a kick of the local user out of a room.</summary>
     /// <param name="kick">The kick to project.</param>
     /// <returns>The kick snapshot.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="kick"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="kick"/> is <see langword="null"/>.</exception>
     public static RoomKickSnapshot From(RoomKick kick)
     {
         ArgumentNullException.ThrowIfNull(kick);
@@ -164,7 +164,7 @@ public static partial class SnapshotFactory
     /// <summary>Projects how a room session ended, resolving the classified cause alongside the raw transport.</summary>
     /// <param name="exit">The exit state to project.</param>
     /// <returns>The exit snapshot, including the consumed kick when the exit was a kick.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="exit"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="exit"/> is <see langword="null"/>.</exception>
     public static RoomExitSnapshot From(RoomExitState exit)
     {
         ArgumentNullException.ThrowIfNull(exit);
@@ -181,7 +181,7 @@ public static partial class SnapshotFactory
     /// <summary>Projects the room's door tile and the facing an arriving avatar is given.</summary>
     /// <param name="tile">The entry tile to project.</param>
     /// <returns>The entry tile snapshot.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="tile"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="tile"/> is <see langword="null"/>.</exception>
     public static RoomEntryTileSnapshot From(RoomEntryTile tile)
     {
         ArgumentNullException.ThrowIfNull(tile);
@@ -194,7 +194,7 @@ public static partial class SnapshotFactory
     /// </summary>
     /// <param name="settings">The visualization settings to project.</param>
     /// <returns>The visualization snapshot.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="settings"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="settings"/> is <see langword="null"/>.</exception>
     public static RoomVisualizationSettingsSnapshot From(RoomVisualizationSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -212,7 +212,7 @@ public static partial class SnapshotFactory
     /// The chat snapshot. On the compact Flash guest-room layout only the flood setting comes
     /// from the hotel; the other four fields carry their defaults.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="settings"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="settings"/> is <see langword="null"/>.</exception>
     public static RoomChatSettingsSnapshot From(RoomChatSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -230,7 +230,7 @@ public static partial class SnapshotFactory
     /// </summary>
     /// <param name="settings">The moderation settings to project.</param>
     /// <returns>The moderation snapshot.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="settings"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="settings"/> is <see langword="null"/>.</exception>
     public static RoomModerationSettingsSnapshot From(RoomModerationSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -240,6 +240,15 @@ public static partial class SnapshotFactory
             (int)settings.Ban);
     }
 
+    /// <summary>
+    /// Projects the guest room details, including the room's moderation and chat settings.
+    /// </summary>
+    /// <param name="details">The guest room details to project.</param>
+    /// <returns>
+    /// The details snapshot. The opening connection flag is <see langword="null"/> when the
+    /// client build's layout does not carry it.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="details"/> is <see langword="null"/>.</exception>
     public static RoomResultDetailsSnapshot From(RoomResultDetails details)
     {
         ArgumentNullException.ThrowIfNull(details);
@@ -260,7 +269,7 @@ public static partial class SnapshotFactory
     /// The environment snapshot. Every block is <see langword="null"/> and the property map is
     /// empty until the corresponding packets arrive; the map is a detached copy.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="room"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="room"/> is <see langword="null"/>.</exception>
     public static RoomEnvironmentSnapshot RoomEnvironment(RoomManager room)
     {
         ArgumentNullException.ThrowIfNull(room);
@@ -281,7 +290,7 @@ public static partial class SnapshotFactory
     /// The authority snapshot. The muted, mute-permission and moderation members come from the
     /// guest room details and stay <see langword="null"/> until those details arrive.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="room"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="room"/> is <see langword="null"/>.</exception>
     public static RoomAuthoritySnapshot RoomAuthority(RoomManager room)
     {
         ArgumentNullException.ThrowIfNull(room);
@@ -297,6 +306,13 @@ public static partial class SnapshotFactory
             details is null ? null : From(details.Moderation));
     }
 
+    /// <summary>Projects the room's static floor plan, including its hidden areas.</summary>
+    /// <param name="floorPlan">The floor plan to project.</param>
+    /// <returns>
+    /// The floor plan snapshot, with tiles and hidden areas copied into detached arrays. The
+    /// camera coordinates are <see langword="null"/> when the floor plan carried no camera data.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="floorPlan"/> is <see langword="null"/>.</exception>
     public static FloorPlanSnapshot From(FloorPlan floorPlan)
     {
         ArgumentNullException.ThrowIfNull(floorPlan);
@@ -334,7 +350,7 @@ public static partial class SnapshotFactory
     /// The counts over every tile. Blocked counts only floor tiles that are blocked, and
     /// walkable counts floor tiles that are not blocked.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="heightmap"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="heightmap"/> is <see langword="null"/>.</exception>
     public static HeightmapSummarySnapshot HeightmapSummary(Heightmap heightmap)
     {
         ArgumentNullException.ThrowIfNull(heightmap);
@@ -367,9 +383,9 @@ public static partial class SnapshotFactory
     /// <summary>Projects every avatar in the sequence with no room context attached.</summary>
     /// <param name="avatars">The avatars to project.</param>
     /// <returns>The avatar collection, ordered ascending by room index and never truncated.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="avatars"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="avatars"/> is <see langword="null"/>.</exception>
     /// <exception cref="SnapshotSourceLimitExceededException">
-    /// The sequence yields <see cref="DefaultSourceItemLimit"/> items or more.
+    /// Thrown when the sequence yields more than <see cref="DefaultSourceItemLimit"/> items.
     /// </exception>
     public static AvatarCollectionSnapshot Avatars(IEnumerable<Avatar> avatars) =>
         Avatars(avatars, null, 0, DefaultSourceItemLimit);
@@ -383,13 +399,13 @@ public static partial class SnapshotFactory
     /// <param name="roomId">The room the avatars belong to, or <see langword="null"/> when outside a room.</param>
     /// <param name="generation">The room session counter to stamp onto the snapshot.</param>
     /// <param name="sourceItemLimit">
-    /// The safety valve against an unbounded source; reaching it throws.
+    /// The safety valve against an unbounded source; a source with more items throws.
     /// </param>
     /// <returns>The avatar collection, ordered ascending by room index.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="avatars"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="sourceItemLimit"/> is negative.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="avatars"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="sourceItemLimit"/> is negative.</exception>
     /// <exception cref="SnapshotSourceLimitExceededException">
-    /// The sequence yields <paramref name="sourceItemLimit"/> items or more.
+    /// Thrown when the sequence yields more than <paramref name="sourceItemLimit"/> items.
     /// </exception>
     public static AvatarCollectionSnapshot Avatars(
         IEnumerable<Avatar> avatars,
@@ -417,7 +433,7 @@ public static partial class SnapshotFactory
     /// The avatar snapshot. Its status block is <see langword="null"/> when no status update
     /// has been received yet, which also leaves a user's rights level at 0.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="avatar"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="avatar"/> is <see langword="null"/>.</exception>
     public static AvatarSnapshot From(Avatar avatar)
     {
         ArgumentNullException.ThrowIfNull(avatar);
@@ -495,10 +511,10 @@ public static partial class SnapshotFactory
     /// <summary>Projects a user's profile card.</summary>
     /// <param name="profile">The profile to project.</param>
     /// <returns>
-    /// The profile snapshot. The trade lock, name colour and respect allowance fields are only
+    /// The profile snapshot. The trade lock, name color and respect allowance fields are only
     /// sent by newer hotels and are otherwise at their defaults.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="profile"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is <see langword="null"/>.</exception>
     public static ProfileSnapshot From(UserData profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
@@ -527,9 +543,9 @@ public static partial class SnapshotFactory
     /// <summary>Projects the friend list with no categories and no capacity limits.</summary>
     /// <param name="friends">The friends to project.</param>
     /// <returns>The friend collection, online first then by name, and never truncated.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="friends"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="friends"/> is <see langword="null"/>.</exception>
     /// <exception cref="SnapshotSourceLimitExceededException">
-    /// The sequence yields <see cref="DefaultSourceItemLimit"/> items or more.
+    /// Thrown when the sequence yields more than <see cref="DefaultSourceItemLimit"/> items.
     /// </exception>
     public static FriendCollectionSnapshot Friends(IEnumerable<Friend> friends) =>
         Friends(friends, null, 0, 0, 0, DefaultSourceItemLimit);
@@ -545,16 +561,16 @@ public static partial class SnapshotFactory
     /// <param name="normalLimit">The friend slots a non-club account gets; 0 when not reported.</param>
     /// <param name="extendedLimit">The friend slots a club account gets; 0 when not reported.</param>
     /// <param name="sourceItemLimit">
-    /// The safety valve applied to the friends and to the categories separately; reaching it throws.
+    /// The safety valve applied to the friends and to the categories separately; a source with more items throws.
     /// </param>
     /// <returns>
     /// The friend collection. Friends are ordered online first, then by name case-insensitively;
     /// categories by name, then by identifier. The online count is computed from the projection.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="friends"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="sourceItemLimit"/> is negative.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="friends"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="sourceItemLimit"/> is negative.</exception>
     /// <exception cref="SnapshotSourceLimitExceededException">
-    /// Either sequence yields <paramref name="sourceItemLimit"/> items or more.
+    /// Thrown when either sequence yields more than <paramref name="sourceItemLimit"/> items.
     /// </exception>
     public static FriendCollectionSnapshot Friends(
         IEnumerable<Friend> friends,
@@ -614,12 +630,12 @@ public static partial class SnapshotFactory
     /// <param name="roomId">The room the list belongs to, or <see langword="null"/> when outside a room.</param>
     /// <param name="generation">The room session counter to stamp onto the snapshot.</param>
     /// <param name="isOwner">Whether the local user owns the room.</param>
-    /// <param name="sourceItemLimit">The safety valve against an unbounded source; reaching it throws.</param>
+    /// <param name="sourceItemLimit">The safety valve against an unbounded source; a source with more items throws.</param>
     /// <returns>The controller collection, ordered by name case-insensitively, then by identifier.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="controllers"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="sourceItemLimit"/> is negative.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="controllers"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="sourceItemLimit"/> is negative.</exception>
     /// <exception cref="SnapshotSourceLimitExceededException">
-    /// The sequence yields <paramref name="sourceItemLimit"/> items or more.
+    /// Thrown when the sequence yields more than <paramref name="sourceItemLimit"/> items.
     /// </exception>
     public static ControllerCollectionSnapshot Controllers(
         IEnumerable<IdName> controllers,
@@ -648,7 +664,7 @@ public static partial class SnapshotFactory
     /// The status snapshot, including the recompiled raw string and a case-insensitive copy of
     /// every fragment, so fragments QX does not model are still reachable.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="status"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="status"/> is <see langword="null"/>.</exception>
     public static AvatarStatusSnapshot From(AvatarStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
@@ -688,10 +704,10 @@ public static partial class SnapshotFactory
     /// </param>
     /// <param name="maxItemsPerType">The output cap applied to each list separately.</param>
     /// <returns>The furni collection with its truncation flags and total counts.</returns>
-    /// <exception cref="ArgumentNullException">Either item sequence is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxItemsPerType"/> is negative.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when either item sequence is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxItemsPerType"/> is negative.</exception>
     /// <exception cref="SnapshotSourceLimitExceededException">
-    /// Either sequence yields <see cref="DefaultSourceItemLimit"/> items or more.
+    /// Thrown when either sequence yields more than <see cref="DefaultSourceItemLimit"/> items.
     /// </exception>
     public static FurniCollectionSnapshot Furni(
         IEnumerable<FloorItem> floorItems,
@@ -729,15 +745,15 @@ public static partial class SnapshotFactory
     /// <param name="roomId">The room the items belong to, or <see langword="null"/> when outside a room.</param>
     /// <param name="generation">The room session counter to stamp onto the snapshot.</param>
     /// <param name="sourceItemLimitPerType">
-    /// The safety valve applied to each sequence separately; reaching it throws.
+    /// The safety valve applied to each sequence separately; a source with more items throws.
     /// </param>
     /// <returns>The furni collection with its truncation flags and total counts.</returns>
-    /// <exception cref="ArgumentNullException">Either item sequence is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when either item sequence is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// <paramref name="maxItemsPerType"/> or <paramref name="sourceItemLimitPerType"/> is negative.
+    /// Thrown when <paramref name="maxItemsPerType"/> or <paramref name="sourceItemLimitPerType"/> is negative.
     /// </exception>
     /// <exception cref="SnapshotSourceLimitExceededException">
-    /// Either sequence yields <paramref name="sourceItemLimitPerType"/> items or more.
+    /// Thrown when either sequence yields more than <paramref name="sourceItemLimitPerType"/> items.
     /// </exception>
     public static FurniCollectionSnapshot Furni(
         IEnumerable<FloorItem> floorItems,
@@ -798,7 +814,7 @@ public static partial class SnapshotFactory
     /// packet carried, and the area falls back to the item's own size.
     /// </param>
     /// <returns>The floor item snapshot, with its area already rotated for the item's direction.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public static FloorItemSnapshot From(FloorItem item, FurniData? furniData = null)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -841,7 +857,7 @@ public static partial class SnapshotFactory
     /// The wall item snapshot, carrying the location both decomposed and in the client's own
     /// <c>:w=wx,wy l=lx,ly o</c> text form.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public static WallItemSnapshot From(WallItem item, FurniData? furniData = null)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -896,14 +912,14 @@ public static partial class SnapshotFactory
     /// How many fragments the current load consists of; -1 means that is not yet known.
     /// </param>
     /// <param name="receivedFragments">How many fragments have arrived.</param>
-    /// <param name="sourceItemLimit">The safety valve against an unbounded source; reaching it throws.</param>
+    /// <param name="sourceItemLimit">The safety valve against an unbounded source; a source with more items throws.</param>
     /// <returns>The inventory snapshot with its truncation flag and total count.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="items"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="items"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// <paramref name="maxItems"/> or <paramref name="sourceItemLimit"/> is negative.
+    /// Thrown when <paramref name="maxItems"/> or <paramref name="sourceItemLimit"/> is negative.
     /// </exception>
     /// <exception cref="SnapshotSourceLimitExceededException">
-    /// The sequence yields <paramref name="sourceItemLimit"/> items or more.
+    /// Thrown when the sequence yields more than <paramref name="sourceItemLimit"/> items.
     /// </exception>
     public static InventorySnapshot Inventory(
         IEnumerable<InventoryItem> items,
@@ -947,7 +963,7 @@ public static partial class SnapshotFactory
     /// The furni definition catalog, or <see langword="null"/> to project without a definition.
     /// </param>
     /// <returns>The inventory item snapshot.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public static InventoryItemSnapshot From(InventoryItem item, FurniData? furniData = null)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -971,6 +987,19 @@ public static partial class SnapshotFactory
             item.Extra);
     }
 
+    /// <summary>
+    /// Resolves the definition of an already projected inventory item again against a furni
+    /// definition catalog.
+    /// </summary>
+    /// <param name="item">The inventory item snapshot to update.</param>
+    /// <param name="furni_data">
+    /// The furni definition catalog, or <see langword="null"/> to clear the definition.
+    /// </param>
+    /// <returns>A copy of <paramref name="item"/> with its definition replaced.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when the item's type is not <see cref="ItemType.Floor"/> or <see cref="ItemType.Wall"/>.
+    /// </exception>
     public static InventoryItemSnapshot WithDefinition(
         InventoryItemSnapshot item,
         FurniData? furni_data)
@@ -1002,8 +1031,8 @@ public static partial class SnapshotFactory
     /// <param name="roomId">The room the heightmap belongs to, or <see langword="null"/> when outside a room.</param>
     /// <param name="generation">The room session counter to stamp onto the snapshot.</param>
     /// <returns>The heightmap snapshot with its truncation flag and aggregate counts.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="heightmap"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxTiles"/> is negative.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="heightmap"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxTiles"/> is negative.</exception>
     public static HeightmapSnapshot Heightmap(
         Heightmap heightmap,
         int maxTiles = 4096,
@@ -1067,7 +1096,7 @@ public static partial class SnapshotFactory
     /// crackable members are <see langword="null"/> unless the payload is of the matching type,
     /// and are then omitted from JSON entirely.
     /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="data"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="data"/> is <see langword="null"/>.</exception>
     public static ItemDataSnapshot From(ItemData data)
     {
         ArgumentNullException.ThrowIfNull(data);
@@ -1116,7 +1145,7 @@ public static partial class SnapshotFactory
     /// </summary>
     /// <param name="pet">The pet statistics to project.</param>
     /// <returns>The pet snapshot with its pet type left <see langword="null"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="pet"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="pet"/> is <see langword="null"/>.</exception>
     public static PetInfoSnapshot From(PetInfo pet) => From(pet, null);
 
     /// <summary>Projects a pet's statistics, optionally stamped with the pet type from the room.</summary>
@@ -1130,7 +1159,7 @@ public static partial class SnapshotFactory
     /// What kind of animal this is, or <see langword="null"/> when the pet is not in the room.
     /// </param>
     /// <returns>The pet snapshot.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="pet"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="pet"/> is <see langword="null"/>.</exception>
     public static PetInfoSnapshot From(PetInfo pet, int? petType)
     {
         ArgumentNullException.ThrowIfNull(pet);

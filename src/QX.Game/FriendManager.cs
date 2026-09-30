@@ -8,6 +8,19 @@ using Qx.Protocol;
 
 namespace Qx.Game;
 
+/// <summary>
+/// Manages the user's friend list, friend requests and private messages.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The hotel sends the friend list in fragments. <see cref="EnsureLoadedAsync(int, CancellationToken)"/>
+/// requests it and completes once every fragment has arrived. Later additions, updates and
+/// removals are applied as the hotel reports them.
+/// </para>
+/// <para>
+/// All members are safe to call from any thread. The state is cleared when the hotel connection closes.
+/// </para>
+/// </remarks>
 public sealed class FriendManager : GameStateManager
 {
     private static readonly TimeSpan request_lease = TimeSpan.FromSeconds(30);
@@ -40,6 +53,7 @@ public sealed class FriendManager : GameStateManager
     private long _generation;
     private long _revision;
 
+    /// <summary>Initializes a new instance of the <see cref="FriendManager"/> class.</summary>
     public FriendManager()
         : this(TimeProvider.System)
     {
@@ -50,6 +64,7 @@ public sealed class FriendManager : GameStateManager
         _time_provider = time_provider ?? throw new ArgumentNullException(nameof(time_provider));
     }
 
+    /// <summary>Gets a snapshot of the friends in the friend list.</summary>
     public IReadOnlyCollection<Friend> Friends
     {
         get
@@ -59,6 +74,7 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Gets a snapshot of the user's friend categories.</summary>
     public IReadOnlyList<FriendCategory> Categories
     {
         get
@@ -68,6 +84,7 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Gets whether the complete friend list has been received.</summary>
     public bool IsLoaded
     {
         get
@@ -77,6 +94,7 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Gets whether the friend list is being received.</summary>
     public bool IsLoading
     {
         get
@@ -86,6 +104,11 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Gets whether <see cref="Friends"/> holds friends that a completed load has not confirmed.</summary>
+    /// <remarks>
+    /// <see langword="true"/> while a new load runs over an existing list, after a load was
+    /// abandoned, or when the hotel reported changes before the list was loaded.
+    /// </remarks>
     public bool IsStale
     {
         get
@@ -95,6 +118,8 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Gets the user's friend list limit from the messenger initialization.</summary>
+    /// <remarks>0 until the hotel sends the messenger initialization.</remarks>
     public int UserLimit
     {
         get
@@ -104,6 +129,8 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Gets the normal friend list limit from the messenger initialization.</summary>
+    /// <remarks>0 until the hotel sends the messenger initialization.</remarks>
     public int NormalLimit
     {
         get
@@ -113,6 +140,8 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Gets the extended friend list limit from the messenger initialization.</summary>
+    /// <remarks>0 until the hotel sends the messenger initialization.</remarks>
     public int ExtendedLimit
     {
         get
@@ -122,6 +151,7 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Gets the number of fragments the current friend list load expects, or -1 when it is not known.</summary>
     public int ExpectedFragments
     {
         get
@@ -131,6 +161,7 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Gets the number of friend list fragments received for the current load.</summary>
     public int ReceivedFragments
     {
         get
@@ -142,6 +173,7 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Gets the load generation, which increases each time a friend list load starts, is abandoned or is reset.</summary>
     public long Generation
     {
         get
@@ -151,6 +183,7 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Gets the revision, which increases on every change to the friend state.</summary>
     public long Revision
     {
         get
@@ -160,31 +193,41 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <summary>Occurs when the complete friend list has been received.</summary>
     public event Action? Loaded;
+    /// <summary>Occurs when the messenger initialization with the friend limits and categories arrives.</summary>
     public event Action? Initialized;
+    /// <summary>Occurs when the hotel adds a friend to the friend list; the argument is the new friend.</summary>
     public event Action<Friend>? FriendAdded;
+    /// <summary>Occurs when the hotel updates a friend in the friend list; the argument is the updated friend.</summary>
     public event Action<Friend>? FriendUpdated;
+    /// <summary>Occurs when the hotel removes a friend from the friend list; the argument is the removed friend.</summary>
     public event Action<Friend>? FriendRemoved;
+    /// <summary>Occurs when another user sends the user a friend request; the argument is the request.</summary>
     public event Action<NewFriendRequest>? FriendRequestReceived;
+    /// <summary>Occurs after the friend state has been cleared because the hotel connection closed.</summary>
     public event Action? ResetCompleted;
 
     /// <summary>
-    /// Raised for a private message from a friend, which is the console conversation rather than
-    /// room chat.
+    /// Occurs when a private message from a friend arrives; the argument is the message.
     /// </summary>
     /// <remarks>
-    /// Offline messages arrive on connect with a non-zero age, so a handler that acts on every
-    /// message will also act on the backlog. <see cref="NewConsoleMessage.IsOffline"/> separates
-    /// the two.
+    /// Private messages are the messenger conversation, not room chat. Offline messages arrive on
+    /// connect with a non-zero age, so a handler that acts on every message also acts on the
+    /// backlog. <see cref="NewConsoleMessage.IsOffline"/> tells the two apart.
     /// </remarks>
     public event Action<NewConsoleMessage>? MessageReceived;
 
-    /// <summary>Raised when the hotel refused a messenger operation.</summary>
+    /// <summary>Occurs when the hotel refuses a messenger operation; the argument holds the error code.</summary>
     public event Action<MessengerError>? MessengerFailed;
 
-    /// <summary>Raised when a private message could not be delivered.</summary>
+    /// <summary>Occurs when a private message could not be delivered; the argument describes the error.</summary>
     public event Action<InstantMessageError>? MessageDeliveryFailed;
 
+    /// <summary>Reads several values from the manager while holding its state lock, so they are consistent with each other.</summary>
+    /// <typeparam name="TResult">The type of the value the projection returns.</typeparam>
+    /// <param name="projection">The function that reads the manager.</param>
+    /// <returns>The value the projection returns.</returns>
     public TResult Capture<TResult>(Func<FriendManager, TResult> projection)
     {
         ArgumentNullException.ThrowIfNull(projection);
@@ -192,12 +235,18 @@ public sealed class FriendManager : GameStateManager
             return projection(this);
     }
 
+    /// <summary>Gets the friend with the specified user id.</summary>
+    /// <param name="id">The user id of the friend.</param>
+    /// <returns>The friend, or <see langword="null"/> if the user is not in the friend list.</returns>
     public Friend? FriendById(Id id)
     {
         lock (_sync)
             return _friends.GetValueOrDefault(id);
     }
 
+    /// <summary>Gets the friend with the specified name, ignoring case.</summary>
+    /// <param name="name">The name of the friend.</param>
+    /// <returns>The friend, or <see langword="null"/> if no friend has that name.</returns>
     public Friend? FriendByName(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
@@ -206,8 +255,16 @@ public sealed class FriendManager : GameStateManager
                 string.Equals(friend.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Gets whether a user with the specified name is in the friend list, ignoring case.</summary>
+    /// <param name="name">The name of the user.</param>
     public bool IsFriend(string name) => FriendByName(name) is not null;
 
+    /// <summary>Sends a private message to a friend.</summary>
+    /// <param name="recipientId">The user id of the friend.</param>
+    /// <param name="text">The message text, which must not be empty.</param>
+    /// <remarks>
+    /// The message carries the next sequence number from <see cref="NextMessageIndex(Id)"/>.
+    /// </remarks>
     public void SendPrivateMessage(Id recipientId, string text) =>
     SendPrivateMessageCore(recipientId, text, null, default);
 
@@ -236,12 +293,14 @@ public sealed class FriendManager : GameStateManager
     }
 
     /// <summary>
-    /// The next sequence number for a conversation, advancing it.
+    /// Gets the next message sequence number for a conversation and advances it.
     /// </summary>
     /// <remarks>
-    /// The counter lives here so every caller shares one sequence per conversation.
+    /// Every caller shares one sequence per conversation. Sequences start at 0 and are cleared when
+    /// the hotel connection closes.
     /// </remarks>
-    /// <param name="recipientId">The friend being written to.</param>
+    /// <param name="recipientId">The user id of the friend being written to.</param>
+    /// <returns>The sequence number to send with the next message.</returns>
     public int NextMessageIndex(Id recipientId)
     {
         lock (_message_index_sync)
@@ -252,8 +311,8 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
-    /// <summary>Asks someone to be a friend, by name.</summary>
-    /// <param name="name">Who to ask.</param>
+    /// <summary>Sends a friend request to the user with the specified name.</summary>
+    /// <param name="name">The name of the user to ask, which must not be empty.</param>
     public void RequestFriend(string name) =>
         RequestFriendCore(name, null, default);
 
@@ -277,7 +336,8 @@ public sealed class FriendManager : GameStateManager
     }
 
     /// <summary>Accepts pending friend requests.</summary>
-    /// <param name="requestIds">The requesters to accept.</param>
+    /// <param name="requestIds">The ids of the requests to accept.</param>
+    /// <remarks>Nothing is sent when <paramref name="requestIds"/> is empty.</remarks>
     public void AcceptFriendRequests(params IReadOnlyList<Id> requestIds) =>
         AcceptFriendRequestsCore(requestIds, null, default);
 
@@ -303,7 +363,8 @@ public sealed class FriendManager : GameStateManager
     }
 
     /// <summary>Declines pending friend requests.</summary>
-    /// <param name="requestIds">The requesters to decline.</param>
+    /// <param name="requestIds">The ids of the requests to decline.</param>
+    /// <remarks>Nothing is sent when <paramref name="requestIds"/> is empty.</remarks>
     public void DeclineFriendRequests(params IReadOnlyList<Id> requestIds) =>
         DeclineFriendRequestsCore(requestIds, null, default);
 
@@ -346,8 +407,9 @@ public sealed class FriendManager : GameStateManager
             expected_session,
             cancellation_token);
 
-    /// <summary>Removes people from the friend list.</summary>
-    /// <param name="friendIds">The friends to remove.</param>
+    /// <summary>Removes friends from the friend list.</summary>
+    /// <param name="friendIds">The user ids of the friends to remove.</param>
+    /// <remarks>Nothing is sent when <paramref name="friendIds"/> is empty.</remarks>
     public void RemoveFriends(params IReadOnlyList<Id> friendIds) =>
         RemoveFriendsCore(friendIds, null, default);
 
@@ -373,7 +435,7 @@ public sealed class FriendManager : GameStateManager
     }
 
     /// <summary>Follows a friend to the room they are in.</summary>
-    /// <param name="friendId">The friend to follow.</param>
+    /// <param name="friendId">The user id of the friend to follow.</param>
     public void Follow(Id friendId) =>
         FollowCore(friendId, null, default);
 
@@ -393,8 +455,8 @@ public sealed class FriendManager : GameStateManager
             expected_session,
             cancellation_token);
 
-    /// <summary>Sets the relationship shown against a friend.</summary>
-    /// <param name="friendId">The friend.</param>
+    /// <summary>Sets the relationship shown for a friend.</summary>
+    /// <param name="friendId">The user id of the friend.</param>
     /// <param name="relationship">The relationship to show.</param>
     public void SetRelationship(Id friendId, RelationshipType relationship) =>
         SetRelationshipCore(friendId, relationship, null, default);
@@ -417,6 +479,17 @@ public sealed class FriendManager : GameStateManager
             expected_session,
             cancellation_token);
 
+    /// <summary>Requests the friend list from the server unless it is already loaded.</summary>
+    /// <param name="timeoutMs">The time to wait for the complete friend list, in milliseconds.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with a snapshot of the friends.</returns>
+    /// <remarks>
+    /// A loaded list is returned without a request. Concurrent callers share one request.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is not positive.</exception>
+    /// <exception cref="TimeoutException">Thrown when the friend list does not arrive in time.</exception>
+    /// <exception cref="FragmentedLoadCorrelationException">Thrown when the fragments of an abandoned request cannot be told apart from the current one.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached, or the hotel connection closes during the load.</exception>
     public Task<IReadOnlyCollection<Friend>> EnsureLoadedAsync(
         int timeoutMs = 10000,
         CancellationToken cancellationToken = default) =>
@@ -535,6 +608,7 @@ public sealed class FriendManager : GameStateManager
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         OnIncoming(
@@ -914,6 +988,7 @@ public sealed class FriendManager : GameStateManager
     private FragmentedLoadCorrelationException RecoveryError() =>
         new("friend list", _recovery_retired_epoch, _recovery_active_epoch);
 
+    /// <inheritdoc/>
     protected override void Reset()
     {
         lock (_publication_sync)

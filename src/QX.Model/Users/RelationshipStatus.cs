@@ -3,12 +3,13 @@ using Qx.Messages;
 namespace Qx.Model;
 
 /// <summary>
-/// The relationship shown against a friend, which is what the client's heart, smile and bobba
-/// buttons set.
+/// Specifies the relationship shown against a friend, which is what the client's heart, smile and
+/// bobba buttons set.
 /// </summary>
 public enum RelationshipType
 {
-    /// <summary>No relationship set. Clears whatever was there.</summary>
+    /// <summary>No relationship set.</summary>
+    /// <remarks>Setting it clears whatever was there.</remarks>
     None = 0,
     /// <summary>Heart.</summary>
     Heart = 1,
@@ -18,6 +19,12 @@ public enum RelationshipType
     Bobba = 3
 }
 
+/// <summary>Represents one relationship type on a user's profile with how many friends have it.</summary>
+/// <param name="Type">The relationship type, using the <see cref="RelationshipType"/> numbering.</param>
+/// <param name="FriendCount">The number of friends with this relationship.</param>
+/// <param name="RandomFriendId">The identifier of one friend with this relationship, picked by the hotel.</param>
+/// <param name="RandomFriendName">The name of that friend.</param>
+/// <param name="RandomFriendFigure">The figure string of that friend.</param>
 public sealed record RelationshipEntry(
     int Type,
     int FriendCount,
@@ -25,12 +32,19 @@ public sealed record RelationshipEntry(
     string RandomFriendName,
     string RandomFriendFigure) : IParserComposer<RelationshipEntry>
 {
+    /// <summary>Reads a relationship entry from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
     public static RelationshipEntry Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static RelationshipEntry ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt(), p.ReadInt(), p.ReadString(), p.ReadString());
 
+    /// <summary>Writes the relationship entry to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when <see cref="RandomFriendId"/> does not fit in 32 bits or a string is too long.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -53,31 +67,46 @@ public sealed record RelationshipEntry(
     }
 }
 
+/// <summary>Represents the relationships shown on a user's profile.</summary>
 public sealed record RelationshipStatus : IParserComposer<RelationshipStatus>
 {
     private IReadOnlyList<RelationshipEntry> _entries =
         Array.AsReadOnly(Array.Empty<RelationshipEntry>());
 
+    /// <summary>Initializes a new instance of the <see cref="RelationshipStatus"/> class.</summary>
+    /// <param name="UserId">The user whose relationships these are.</param>
+    /// <param name="Entries">The relationship entries; the list is copied.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="Entries"/> or any entry is <see langword="null"/>.</exception>
     public RelationshipStatus(Id UserId, IReadOnlyList<RelationshipEntry> Entries)
     {
         this.UserId = UserId;
         this.Entries = Entries;
     }
 
+    /// <summary>Gets the user whose relationships these are.</summary>
     public Id UserId { get; init; }
 
+    /// <summary>Gets the relationship entries as a read-only copy.</summary>
+    /// <exception cref="ArgumentNullException">Thrown when set to <see langword="null"/> or a list with a <see langword="null"/> entry.</exception>
     public IReadOnlyList<RelationshipEntry> Entries
     {
         get => _entries;
         init => _entries = PeopleWire.FreezeReferences(value, nameof(Entries));
     }
 
+    /// <summary>Deconstructs the status into its user and entries.</summary>
+    /// <param name="UserId">The user whose relationships these are.</param>
+    /// <param name="Entries">The relationship entries.</param>
     public void Deconstruct(out Id UserId, out IReadOnlyList<RelationshipEntry> Entries)
     {
         UserId = this.UserId;
         Entries = this.Entries;
     }
 
+    /// <summary>Reads the relationship status from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the entry count is invalid or bytes remain after the entries.</exception>
     public static RelationshipStatus Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -95,6 +124,10 @@ public sealed record RelationshipStatus : IParserComposer<RelationshipStatus>
         return new RelationshipStatus(user_id, entries);
     }
 
+    /// <summary>Writes the relationship status to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when an identifier does not fit in 32 bits or a string is too long.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

@@ -3,47 +3,58 @@ using System.Text.RegularExpressions;
 
 namespace Qx.Scripting;
 
+/// <summary>Specifies the kind of input a panel field directive declares.</summary>
 public enum UiFieldKind
 {
+    /// <summary>A whole number input, declared with <c>//@ui:int</c>.</summary>
     Int,
+    /// <summary>A decimal number input, declared with <c>//@ui:number</c>.</summary>
     Number,
+    /// <summary>A single line text input, declared with <c>//@ui:string</c>.</summary>
     String,
+    /// <summary>A multi-line text input, declared with <c>//@ui:text</c>.</summary>
     Text,
+    /// <summary>A checkbox, declared with <c>//@ui:bool</c>.</summary>
     Bool,
+    /// <summary>A choice from the bracket list of options, declared with <c>//@ui:select</c>.</summary>
     Select,
+    /// <summary>A file picker that holds the chosen path, declared with <c>//@ui:file</c>.</summary>
     File,
+    /// <summary>A slider limited to the <c>min</c> and <c>max</c> range, declared with <c>//@ui:slider</c>.</summary>
     Slider,
+    /// <summary>A color input that holds a <c>#RRGGBB</c> value, declared with <c>//@ui:color</c>.</summary>
     Color
 }
 
-/// <summary>How prominent a button is.</summary>
+/// <summary>Specifies how prominent a panel button is.</summary>
 public enum UiButtonStyle
 {
     /// <summary>The ordinary outlined button.</summary>
     Normal,
-    /// <summary>The filled button. The first declared button is this unless it says otherwise.</summary>
+    /// <summary>The filled button.</summary>
+    /// <remarks>The first declared button uses this style unless it sets another one.</remarks>
     Primary,
-    /// <summary>Text only, for secondary actions that should not compete.</summary>
+    /// <summary>A text only button, for secondary actions that should not compete.</summary>
     Quiet,
-    /// <summary>Tinted for something destructive.</summary>
+    /// <summary>A tinted button, for something destructive.</summary>
     Danger
 }
 
-/// <summary>How a row distributes the space its children do not claim.</summary>
+/// <summary>Specifies how a row distributes the space its children do not claim.</summary>
 public enum UiRowAlign
 {
-    /// <summary>Children keep their natural width and sit to the left.</summary>
+    /// <summary>Children at their natural width, aligned to the left.</summary>
     Start,
-    /// <summary>Children keep their natural width and sit in the middle.</summary>
+    /// <summary>Children at their natural width, aligned to the middle.</summary>
     Center,
-    /// <summary>Children keep their natural width and sit to the right.</summary>
+    /// <summary>Children at their natural width, aligned to the right.</summary>
     End,
-    /// <summary>Children share the row evenly unless one of them sets a width.</summary>
+    /// <summary>Children sharing the row evenly unless one of them sets a width.</summary>
     Stretch
 }
 
 /// <summary>
-/// The attributes a directive carried, as written.
+/// Represents the attributes a directive carried, as written.
 /// </summary>
 /// <remarks>
 /// Kept as text so an unknown attribute is preserved rather than dropped: the parser is shared with
@@ -56,18 +67,27 @@ public sealed class UiAttributes
 
     internal UiAttributes(Dictionary<string, string> values) => _values = values;
 
-    /// <summary>An empty set, for directives that carried none.</summary>
+    /// <summary>Gets an empty set, for directives that carried none.</summary>
     public static UiAttributes Empty { get; } = new(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 
-    /// <summary>Every attribute, keyed case-insensitively.</summary>
+    /// <summary>Gets every attribute, keyed case-insensitively.</summary>
+    /// <remarks>A bare attribute written without a value is stored with an empty string.</remarks>
     public IReadOnlyDictionary<string, string> Values => _values;
 
-    /// <summary>The attribute as text, or <see langword="null"/> when it was not written.</summary>
-    /// <param name="name">The attribute name.</param>
+    /// <summary>Gets the attribute as text.</summary>
+    /// <param name="name">The attribute name, matched case-insensitively.</param>
+    /// <returns>
+    /// The value as written, an empty string for a bare attribute, or <see langword="null"/> when it
+    /// was not written.
+    /// </returns>
     public string? Text(string name) => _values.GetValueOrDefault(name);
 
-    /// <summary>The attribute as a number.</summary>
-    /// <param name="name">The attribute name.</param>
+    /// <summary>Gets the attribute as a number.</summary>
+    /// <param name="name">The attribute name, matched case-insensitively.</param>
+    /// <returns>
+    /// The value parsed with the invariant culture, or <see langword="null"/> when it was not written
+    /// or is not a number.
+    /// </returns>
     public double? Number(string name) =>
         _values.TryGetValue(name, out string? value) &&
         double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
@@ -75,10 +95,17 @@ public sealed class UiAttributes
             : null;
 
     /// <summary>
-    /// The attribute as a switch. A bare attribute with no value counts as true, so
-    /// <c>wrap</c> and <c>wrap=true</c> mean the same thing.
+    /// Gets the attribute as a switch.
     /// </summary>
-    /// <param name="name">The attribute name.</param>
+    /// <remarks>
+    /// A bare attribute with no value counts as true, so <c>wrap</c> and <c>wrap=true</c> mean the
+    /// same thing.
+    /// </remarks>
+    /// <param name="name">The attribute name, matched case-insensitively.</param>
+    /// <returns>
+    /// <see langword="true"/> when the value is empty, <c>true</c> in any case or <c>1</c>;
+    /// <see langword="false"/> for any other value; <see langword="null"/> when it was not written.
+    /// </returns>
     public bool? Flag(string name)
     {
         if (!_values.TryGetValue(name, out string? value))
@@ -89,6 +116,22 @@ public sealed class UiAttributes
     }
 }
 
+/// <summary>Represents an input field a panel declares.</summary>
+/// <param name="Kind">The kind of input.</param>
+/// <param name="Name">The name the script reads the value by.</param>
+/// <param name="Label">The caption shown with the input, derived from the name when none was written.</param>
+/// <param name="Default">
+/// The starting value, or an empty string when none was written. A select field without one starts
+/// on its first option.
+/// </param>
+/// <param name="Options">The bracket list of options that a select field offers, empty when none was written.</param>
+/// <param name="Min">The lower bound from the <c>min</c> attribute, or <see langword="null"/> when it was not written.</param>
+/// <param name="Max">The upper bound from the <c>max</c> attribute, or <see langword="null"/> when it was not written.</param>
+/// <param name="Section">
+/// The title of the preceding <c>//@ui:section</c> when this is the first field after it; otherwise,
+/// <see langword="null"/>.
+/// </param>
+/// <param name="Attributes">The attributes the directive carried, or <see langword="null"/> for none.</param>
 public sealed record UiField(
     UiFieldKind Kind,
     string Name,
@@ -100,37 +143,57 @@ public sealed record UiField(
     string? Section = null,
     UiAttributes? Attributes = null)
 {
-    /// <summary>The attributes the directive carried; never null.</summary>
+    /// <summary>Gets the attributes the directive carried, never <see langword="null"/>.</summary>
     public UiAttributes Attr => Attributes ?? UiAttributes.Empty;
 }
 
+/// <summary>Represents an output box a panel declares.</summary>
+/// <param name="Name">The name the script writes to with <see cref="ScriptUi.Log(string, object)"/>.</param>
+/// <param name="Label">The caption shown with the box.</param>
+/// <param name="Attributes">The attributes the directive carried, or <see langword="null"/> for none.</param>
 public sealed record UiOutput(string Name, string Label, UiAttributes? Attributes = null)
 {
     /// <inheritdoc cref="UiField.Attr"/>
     public UiAttributes Attr => Attributes ?? UiAttributes.Empty;
 
-    /// <summary>The height the box asks for, or null for the renderer's own.</summary>
+    /// <summary>Gets the height in pixels the box asks for, or <see langword="null"/> for the renderer's own.</summary>
     public double? Height => Attr.Number("height");
 
-    /// <summary>Whether long lines wrap instead of scrolling sideways.</summary>
+    /// <summary>Gets whether long lines wrap instead of scrolling sideways.</summary>
+    /// <remarks>Off unless the <c>wrap</c> attribute turns it on.</remarks>
     public bool Wrap => Attr.Flag("wrap") ?? false;
 
-    /// <summary>Whether the text is drawn in the code font. On unless turned off.</summary>
+    /// <summary>Gets whether the text is drawn in the code font.</summary>
+    /// <remarks>On unless <c>mono=false</c> turns it off.</remarks>
     public bool Monospace => Attr.Flag("mono") ?? true;
 
     /// <summary>
-    /// Whether the box carries its own clear and copy actions. On unless turned off, because a box
-    /// a script fills is a box someone will want to empty or take away.
+    /// Gets whether the box carries its own clear and copy actions.
     /// </summary>
+    /// <remarks>
+    /// On unless <c>toolbar=false</c> turns it off, because a box a script fills is a box someone
+    /// will want to empty or take away.
+    /// </remarks>
     public bool Toolbar => Attr.Flag("toolbar") ?? true;
 }
 
+/// <summary>Represents a button a panel declares.</summary>
+/// <param name="Name">
+/// The name that <see cref="ScriptUi.OnClick(string, Func{Task})"/> and
+/// <see cref="ScriptUi.Clicked(string)"/> refer to.
+/// </param>
+/// <param name="Label">The caption on the button.</param>
+/// <param name="Attributes">The attributes the directive carried, or <see langword="null"/> for none.</param>
 public sealed record UiButton(string Name, string Label, UiAttributes? Attributes = null)
 {
     /// <inheritdoc cref="UiField.Attr"/>
     public UiAttributes Attr => Attributes ?? UiAttributes.Empty;
 
-    /// <summary>How prominent the button is, or null to let position decide.</summary>
+    /// <summary>Gets how prominent the button is, or <see langword="null"/> to let its position decide.</summary>
+    /// <remarks>
+    /// Read from the <c>style</c> attribute; a value other than <c>normal</c>, <c>primary</c>,
+    /// <c>quiet</c> or <c>danger</c> counts as not written.
+    /// </remarks>
     public UiButtonStyle? Style => Attr.Text("style")?.ToLowerInvariant() switch
     {
         "primary" => UiButtonStyle.Primary,
@@ -141,58 +204,68 @@ public sealed record UiButton(string Name, string Label, UiAttributes? Attribute
     };
 }
 
-/// <summary>A piece of a panel.</summary>
+/// <summary>Represents a piece of a panel.</summary>
 public abstract record UiNode
 {
-    /// <summary>The attributes the directive carried; never null.</summary>
+    /// <summary>Gets the attributes the directive carried, never <see langword="null"/>.</summary>
     public UiAttributes Attr { get; init; } = UiAttributes.Empty;
 
     /// <summary>
-    /// How much of a row's spare width this takes, relative to its siblings. Null means it keeps
-    /// its natural width.
+    /// Gets how much of a row's spare width the node takes, relative to its siblings.
     /// </summary>
+    /// <remarks><see langword="null"/> means it keeps its natural width.</remarks>
     public double? Grow => Attr.Number("grow");
 
-    /// <summary>A fixed width in pixels, or null to size to content.</summary>
+    /// <summary>Gets a fixed width in pixels, or <see langword="null"/> to size to content.</summary>
     public double? Width => Attr.Number("width");
 }
 
-/// <summary>An input.</summary>
+/// <summary>Represents an input field in the panel tree.</summary>
+/// <param name="Field">The field the directive declared.</param>
 public sealed record UiFieldNode(UiField Field) : UiNode;
 
-/// <summary>A box a script writes lines into.</summary>
+/// <summary>Represents a box a script writes lines into.</summary>
+/// <param name="Output">The output box the directive declared.</param>
 public sealed record UiOutputNode(UiOutput Output) : UiNode;
 
-/// <summary>A button that starts a run.</summary>
+/// <summary>Represents a button in the panel tree.</summary>
+/// <remarks>
+/// Pressing it calls the handlers registered with <see cref="ScriptUi.OnClick(string, Func{Task})"/>,
+/// or starts a run when the script registered none.
+/// </remarks>
+/// <param name="Button">The button the directive declared.</param>
 public sealed record UiButtonNode(UiButton Button) : UiNode;
 
-/// <summary>Static text.</summary>
+/// <summary>Represents static text.</summary>
+/// <param name="Text">The text shown.</param>
 public sealed record UiLabelNode(string Text) : UiNode;
 
-/// <summary>A horizontal rule.</summary>
+/// <summary>Represents a horizontal rule.</summary>
 public sealed record UiSeparatorNode : UiNode;
 
-/// <summary>Empty space.</summary>
+/// <summary>Represents empty space.</summary>
 public sealed record UiSpacerNode : UiNode
 {
-    /// <summary>How tall the gap is.</summary>
+    /// <summary>Gets how tall the gap is in pixels, 12 unless the <c>height</c> attribute sets it.</summary>
     public double Height => Attr.Number("height") ?? 12;
 }
 
-/// <summary>A progress bar the script drives.</summary>
+/// <summary>Represents a progress bar the script drives.</summary>
+/// <param name="Name">The bar's name, for <see cref="ScriptUi.Progress(string, double)"/>.</param>
+/// <param name="Label">The caption beside it.</param>
 public sealed record UiProgressNode(string Name, string Label) : UiNode;
 
-/// <summary>A single line of text the script replaces as it goes.</summary>
+/// <summary>Represents a single line of text the script replaces as it goes.</summary>
 /// <param name="Name">The line's name, for <c>Ui.Status</c>.</param>
 /// <param name="Label">The caption beside it.</param>
 /// <param name="Initial">
-/// What it says before the script writes anything. The quoted text is the caption, so a starting
+/// The text shown before the script writes anything. The quoted text is the caption, so a starting
 /// value is written as a default: <c>//@ui:status state "Stage" ="waiting"</c>.
 /// </param>
 public sealed record UiStatusNode(string Name, string Label, string Initial = "") : UiNode;
 
 /// <summary>
-/// A grid of rows a script fills as it goes.
+/// Represents a grid of rows a script fills as it goes.
 /// </summary>
 /// <remarks>
 /// The columns come from the directive's bracket list, so a table is declared the way a select
@@ -205,29 +278,39 @@ public sealed record UiStatusNode(string Name, string Label, string Initial = ""
 /// <param name="Columns">The column headings.</param>
 public sealed record UiTableNode(string Name, string Label, IReadOnlyList<string> Columns) : UiNode
 {
-    /// <summary>How tall the grid is.</summary>
+    /// <summary>Gets how tall the grid is in pixels, 220 unless the <c>height</c> attribute sets it.</summary>
     public double Height => Attr.Number("height") ?? 220;
 
-    /// <summary>Whether a row can be selected, which a script reads back with <c>Ui.String</c>.</summary>
+    /// <summary>Gets whether a row can be selected, which a script reads back with <c>Ui.String</c>.</summary>
+    /// <remarks>
+    /// On unless <c>selectable=false</c> turns it off. The selected row reads back as its cells
+    /// joined with tabs.
+    /// </remarks>
     public bool Selectable => Attr.Flag("selectable") ?? true;
 
-    /// <summary>Whether the grid carries its own clear and copy actions.</summary>
+    /// <summary>Gets whether the grid carries its own clear and copy actions.</summary>
+    /// <remarks>On unless <c>toolbar=false</c> turns it off.</remarks>
     public bool Toolbar => Attr.Flag("toolbar") ?? true;
 }
 
-/// <summary>A heading with a rule, kept for panels written against the older grammar.</summary>
+/// <summary>Represents a heading with a rule, kept for panels written against the older grammar.</summary>
+/// <param name="Title">The heading text.</param>
 public sealed record UiSectionNode(string Title) : UiNode;
 
-/// <summary>Children laid out side by side.</summary>
+/// <summary>Represents a row that lays out its children side by side.</summary>
 public sealed record UiRowNode : UiNode
 {
-    /// <summary>What sits in the row, left to right.</summary>
+    /// <summary>Gets what sits in the row, left to right.</summary>
     public List<UiNode> Children { get; } = [];
 
-    /// <summary>The gap between children.</summary>
+    /// <summary>Gets the gap between children in pixels, 12 unless the <c>gap</c> attribute sets it.</summary>
     public double Gap => Attr.Number("gap") ?? 12;
 
-    /// <summary>How the row distributes width its children do not claim.</summary>
+    /// <summary>Gets how the row distributes width its children do not claim.</summary>
+    /// <remarks>
+    /// Read from the <c>align</c> attribute, where <c>right</c> means the same as <c>end</c>. A
+    /// missing or unknown value gives <see cref="UiRowAlign.Start"/>.
+    /// </remarks>
     public UiRowAlign Align => Attr.Text("align")?.ToLowerInvariant() switch
     {
         "center" => UiRowAlign.Center,
@@ -237,55 +320,67 @@ public sealed record UiRowNode : UiNode
     };
 }
 
-/// <summary>Children inside a titled box that can be folded away.</summary>
+/// <summary>Represents a titled box of children that can be folded away.</summary>
+/// <param name="Title">The title shown on the box.</param>
 public sealed record UiGroupNode(string Title) : UiNode
 {
-    /// <summary>What the group holds.</summary>
+    /// <summary>Gets what the group holds.</summary>
     public List<UiNode> Children { get; } = [];
 
-    /// <summary>Whether the group starts folded.</summary>
+    /// <summary>Gets whether the group starts folded.</summary>
     public bool Collapsed => Attr.Flag("collapsed") ?? false;
 }
 
-/// <summary>How the script's own output is shown under its panel.</summary>
-/// <param name="Collapsed">Whether it starts folded.</param>
-/// <param name="Height">Its starting height in pixels, or <see langword="null"/> for the default.</param>
+/// <summary>Represents how the script's own output is shown under its panel.</summary>
+/// <param name="Collapsed"><see langword="true"/> when it starts folded; otherwise, <see langword="false"/>.</param>
+/// <param name="Height">The starting height in pixels, or <see langword="null"/> for the default.</param>
 public sealed record UiConsole(bool Collapsed, double? Height);
 
-/// <summary>How the panel's content sits on its page.</summary>
-/// <param name="Centered">Whether the content is centred instead of left-aligned.</param>
+/// <summary>Represents how the panel's content sits on its page.</summary>
+/// <param name="Centered"><see langword="true"/> when the content is centered; <see langword="false"/> when it is left-aligned.</param>
 /// <param name="Width">
 /// The widest the content grows in pixels, <see langword="null"/> for the default and
 /// <see cref="double.PositiveInfinity"/> to fill the page.
 /// </param>
 public sealed record UiLayout(bool Centered, double? Width);
 
+/// <summary>Represents the panel a script declares with <c>//@ui:</c> directives.</summary>
 public sealed partial class UiSpec
 {
+    /// <summary>Gets or sets the panel title from <c>//@ui:title</c>, or an empty string when none was written.</summary>
     public string Title { get; set; } = "";
+    /// <summary>
+    /// Gets or sets the panel description from <c>//@ui:desc</c> or <c>//@ui:description</c>, or an
+    /// empty string when none was written.
+    /// </summary>
     public string Description { get; set; } = "";
 
     /// <summary>
-    /// Whether the script only works with its panel, as <c>//@ui:required</c> declares. Such a
-    /// script always runs in panel mode: starting it from the editor opens the panel, and a run
-    /// without a panel is refused instead of finishing at once with default values.
+    /// Gets or sets whether the script only works with its panel, as <c>//@ui:required</c> declares.
     /// </summary>
+    /// <remarks>
+    /// Such a script always runs in panel mode: starting it from the editor opens the panel, and a
+    /// run without a panel is refused instead of finishing at once with default values.
+    /// </remarks>
     public bool Required { get; set; }
 
     /// <summary>
-    /// The script's own output shown under the panel, as <c>//@ui:console</c> declares, or
-    /// <see langword="null"/> when the panel hides it.
+    /// Gets or sets how the script's own output is shown under the panel, as <c>//@ui:console</c>
+    /// declares.
     /// </summary>
+    /// <remarks><see langword="null"/> when the panel hides it.</remarks>
     public UiConsole? Console { get; set; }
 
     /// <summary>
-    /// Where the panel's content sits, as <c>//@ui:layout</c> declares, or <see langword="null"/>
-    /// for the default: left-aligned at the theme's width.
+    /// Gets or sets where the panel's content sits, as <c>//@ui:layout</c> declares.
     /// </summary>
+    /// <remarks>
+    /// <see langword="null"/> means the default: left-aligned at the theme's width.
+    /// </remarks>
     public UiLayout? Layout { get; set; }
 
     /// <summary>
-    /// The panel as written, including its rows and groups.
+    /// Gets the panel as written, including its rows and groups.
     /// </summary>
     /// <remarks>
     /// <see cref="Fields"/>, <see cref="Outputs"/> and <see cref="Buttons"/> are the same things
@@ -294,19 +389,27 @@ public sealed partial class UiSpec
     /// </remarks>
     public List<UiNode> Nodes { get; } = [];
 
+    /// <summary>Gets every input field in declaration order, flattened out of rows and groups.</summary>
     public List<UiField> Fields { get; } = [];
+    /// <summary>Gets every output box in declaration order, flattened out of rows and groups.</summary>
     public List<UiOutput> Outputs { get; } = [];
+    /// <summary>Gets every button in declaration order, flattened out of rows and groups.</summary>
     public List<UiButton> Buttons { get; } = [];
 
-    /// <summary>Progress bars declared in the panel.</summary>
+    /// <summary>Gets the progress bars declared in the panel.</summary>
     public List<UiProgressNode> Progresses { get; } = [];
 
-    /// <summary>Status lines declared in the panel.</summary>
+    /// <summary>Gets the status lines declared in the panel.</summary>
     public List<UiStatusNode> Statuses { get; } = [];
 
-    /// <summary>Tables declared in the panel.</summary>
+    /// <summary>Gets the tables declared in the panel.</summary>
     public List<UiTableNode> Tables { get; } = [];
 
+    /// <summary>Gets whether the script declares a panel.</summary>
+    /// <remarks>
+    /// <see langword="true"/> when there is at least one node, a title or a description, or a
+    /// <c>//@ui:required</c>, <c>//@ui:console</c> or <c>//@ui:layout</c> directive.
+    /// </remarks>
     public bool HasUi =>
         Nodes.Count > 0 || Title.Length > 0 || Description.Length > 0 || Required || Console is not null || Layout is not null;
 
@@ -331,6 +434,14 @@ public sealed partial class UiSpec
     [GeneratedRegex(@"(?<k>[A-Za-z_]\w*)")]
     private static partial Regex BareFlagRegex();
 
+    /// <summary>Parses the <c>//@ui:</c> directives in a script into a panel.</summary>
+    /// <remarks>
+    /// Every line that is a <c>//@ui:</c> comment on its own counts, wherever it sits in the file.
+    /// Directive keys are matched case-insensitively, unknown directives are ignored, and a control
+    /// without a usable name is dropped. A row or group left open is closed by the end of the file.
+    /// </remarks>
+    /// <param name="code">The script source.</param>
+    /// <returns>The parsed panel, empty when the script declares none.</returns>
     public static UiSpec Parse(string code)
     {
         var spec = new UiSpec();

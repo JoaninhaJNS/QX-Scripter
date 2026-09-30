@@ -2,9 +2,7 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
-/// <summary>
-/// One entry in the navigator's left pane: a search the hotel offers by name.
-/// </summary>
+/// <summary>Represents a named search the navigator offers in its left pane.</summary>
 /// <remarks>
 /// The same shape serves both the quick links under a category and the searches the user saved,
 /// which is why the identifier is only meaningful for the saved ones.
@@ -19,12 +17,16 @@ public sealed record NavigatorSearch(
     string Filter,
     string Localization) : IParserComposer<NavigatorSearch>
 {
+    /// <summary>Parses the search from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorSearch Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NavigatorSearch ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadString(), p.ReadString(), p.ReadString());
 
+    /// <summary>Composes the search into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -37,14 +39,18 @@ public sealed record NavigatorSearch(
     }
 }
 
-/// <summary>A navigator category, with the searches offered under it.</summary>
+/// <summary>Represents a navigator category with the searches offered under it.</summary>
 /// <param name="SearchCode">The category's code.</param>
 /// <param name="QuickLinks">The searches the hotel offers under it.</param>
 public sealed record NavigatorCategory(string SearchCode, IReadOnlyList<NavigatorSearch> QuickLinks)
     : IParserComposer<NavigatorCategory>
 {
+    /// <summary>Gets the view mode of the category.</summary>
+    /// <remarks>The Flash parser does not read it and composing does not write it, so it is 0 for a parsed category.</remarks>
     public int ViewMode { get; init; }
 
+    /// <summary>Parses the category from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorCategory Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -62,6 +68,8 @@ public sealed record NavigatorCategory(string SearchCode, IReadOnlyList<Navigato
         return new NavigatorCategory(search_code, links);
     }
 
+    /// <summary>Composes the category into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -74,9 +82,7 @@ public sealed record NavigatorCategory(string SearchCode, IReadOnlyList<Navigato
     }
 }
 
-/// <summary>
-/// The navigator's structure: every category the hotel publishes and what sits under each.
-/// </summary>
+/// <summary>Represents the <c>NavigatorMetaData</c> message, received with every navigator category the hotel publishes and the searches under each.</summary>
 /// <remarks>
 /// This is what makes a search code valid. A search sent with a code the hotel does not list here
 /// comes back empty rather than refused, so the categories are worth reading before searching.
@@ -85,6 +91,8 @@ public sealed record NavigatorCategory(string SearchCode, IReadOnlyList<Navigato
 public sealed record NavigatorMetaData(IReadOnlyList<NavigatorCategory> Categories)
     : IParserComposer<NavigatorMetaData>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorMetaData Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -99,6 +107,8 @@ public sealed record NavigatorMetaData(IReadOnlyList<NavigatorCategory> Categori
         return new NavigatorMetaData(categories);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -110,20 +120,24 @@ public sealed record NavigatorMetaData(IReadOnlyList<NavigatorCategory> Categori
     }
 }
 
-/// <summary>A room the hotel is promoting, shown as a tile rather than a list row.</summary>
-/// <param name="RoomId">The room.</param>
-/// <param name="AreaId">Which promoted area it belongs to.</param>
+/// <summary>Represents a room the hotel is promoting, shown as a tile rather than a list row.</summary>
+/// <param name="RoomId">The ID of the room.</param>
+/// <param name="AreaId">The ID of the promoted area the room belongs to.</param>
 /// <param name="Image">The tile's image reference.</param>
 /// <param name="Caption">The tile's caption.</param>
 public sealed record NavigatorLiftedRoom(int RoomId, int AreaId, string Image, string Caption)
     : IParserComposer<NavigatorLiftedRoom>
 {
+    /// <summary>Parses the room from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorLiftedRoom Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NavigatorLiftedRoom ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt(), p.ReadString(), p.ReadString());
 
+    /// <summary>Composes the room into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -136,11 +150,13 @@ public sealed record NavigatorLiftedRoom(int RoomId, int AreaId, string Image, s
     }
 }
 
-/// <summary>The rooms the hotel is currently promoting.</summary>
+/// <summary>Represents the <c>NavigatorLiftedRooms</c> message, received with the rooms the hotel is currently promoting.</summary>
 /// <param name="Rooms">The promoted rooms.</param>
 public sealed record NavigatorLiftedRooms(IReadOnlyList<NavigatorLiftedRoom> Rooms)
     : IParserComposer<NavigatorLiftedRooms>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorLiftedRooms Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -155,6 +171,8 @@ public sealed record NavigatorLiftedRooms(IReadOnlyList<NavigatorLiftedRoom> Roo
         return new NavigatorLiftedRooms(rooms);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -166,11 +184,13 @@ public sealed record NavigatorLiftedRooms(IReadOnlyList<NavigatorLiftedRoom> Roo
     }
 }
 
-/// <summary>The searches the local user has saved.</summary>
+/// <summary>Represents the <c>NavigatorSavedSearches</c> message, received with the searches the user has saved.</summary>
 /// <param name="Searches">The saved searches.</param>
 public sealed record NavigatorSavedSearches(IReadOnlyList<NavigatorSearch> Searches)
     : IParserComposer<NavigatorSavedSearches>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorSavedSearches Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -185,6 +205,8 @@ public sealed record NavigatorSavedSearches(IReadOnlyList<NavigatorSearch> Searc
         return new NavigatorSavedSearches(searches);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -196,15 +218,22 @@ public sealed record NavigatorSavedSearches(IReadOnlyList<NavigatorSearch> Searc
     }
 }
 
+/// <summary>Represents the <c>NavigatorSettings</c> message, received with the user's home room and the room the client should enter.</summary>
+/// <param name="HomeRoomId">The ID of the user's home room, or 0 when none is set.</param>
+/// <param name="RoomIdToEnter">The ID of the room the hotel tells the client to enter.</param>
 public sealed record NavigatorSettings(Id HomeRoomId, Id RoomIdToEnter)
     : IParserComposer<NavigatorSettings>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NavigatorSettings Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NavigatorSettings ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -215,13 +244,13 @@ public sealed record NavigatorSettings(Id HomeRoomId, Id RoomIdToEnter)
     }
 }
 
-/// <summary>How the local user has arranged the navigator window.</summary>
-/// <param name="WindowX">Window position.</param>
-/// <param name="WindowY">Window position.</param>
-/// <param name="WindowWidth">Window size.</param>
-/// <param name="WindowHeight">Window size.</param>
+/// <summary>Represents the <c>NewNavigatorPreferences</c> message, received with how the user has arranged the navigator window.</summary>
+/// <param name="WindowX">The x position of the window.</param>
+/// <param name="WindowY">The y position of the window.</param>
+/// <param name="WindowWidth">The width of the window.</param>
+/// <param name="WindowHeight">The height of the window.</param>
 /// <param name="LeftPaneHidden">Whether the category pane is collapsed away.</param>
-/// <param name="ResultsMode">How results are drawn: list, thumbnails and so on.</param>
+/// <param name="ResultsMode">The mode the results are drawn in, such as a list or thumbnails.</param>
 public sealed record NewNavigatorPreferences(
     int WindowX,
     int WindowY,
@@ -230,12 +259,16 @@ public sealed record NewNavigatorPreferences(
     bool LeftPaneHidden,
     int ResultsMode) : IParserComposer<NewNavigatorPreferences>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NewNavigatorPreferences Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NewNavigatorPreferences ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt(), p.ReadInt(), p.ReadInt(), p.ReadBool(), p.ReadInt());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -250,9 +283,7 @@ public sealed record NewNavigatorPreferences(
     }
 }
 
-/// <summary>
-/// One room category a room owner can file their room under.
-/// </summary>
+/// <summary>Represents a room category a room owner can file their room under.</summary>
 /// <param name="NodeId">The category's identifier, which is what a room's category field holds.</param>
 /// <param name="Name">The category's name.</param>
 /// <param name="Visible">Whether the category is shown at all.</param>
@@ -272,9 +303,12 @@ public sealed record FlatCategory(
     string GlobalCategoryKey,
     bool StaffOnly) : IParserComposer<FlatCategory>
 {
-    /// <summary>Whether a room owner can actually file a room under this category.</summary>
+    /// <summary>Gets whether a room owner can file a room under this category.</summary>
+    /// <remarks>True when the category is visible, not automatic and not staff only.</remarks>
     public bool IsSelectable => Visible && !Automatic && !StaffOnly;
 
+    /// <summary>Parses the category from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FlatCategory Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -282,6 +316,8 @@ public sealed record FlatCategory(
         new(p.ReadInt(), p.ReadString(), p.ReadBool(), p.ReadBool(),
             p.ReadString(), p.ReadString(), p.ReadBool());
 
+    /// <summary>Composes the category into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -297,11 +333,13 @@ public sealed record FlatCategory(
     }
 }
 
-/// <summary>The room categories the hotel publishes.</summary>
+/// <summary>Represents the <c>UserFlatCats</c> message, received with the room categories the hotel publishes.</summary>
 /// <param name="Categories">The categories.</param>
 public sealed record UserFlatCats(IReadOnlyList<FlatCategory> Categories)
     : IParserComposer<UserFlatCats>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static UserFlatCats Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -316,6 +354,8 @@ public sealed record UserFlatCats(IReadOnlyList<FlatCategory> Categories)
         return new UserFlatCats(categories);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -327,11 +367,13 @@ public sealed record UserFlatCats(IReadOnlyList<FlatCategory> Categories)
     }
 }
 
-/// <summary>The navigator categories the local user has collapsed.</summary>
+/// <summary>Represents the <c>CollapsedCategories</c> message, received with the navigator categories the user has collapsed.</summary>
 /// <param name="Categories">The collapsed category codes.</param>
 public sealed record CollapsedCategories(IReadOnlyList<string> Categories)
     : IParserComposer<CollapsedCategories>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CollapsedCategories Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -346,6 +388,8 @@ public sealed record CollapsedCategories(IReadOnlyList<string> Categories)
         return new CollapsedCategories(categories);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

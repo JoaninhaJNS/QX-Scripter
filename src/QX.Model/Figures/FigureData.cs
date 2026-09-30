@@ -5,6 +5,13 @@ using System.Xml.Linq;
 
 namespace Qx.Model.Figures;
 
+/// <summary>
+/// Represents figure data, the palettes and part sets that define which figures avatars can wear.
+/// </summary>
+/// <remarks>
+/// Figure data is read from the hotel's <c>figuredata</c> XML with <see cref="ParseXml"/>.
+/// Lookups by id or part type return <see langword="null"/> for unknown values.
+/// </remarks>
 public sealed class FigureData
 {
     private const int ValidationClubLevel = 2;
@@ -16,10 +23,19 @@ public sealed class FigureData
     private readonly Dictionary<int, FigurePalette> _palettesById;
     private readonly Dictionary<FigurePartType, FigureSetType> _setTypesByType;
 
+    /// <summary>Gets the client format the figure data was read in.</summary>
     public FigureDataFormat Format { get; }
+    /// <summary>Gets the color palettes, in figure data order.</summary>
     public IReadOnlyList<FigurePalette> Palettes => _readOnlyPalettes;
+    /// <summary>Gets the set types, one per figure part type, in figure data order.</summary>
     public IReadOnlyList<FigureSetType> SetTypes => _readOnlySetTypes;
 
+    /// <summary>Initializes a new instance of the <see cref="FigureData"/> class.</summary>
+    /// <param name="format">The client format the figure data was read in.</param>
+    /// <param name="palettes">The color palettes. A later palette replaces an earlier one with the same id in lookups.</param>
+    /// <param name="setTypes">The set types. A later set type replaces an earlier one with the same part type in lookups.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="format"/> is not a defined value.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="palettes"/> or <paramref name="setTypes"/> is <see langword="null"/>.</exception>
     public FigureData(
         FigureDataFormat format,
         IEnumerable<FigurePalette> palettes,
@@ -44,6 +60,17 @@ public sealed class FigureData
             _setTypesByType[setType.Type] = setType;
     }
 
+    /// <summary>Parses figure data from a <c>figuredata</c> XML document.</summary>
+    /// <param name="xml">The XML text. DTDs are rejected and external resources are not resolved.</param>
+    /// <param name="format">The client format of the document.</param>
+    /// <returns>The parsed figure data.</returns>
+    /// <remarks>
+    /// For <see cref="FigureDataFormat.Flash"/>, parts of the same type inside a set are ordered by
+    /// descending index, and every <c>breed</c> value must be numeric.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="xml"/> is <see langword="null"/>.</exception>
+    /// <exception cref="FormatException">Thrown when the root is not <c>figuredata</c>, or a required attribute is missing or invalid.</exception>
+    /// <exception cref="XmlException">Thrown when the text is not well formed XML.</exception>
     public static FigureData ParseXml(string xml, FigureDataFormat format)
     {
         ArgumentNullException.ThrowIfNull(xml);
@@ -81,14 +108,25 @@ public sealed class FigureData
         return new FigureData(format, palettes, setTypes);
     }
 
+    /// <summary>Gets the palette with the specified id.</summary>
+    /// <param name="id">The palette id.</param>
+    /// <returns>The palette, or <see langword="null"/> when no palette has the id.</returns>
     public FigurePalette? GetPalette(int id) => _palettesById.GetValueOrDefault(id);
 
+    /// <summary>Gets the set type for a part type.</summary>
+    /// <param name="type">The part type.</param>
+    /// <returns>The set type, or <see langword="null"/> when the part type is not in the figure data.</returns>
     public FigureSetType? GetSetType(FigurePartType type) => _setTypesByType.GetValueOrDefault(type);
 
-    /// <summary>The palette a part type colours against, following its set type's palette id.</summary>
+    /// <summary>Gets the palette a part type is colored from, following its set type's palette id.</summary>
+    /// <param name="type">The part type.</param>
+    /// <returns>The palette, or <see langword="null"/> when the set type or its palette is unknown.</returns>
     public FigurePalette? GetPalette(FigurePartType type) =>
         GetSetType(type) is { } setType ? GetPalette(setType.PaletteId) : null;
 
+    /// <summary>Gets the part set with the specified id, searching every set type in order.</summary>
+    /// <param name="id">The set id.</param>
+    /// <returns>The first matching set, or <see langword="null"/> when no set type has the id.</returns>
     public FigurePartSet? GetSet(int id)
     {
         foreach (FigureSetType setType in _setTypes)
@@ -101,6 +139,10 @@ public sealed class FigureData
         return null;
     }
 
+    /// <summary>Gets the part set with the specified id and the set type that holds it.</summary>
+    /// <param name="id">The set id.</param>
+    /// <param name="setType">The set type that holds the set, or <see langword="null"/> when no set matches.</param>
+    /// <returns>The first matching set, or <see langword="null"/> when no set type has the id.</returns>
     public FigurePartSet? GetSet(int id, out FigureSetType? setType)
     {
         foreach (FigureSetType candidate in _setTypes)
@@ -117,27 +159,42 @@ public sealed class FigureData
         return null;
     }
 
+    /// <summary>Gets the default set of a part type for a gender.</summary>
+    /// <param name="type">The part type.</param>
+    /// <param name="gender">The gender the set must be valid for.</param>
+    /// <returns>The default set as chosen by <see cref="FigureSetType.GetDefaultSet"/>, or <see langword="null"/> when there is none.</returns>
     public FigurePartSet? GetDefaultSet(FigurePartType type, FigureGender gender) =>
         GetSetType(type)?.GetDefaultSet(gender);
 
-    /// <summary>Whether a part set may be worn by the given gender.</summary>
+    /// <summary>Gets whether a part set may be worn by the given gender.</summary>
+    /// <param name="id">The set id.</param>
+    /// <param name="gender">The gender to check.</param>
+    /// <returns><see langword="true"/> if the set exists and is valid for <paramref name="gender"/>; otherwise, <see langword="false"/>.</returns>
     public bool IsValidSetForGender(int id, FigureGender gender) =>
         GetSet(id)?.IsValidForGender(gender) ?? false;
 
-    /// <summary>The part types a figure must contain for a gender at a club level.</summary>
+    /// <summary>Gets the part types a figure must contain for a gender at a club level.</summary>
+    /// <param name="gender">The gender. Only <see cref="FigureGender.Male"/> and <see cref="FigureGender.Female"/> have mandatory types.</param>
+    /// <param name="club_level">The club level. Any level of 1 or more counts as club, a negative level has no mandatory types.</param>
+    /// <returns>The mandatory part types, in figure data order.</returns>
     public IReadOnlyList<FigurePartType> GetMandatorySetTypes(FigureGender gender, int club_level) =>
         Array.AsReadOnly(_setTypes
             .Where(setType => setType.IsMandatory(gender, club_level))
             .Select(setType => setType.Type)
             .ToArray());
 
-    /// <summary>
-    /// Derives the gender from the part sets the figure selects. Figure strings do not carry a
-    /// gender, so this is only an inference from figure data: it returns
-    /// <see cref="FigureGender.Undefined"/> when no selected set is gendered or when the
-    /// selections contradict each other. The authoritative gender always arrives next to the
+    /// <summary>Infers the gender from the part sets the figure selects.</summary>
+    /// <param name="figure">The figure to inspect.</param>
+    /// <returns>
+    /// The gender of the gendered sets, or <see cref="FigureGender.Undefined"/> when no selected set is
+    /// gendered or when the selections contradict each other.
+    /// </returns>
+    /// <remarks>
+    /// Figure strings do not carry a gender, so the result is only an inference from figure data.
+    /// Unisex and unknown sets are ignored. The authoritative gender always arrives next to the
     /// figure on the wire.
-    /// </summary>
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="figure"/> is <see langword="null"/>.</exception>
     public FigureGender InferGender(Figure figure)
     {
         ArgumentNullException.ThrowIfNull(figure);
@@ -159,10 +216,17 @@ public sealed class FigureData
     }
 
     /// <summary>
-    /// Completes a figure for a gender the way the client repairs a figure before rendering:
-    /// every mandatory part type that is missing or references an unknown set is replaced by
-    /// the default set for that gender using colour zero.
+    /// Completes a figure for a gender the way the client repairs a figure before rendering.
     /// </summary>
+    /// <param name="figure">The figure to complete.</param>
+    /// <param name="gender">The gender the figure is worn as.</param>
+    /// <returns>The completed figure, whether it needed repair, and the part types that were replaced.</returns>
+    /// <remarks>
+    /// The figure is normalized with <see cref="Figure.Normalize"/> first. Every part type that is
+    /// mandatory for the gender with club and is missing or references an unknown set is replaced by
+    /// the default set for that gender with color id 0. Part types without a default set are left as they are.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="figure"/> is <see langword="null"/>.</exception>
     public FigureValidation Validate(Figure figure, FigureGender gender)
     {
         ArgumentNullException.ThrowIfNull(figure);
@@ -190,16 +254,20 @@ public sealed class FigureData
         return new FigureValidation(current, repaired.Count == 0, repaired.AsReadOnly());
     }
 
-    /// <summary>
-    /// The club level required to wear a figure: the highest club level across the selected
-    /// sets and their colours, raised by the club level at which any of
-    /// <paramref name="part_types"/> that the figure omits becomes optional.
-    /// </summary>
+    /// <summary>Gets the club level required to wear a figure.</summary>
+    /// <param name="figure">The figure to inspect.</param>
+    /// <param name="gender">The gender the figure is worn as.</param>
+    /// <param name="part_types">The part types the figure may omit only at a sufficient club level, or <see langword="null"/> to skip that check.</param>
+    /// <returns>The required club level, 0 when no club is needed.</returns>
     /// <remarks>
+    /// The level is the highest club level across the selected sets and their colors, raised by
+    /// the club level at which any of <paramref name="part_types"/> that the figure omits becomes
+    /// optional. Unknown sets, palettes and colors are ignored.
     /// The client passes the part types explicitly, for example the mannequin widget passes
     /// its clothing part types. Its own fallback reads body part ids out of the avatar
     /// geometry, which are not figure data set types, so no fallback is applied here.
     /// </remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="figure"/> is <see langword="null"/>.</exception>
     public int ResolveClubLevel(
         Figure figure,
         FigureGender gender,
@@ -244,6 +312,10 @@ public sealed class FigureData
         return level;
     }
 
+    /// <summary>Resolves every part of a figure to its set type, part set and palette colors.</summary>
+    /// <param name="figure">The figure to resolve.</param>
+    /// <returns>One resolved part per figure part, in figure order. Unknown set types, sets and colors resolve to <see langword="null"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="figure"/> is <see langword="null"/>.</exception>
     public IReadOnlyList<ResolvedFigurePart> Resolve(Figure figure)
     {
         ArgumentNullException.ThrowIfNull(figure);
@@ -273,6 +345,8 @@ public sealed class FigureData
         return Array.AsReadOnly(resolved);
     }
 
+    /// <summary>Serializes the palettes and set types to a <c>figuredata</c> XML string without formatting.</summary>
+    /// <returns>The XML text, which <see cref="ParseXml"/> can read back.</returns>
     public string ToXml()
     {
         XElement colors = new("colors",

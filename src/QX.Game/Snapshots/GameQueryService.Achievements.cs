@@ -4,6 +4,15 @@ namespace Qx.Game.Snapshots;
 
 public sealed partial class GameQueryService
 {
+    /// <summary>Gets the local user's achievements.</summary>
+    /// <remarks>
+    /// The achievements are ordered by category and subcategory case-insensitively, then by identifier.
+    /// With <paramref name="maxItems"/> set to 0 only the counts are returned.
+    /// </remarks>
+    /// <param name="maxItems">The maximum number of achievements to return.</param>
+    /// <returns>The <c>achievements</c> query envelope.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxItems"/> is negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the achievement application returns an invalid or incomplete snapshot.</exception>
     public QueryEnvelope<AchievementCollectionSnapshot> Achievements(int maxItems = 500)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(maxItems);

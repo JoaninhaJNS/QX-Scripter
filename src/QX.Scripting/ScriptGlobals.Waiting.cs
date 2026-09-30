@@ -5,18 +5,25 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// Waits until a condition holds. It is checked at once, again after every change to the room
-    /// state, and at least every <paramref name="pollMs"/> milliseconds for conditions that depend
-    /// on time or on the script's own flags.
+    /// Waits until a condition holds.
     /// </summary>
+    /// <remarks>
+    /// The condition is checked at once, again after every change to the room state, and at
+    /// least every <paramref name="pollMs"/> milliseconds for conditions that depend on time or
+    /// on the script's own flags.
+    /// </remarks>
     /// <param name="condition">
-    /// What to wait for. It runs on whichever thread observed the change, so it should only read
-    /// state. An exception it throws ends the wait and propagates to the caller.
+    /// The condition to wait for. After the first check it runs on a thread pool thread, so it
+    /// should only read state. An exception it throws ends the wait and propagates to the caller.
     /// </param>
-    /// <param name="timeoutMs">How long to wait in milliseconds; -1 waits without a limit.</param>
-    /// <param name="pollMs">The longest gap between two checks, in milliseconds.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds; -1 waits without a limit.</param>
+    /// <param name="pollMs">The longest gap between two checks, in milliseconds. Must be at least 1.</param>
     /// <returns><see langword="true"/> once the condition holds, <see langword="false"/> when the time ran out.</returns>
-    /// <exception cref="OperationCanceledException">The script was stopped while waiting.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="condition"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="timeoutMs"/> is less than -1 or <paramref name="pollMs"/> is less than 1.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while waiting.</exception>
     public async Task<bool> WaitUntil(Func<bool> condition, int timeoutMs = 10000, int pollMs = 50)
     {
         ArgumentNullException.ThrowIfNull(condition);
@@ -43,12 +50,15 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Waits until a room is fully loaded with the own avatar and the furni in it.
+    /// Waits until a room is ready, its floor items are loaded and the local user's avatar is in it.
     /// </summary>
-    /// <param name="roomId">The room to wait for; 0 accepts whichever room is entered.</param>
-    /// <param name="timeoutMs">How long to wait in milliseconds; -1 waits without a limit.</param>
+    /// <remarks>
+    /// The task completes at once when the current room already meets the condition.
+    /// </remarks>
+    /// <param name="roomId">The id of the room to wait for; 0 accepts whichever room is entered.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds; -1 waits without a limit.</param>
     /// <returns><see langword="true"/> once the room is ready, <see langword="false"/> when the time ran out.</returns>
-    /// <exception cref="OperationCanceledException">The script was stopped while waiting.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while waiting.</exception>
     public Task<bool> WaitRoomReady(long roomId = 0, int timeoutMs = 20000) =>
         WaitUntil(
             () => Room.Capture(room =>
@@ -60,8 +70,9 @@ public partial class ScriptGlobals
 
     /// <summary>
     /// Binds to the room the local user is in right now, so later work can tell whether it is
-    /// still the same visit. See <see cref="RoomScope"/>.
+    /// still the same visit.
     /// </summary>
-    /// <exception cref="InvalidOperationException">No room is loaded or the own avatar is not in it.</exception>
+    /// <returns>A <see cref="RoomScope"/> for the current room session and the local user's avatar index.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no room is loaded or the own avatar is not in it.</exception>
     public RoomScope CaptureRoom() => RoomScope.Capture(Room);
 }

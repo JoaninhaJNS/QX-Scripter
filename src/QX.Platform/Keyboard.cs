@@ -1,12 +1,14 @@
 namespace Qx.Platform;
 
-/// <summary>
-/// Reads the physical keyboard system-wide, whichever window has focus. One instance is shared by
-/// everything in the process: key watchers are polled together on one background thread, which
-/// only runs while something is being watched.
-/// </summary>
+/// <summary>Provides system-wide reads of the physical keyboard, whichever window has focus.</summary>
+/// <remarks>
+/// One instance is shared by everything in the process: key watchers are polled together on one
+/// background thread, which only runs while something is being watched. Reading is supported on
+/// Windows, on macOS once Input Monitoring is allowed, and on Linux in an X11 or XWayland session.
+/// </remarks>
 public sealed class Keyboard : IDisposable
 {
+    /// <summary>The interval between two polls of the watched keys, 10 milliseconds.</summary>
     public static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(10);
 
     readonly object _sync = new();
@@ -19,16 +21,26 @@ public sealed class Keyboard : IDisposable
     Keyboard(IKeyReader reader) => _reader = reader;
 
     /// <summary>Opens the keyboard of the system QX runs on.</summary>
+    /// <remarks>
+    /// Does not throw when the system cannot be read. The returned keyboard then reports
+    /// <see cref="IsSupported"/> as <see langword="false"/> and gives the reason in <see cref="Status"/>.
+    /// </remarks>
+    /// <returns>The system keyboard.</returns>
     public static Keyboard Create() => new(KeyReaders.Open());
 
-    /// <summary>A keyboard that never reports a key, with the reason it cannot.</summary>
+    /// <summary>Creates a keyboard that never reports a key, with the reason it cannot.</summary>
+    /// <param name="reason">The reason reported by <see cref="Status"/>.</param>
+    /// <returns>An unsupported keyboard.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="reason"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="reason"/> is <see langword="null"/>.</exception>
     public static Keyboard Unsupported(string reason)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
         return new(new NoKeyReader(reason));
     }
 
-    /// <summary>Whether keys can be read on this system right now.</summary>
+    /// <summary>Gets whether keys can be read on this system right now.</summary>
+    /// <remarks>Becomes <see langword="false"/> for good after a native read fails.</remarks>
     public bool IsSupported
     {
         get
@@ -38,7 +50,8 @@ public sealed class Keyboard : IDisposable
         }
     }
 
-    /// <summary>What the keyboard is read through, or why it cannot be read.</summary>
+    /// <summary>Gets what the keyboard is read through, or why it cannot be read.</summary>
+    /// <remarks>For example <c>Windows</c>, <c>macOS</c> or <c>X11</c>, or a message that explains the failure.</remarks>
     public string Status
     {
         get
@@ -48,7 +61,12 @@ public sealed class Keyboard : IDisposable
         }
     }
 
-    /// <summary>Whether the key is held down at this moment.</summary>
+    /// <summary>Gets whether the key is held down at this moment.</summary>
+    /// <param name="key">The key to check.</param>
+    /// <returns>
+    /// <see langword="true"/> when the key is down; <see langword="false"/> when it is up, reading is not
+    /// supported or the keyboard is disposed.
+    /// </returns>
     public bool IsDown(Key key)
     {
         lock (_sync)
@@ -68,12 +86,18 @@ public sealed class Keyboard : IDisposable
         }
     }
 
-    /// <summary>
-    /// Calls back whenever the key goes down (<see langword="true"/>) or comes back up
-    /// (<see langword="false"/>). A key already held when watching starts is not reported until it
-    /// changes. The callback runs on the keyboard thread.
-    /// </summary>
+    /// <summary>Watches a key and calls back whenever it goes down or comes back up.</summary>
+    /// <remarks>
+    /// The callback receives <see langword="true"/> when the key goes down and <see langword="false"/>
+    /// when it comes back up. A key already held when watching starts is not reported until it changes.
+    /// The callback runs on the keyboard thread and exceptions it throws are ignored. Nothing is reported
+    /// when reading is not supported.
+    /// </remarks>
+    /// <param name="key">The key to watch.</param>
+    /// <param name="changed">The callback that receives the new key state.</param>
     /// <returns>A handle that stops watching when disposed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="changed"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the keyboard is disposed.</exception>
     public IDisposable Watch(Key key, Action<bool> changed)
     {
         ArgumentNullException.ThrowIfNull(changed);
@@ -91,6 +115,8 @@ public sealed class Keyboard : IDisposable
         }
     }
 
+    /// <summary>Stops every watcher and releases the native keyboard resources.</summary>
+    /// <remarks>Waits up to one second for the keyboard thread to finish.</remarks>
     public void Dispose()
     {
         Thread? poller;

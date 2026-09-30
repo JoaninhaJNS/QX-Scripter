@@ -3,8 +3,21 @@ using Qx.Messages;
 
 namespace Qx.Interception.GEarth;
 
+/// <summary>Provides conversion between packets and the raw wire bytes that G-Earth exchanges.</summary>
+/// <remarks>
+/// A raw packet is a big-endian 32-bit length that counts the header and body, a big-endian 16-bit
+/// header and the body.
+/// </remarks>
 public static class EvaWire
 {
+    /// <summary>Parses raw wire bytes into a packet.</summary>
+    /// <param name="raw">The complete raw packet, including its length prefix.</param>
+    /// <param name="client">The client type the packet belongs to.</param>
+    /// <param name="direction">The direction of the packet.</param>
+    /// <returns>A packet with a copy of the body.</returns>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when <paramref name="raw"/> is shorter than six bytes or its declared length does not match.
+    /// </exception>
     public static Packet ToPacket(ReadOnlySpan<byte> raw, ClientType client, Direction direction)
     {
         if (raw.Length < 6)
@@ -20,6 +33,9 @@ public static class EvaWire
         return new Packet(new Header(direction, header), client, new PacketBuffer(body));
     }
 
+    /// <summary>Encodes a packet into raw wire bytes.</summary>
+    /// <param name="packet">The packet to encode.</param>
+    /// <returns>The length prefix, header and body of the packet.</returns>
     public static byte[] FromPacket(IPacket packet)
     {
         ReadOnlySpan<byte> body = packet.Buffer.Span;

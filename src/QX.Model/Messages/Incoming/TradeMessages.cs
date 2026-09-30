@@ -2,8 +2,14 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the <c>TradingItemList</c> message, received with the items both trade participants offer.</summary>
+/// <remarks>The two offers must belong to two distinct users with positive IDs, otherwise parsing and composing throw <see cref="InvalidDataException"/>.</remarks>
+/// <param name="First">The offer of the first participant.</param>
+/// <param name="Second">The offer of the second participant.</param>
 public sealed record TradeOffers(TradeOffer First, TradeOffer Second) : IParserComposer<TradeOffers>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeOffers Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -15,9 +21,14 @@ public sealed record TradeOffers(TradeOffer First, TradeOffer Second) : IParserC
         return value;
     }
 
+    /// <summary>Gets the offer of the specified participant.</summary>
+    /// <param name="user_id">The user ID of the participant.</param>
+    /// <returns>The participant's offer, or <see langword="null"/> when neither offer belongs to the user.</returns>
     public TradeOffer? OfferOf(Id user_id) =>
         First.UserId == user_id ? First : Second.UserId == user_id ? Second : null;
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -42,6 +53,15 @@ public sealed record TradeOffers(TradeOffer First, TradeOffer Second) : IParserC
     }
 }
 
+/// <summary>Represents the <c>TradingOpen</c> message, received when a trade opens.</summary>
+/// <remarks>
+/// The two flags are sent as integers that must be 0 or 1, and the two users must be distinct with
+/// positive IDs, otherwise parsing throws <see cref="InvalidDataException"/>.
+/// </remarks>
+/// <param name="UserId">The user ID of the first participant.</param>
+/// <param name="UserCanTrade">Whether the first participant can trade.</param>
+/// <param name="OtherUserId">The user ID of the second participant.</param>
+/// <param name="OtherUserCanTrade">Whether the second participant can trade.</param>
 public sealed record TradeOpened(
     Id UserId,
     bool UserCanTrade,
@@ -49,6 +69,8 @@ public sealed record TradeOpened(
     bool OtherUserCanTrade) : IParserComposer<TradeOpened>
 {
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeOpened Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -64,6 +86,8 @@ public sealed record TradeOpened(
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -88,8 +112,13 @@ public sealed record TradeOpened(
     }
 }
 
+/// <summary>Represents the <c>TradingAccept</c> message, received when a trade participant accepts the offers or withdraws acceptance.</summary>
+/// <param name="UserId">The user ID of the participant.</param>
+/// <param name="Accepted">Whether the participant accepted, sent as an integer where any value above 0 reads as <see langword="true"/>.</param>
 public sealed record TradeAccepted(Id UserId, bool Accepted) : IParserComposer<TradeAccepted>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeAccepted Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -103,6 +132,8 @@ public sealed record TradeAccepted(Id UserId, bool Accepted) : IParserComposer<T
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -114,8 +145,13 @@ public sealed record TradeAccepted(Id UserId, bool Accepted) : IParserComposer<T
     }
 }
 
+/// <summary>Represents the <c>TradingClose</c> message, received when a participant closes the trade.</summary>
+/// <param name="UserId">The user ID of the participant who closed the trade.</param>
+/// <param name="Reason">The close reason code sent by the hotel.</param>
 public sealed record TradeClosed(Id UserId, int Reason) : IParserComposer<TradeClosed>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeClosed Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -127,6 +163,8 @@ public sealed record TradeClosed(Id UserId, int Reason) : IParserComposer<TradeC
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -138,8 +176,12 @@ public sealed record TradeClosed(Id UserId, int Reason) : IParserComposer<TradeC
     }
 }
 
+/// <summary>Represents the <c>TradingCompleted</c> message, received when a trade is completed.</summary>
+/// <remarks>The message carries no data.</remarks>
 public sealed record TradeCompleted : IParserComposer<TradeCompleted>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeCompleted Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -149,14 +191,20 @@ public sealed record TradeCompleted : IParserComposer<TradeCompleted>
         return new();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(TradeCompleted value, in PacketWriter p) { }
 }
 
+/// <summary>Represents the <c>TradingConfirmation</c> message, received when both participants have accepted and the trade waits for confirmation.</summary>
+/// <remarks>The message carries no data.</remarks>
 public sealed record TradeConfirmation : IParserComposer<TradeConfirmation>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeConfirmation Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -166,14 +214,21 @@ public sealed record TradeConfirmation : IParserComposer<TradeConfirmation>
         return new();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(TradeConfirmation value, in PacketWriter p) { }
 }
 
+/// <summary>Represents the <c>TradeSilverSet</c> message, received with the silver amounts both participants put into the trade.</summary>
+/// <param name="OwnSilver">The user's silver amount, never negative.</param>
+/// <param name="OtherSilver">The other participant's silver amount, never negative.</param>
 public sealed record TradeSilverSet(int OwnSilver, int OtherSilver) : IParserComposer<TradeSilverSet>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeSilverSet Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -185,6 +240,8 @@ public sealed record TradeSilverSet(int OwnSilver, int OtherSilver) : IParserCom
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -202,8 +259,12 @@ public sealed record TradeSilverSet(int OwnSilver, int OtherSilver) : IParserCom
     }
 }
 
+/// <summary>Represents the <c>TradeSilverFee</c> message, received with the silver fee of the trade.</summary>
+/// <param name="SilverFee">The silver fee, never negative.</param>
 public sealed record TradeSilverFee(int SilverFee) : IParserComposer<TradeSilverFee>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeSilverFee Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -215,6 +276,8 @@ public sealed record TradeSilverFee(int SilverFee) : IParserComposer<TradeSilver
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -225,10 +288,21 @@ public sealed record TradeSilverFee(int SilverFee) : IParserComposer<TradeSilver
     }
 }
 
+/// <summary>Represents an NFT asset in a trade offer or in the trade NFT inventory.</summary>
+/// <remarks>The values are passed through as the hotel sent them. The asset ID must be positive, otherwise parsing and composing throw <see cref="InvalidDataException"/>.</remarks>
 public sealed record TradeNftAsset : IParserComposer<TradeNftAsset>
 {
     private IReadOnlyList<int> _figure_set_ids = Array.Empty<int>();
 
+    /// <summary>Initializes a new instance of the <see cref="TradeNftAsset"/> class.</summary>
+    /// <param name="asset_id">The ID of the asset.</param>
+    /// <param name="product_type_id">The product type ID of the asset.</param>
+    /// <param name="item_type_id">The item type ID of the asset.</param>
+    /// <param name="score">The score of the asset.</param>
+    /// <param name="pet_figure_string">The pet figure string of the asset.</param>
+    /// <param name="figure_set_ids">The figure set IDs of the asset.</param>
+    /// <param name="product_code">The product code of the asset.</param>
+    /// <param name="rarity">The rarity of the asset.</param>
     public TradeNftAsset(
         long asset_id,
         short product_type_id,
@@ -249,26 +323,36 @@ public sealed record TradeNftAsset : IParserComposer<TradeNftAsset>
         Rarity = rarity;
     }
 
+    /// <summary>Gets the ID of the asset, sent as a 64 bit integer.</summary>
     public long AssetId { get; init; }
 
+    /// <summary>Gets the product type ID of the asset, sent as a 16 bit integer.</summary>
     public short ProductTypeId { get; init; }
 
+    /// <summary>Gets the item type ID of the asset.</summary>
     public string ItemTypeId { get; init; }
 
+    /// <summary>Gets the score of the asset.</summary>
     public int Score { get; init; }
 
+    /// <summary>Gets the pet figure string of the asset.</summary>
     public string PetFigureString { get; init; }
 
+    /// <summary>Gets the figure set IDs of the asset.</summary>
     public IReadOnlyList<int> FigureSetIds
     {
         get => _figure_set_ids;
         init => _figure_set_ids = TradeWire.FreezeValues(value, nameof(FigureSetIds));
     }
 
+    /// <summary>Gets the product code of the asset.</summary>
     public string ProductCode { get; init; }
 
+    /// <summary>Gets the rarity of the asset.</summary>
     public string Rarity { get; init; }
 
+    /// <summary>Parses the asset from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeNftAsset Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -302,6 +386,8 @@ public sealed record TradeNftAsset : IParserComposer<TradeNftAsset>
         return value;
     }
 
+    /// <summary>Composes the asset into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -337,11 +423,16 @@ public sealed record TradeNftAsset : IParserComposer<TradeNftAsset>
     }
 }
 
+/// <summary>Represents the <c>TradeNftAssets</c> message, received with the NFT assets both trade participants offer.</summary>
+/// <remarks>Every asset ID must be positive and unique across both lists, otherwise parsing and composing throw <see cref="InvalidDataException"/>.</remarks>
 public sealed record TradeNftAssets : IParserComposer<TradeNftAssets>
 {
     private IReadOnlyList<TradeNftAsset> _own_assets = Array.Empty<TradeNftAsset>();
     private IReadOnlyList<TradeNftAsset> _other_assets = Array.Empty<TradeNftAsset>();
 
+    /// <summary>Initializes a new instance of the <see cref="TradeNftAssets"/> class.</summary>
+    /// <param name="own_assets">The NFT assets offered by the user.</param>
+    /// <param name="other_assets">The NFT assets offered by the other participant.</param>
     public TradeNftAssets(
         IReadOnlyList<TradeNftAsset> own_assets,
         IReadOnlyList<TradeNftAsset> other_assets)
@@ -350,18 +441,22 @@ public sealed record TradeNftAssets : IParserComposer<TradeNftAssets>
         OtherAssets = other_assets;
     }
 
+    /// <summary>Gets the NFT assets offered by the user.</summary>
     public IReadOnlyList<TradeNftAsset> OwnAssets
     {
         get => _own_assets;
         init => _own_assets = TradeWire.FreezeReferences(value, nameof(OwnAssets));
     }
 
+    /// <summary>Gets the NFT assets offered by the other participant.</summary>
     public IReadOnlyList<TradeNftAsset> OtherAssets
     {
         get => _other_assets;
         init => _other_assets = TradeWire.FreezeReferences(value, nameof(OtherAssets));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeNftAssets Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -389,6 +484,8 @@ public sealed record TradeNftAssets : IParserComposer<TradeNftAssets>
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -425,18 +522,25 @@ public sealed record TradeNftAssets : IParserComposer<TradeNftAssets>
     }
 }
 
+/// <summary>Represents the <c>TradeNftAssetInventory</c> message, received with the NFT assets the user can offer in a trade.</summary>
+/// <remarks>Every asset ID must be positive and unique, otherwise parsing and composing throw <see cref="InvalidDataException"/>.</remarks>
 public sealed record TradeNftAssetInventory : IParserComposer<TradeNftAssetInventory>
 {
     private IReadOnlyList<TradeNftAsset> _assets = Array.Empty<TradeNftAsset>();
 
+    /// <summary>Initializes a new instance of the <see cref="TradeNftAssetInventory"/> class.</summary>
+    /// <param name="assets">The NFT assets the user can offer.</param>
     public TradeNftAssetInventory(IReadOnlyList<TradeNftAsset> assets) => Assets = assets;
 
+    /// <summary>Gets the NFT assets the user can offer.</summary>
     public IReadOnlyList<TradeNftAsset> Assets
     {
         get => _assets;
         init => _assets = TradeWire.FreezeReferences(value, nameof(Assets));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeNftAssetInventory Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -456,6 +560,8 @@ public sealed record TradeNftAssetInventory : IParserComposer<TradeNftAssetInven
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -484,8 +590,13 @@ public sealed record TradeNftAssetInventory : IParserComposer<TradeNftAssetInven
     }
 }
 
+/// <summary>Represents the <c>TradeOpenFailed</c> message, received when the hotel refuses to open a trade.</summary>
+/// <param name="Reason">The failure reason code sent by the hotel.</param>
+/// <param name="OtherUserName">The name of the other user sent by the hotel.</param>
 public sealed record TradeOpenFailed(int Reason, string OtherUserName) : IParserComposer<TradeOpenFailed>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TradeOpenFailed Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -496,6 +607,8 @@ public sealed record TradeOpenFailed(int Reason, string OtherUserName) : IParser
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

@@ -16,34 +16,53 @@ namespace Qx.Scripting;
 /// </content>
 public partial class ScriptGlobals
 {
-    /// <summary>Catalog purchase outcomes and the republish signal.</summary>
+    /// <summary>Gets the catalog manager that holds the page cache and the purchase outcomes.</summary>
     public CatalogManager Catalog => Game.Catalog;
 
-    /// <summary>The most recent purchase outcome, or <see langword="null"/> before the first.</summary>
+    /// <summary>
+    /// Gets the last purchase outcome the server sent in the current session, or
+    /// <see langword="null"/> when no answer has been received.
+    /// </summary>
     public CatalogPurchaseOutcome? LastPurchase => Game.Catalog.LastPurchase;
 
     /// <summary>
-    /// What an offer costs in the activity currency it charges, or zero when it charges none.
+    /// Gets what an offer costs in the activity currency it charges.
     /// </summary>
     /// <param name="offer">The catalog offer.</param>
+    /// <returns>The activity currency price, or zero when the offer charges none.</returns>
     public int ActivityPointPrice(PurchaseOffer offer) => offer.PriceInActivityPoints;
 
     /// <summary>
-    /// The balance the local user holds in the currency a given offer charges.
+    /// Gets the balance the local user holds in the activity currency a given offer charges.
     /// </summary>
     /// <remarks>
-    /// Activity currencies are per type - duckets are type 0 and diamonds type 5 - and an offer
+    /// Activity currencies are per type (duckets are type 0 and diamonds type 5) and an offer
     /// names the type it wants, so the balance has to be looked up per offer rather than read from
     /// one fixed property.
     /// </remarks>
     /// <param name="offer">The catalog offer.</param>
+    /// <returns>
+    /// The balance of that currency type, or zero when the wallet is loaded but holds none of it.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">Thrown when the activity point balances have not been loaded yet.</exception>
     public int ActivityPointBalance(PurchaseOffer offer) => ReadWalletPoint(offer.ActivityPointType);
 
     /// <summary>
-    /// Whether the local user can currently pay for an offer.
+    /// Gets whether the local user can currently pay for an offer.
     /// </summary>
+    /// <remarks>
+    /// Both the credit price and the activity currency price, multiplied by
+    /// <paramref name="quantity"/>, are compared with the wallet. Credits that have not been
+    /// loaded count as zero.
+    /// </remarks>
     /// <param name="offer">The catalog offer.</param>
-    /// <param name="quantity">How many to price, for bundles bought in multiples.</param>
+    /// <param name="quantity">The number of items to price, for bundles bought in multiples.</param>
+    /// <returns>
+    /// <see langword="true"/> when the wallet covers both prices; otherwise, <see langword="false"/>.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="offer"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="quantity"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the activity point balances have not been loaded yet.</exception>
     public bool CanAfford(PurchaseOffer offer, int quantity = 1)
     {
         ArgumentNullException.ThrowIfNull(offer);
@@ -55,17 +74,34 @@ public partial class ScriptGlobals
             WalletPoint(state, offer.ActivityPointType) >= point_price;
     }
 
+    /// <summary>
+    /// Sends a catalog purchase for an offer.
+    /// </summary>
     /// <remarks>
+    /// <para>
     /// The page and offer identifiers come from a catalog page; load one with the catalog request
-    /// helpers first. <paramref name="extraData"/> carries the per-offer selection the hotel expects
-    /// - a pet's name and colour, a badge code, a wallpaper variant - and is empty for a plain
-    /// furni offer.
+    /// helpers first. <paramref name="extraData"/> carries the per-offer selection the hotel
+    /// expects, such as a pet's name and color, a badge code or a wallpaper variant, and is empty
+    /// for a plain furni offer.
+    /// </para>
+    /// <para>
+    /// The task completes once the request is sent and does not wait for the server's answer.
+    /// Observe the answer with <see cref="OnPurchase"/> or <see cref="LastPurchase"/>.
+    /// </para>
     /// </remarks>
     /// <param name="pageId">The catalog page the offer sits on.</param>
     /// <param name="offerId">The offer to buy.</param>
     /// <param name="extraData">The offer's selection data, or empty when it takes none.</param>
-    /// <param name="quantity">How many to buy.</param>
-    /// <param name="timeoutMs">How long to wait for the purchase result, in milliseconds.</param>
+    /// <param name="quantity">The number of items to buy.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds. It is currently not used, because the call does not wait for an answer.</param>
+    /// <returns>
+    /// An outcome with <see cref="CatalogPurchaseStatus.Dispatched"/>, no offer and error code 0.
+    /// </returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="pageId"/> or <paramref name="offerId"/> is negative, <paramref name="quantity"/>
+    /// is zero or negative, or <paramref name="extraData"/> is too long for the wire.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no active hotel session or the catalog state changed before sending.</exception>
     public Task<CatalogPurchaseOutcome> BuyFromCatalog(
         int pageId,
         int offerId,
@@ -74,21 +110,34 @@ public partial class ScriptGlobals
         int timeoutMs = 10000) =>
         DispatchCatalogPurchase(pageId, offerId, extraData, quantity, timeoutMs);
 
+    /// <summary>
+    /// Sends a catalog purchase for an offer, wrapped as a gift for another user.
+    /// </summary>
     /// <remarks>
-    /// The wrapping is part of the purchase, not a later step: box, ribbon and colour are chosen
-    /// here. Not every offer may be gifted - check <c>IsOfferGiftable</c> first, or read
+    /// <para>
+    /// The wrapping is part of the purchase, not a later step: box, ribbon and color are chosen
+    /// here. Not every offer may be gifted; check <c>IsOfferGiftable</c> first, or read
     /// <see cref="PurchaseOffer.Giftable"/> on a loaded offer.
+    /// </para>
+    /// <para>
+    /// The task completes once the request is sent and does not wait for the server's answer.
+    /// </para>
     /// </remarks>
     /// <param name="pageId">The catalog page the offer sits on.</param>
     /// <param name="offerId">The offer to buy.</param>
-    /// <param name="receiverName">Who receives the gift.</param>
-    /// <param name="message">The note that comes with it.</param>
+    /// <param name="receiverName">The name of the user who receives the gift.</param>
+    /// <param name="message">The message sent with the gift.</param>
     /// <param name="extraData">The offer's selection data, or empty when it takes none.</param>
-    /// <param name="boxType">Which box the gift is wrapped in.</param>
-    /// <param name="ribbonType">Which ribbon the box carries.</param>
-    /// <param name="color">The wrapping colour.</param>
-    /// <param name="anonymous">Whether the sender stays hidden.</param>
-    /// <param name="timeoutMs">How long to wait for the purchase result, in milliseconds.</param>
+    /// <param name="boxType">The box the gift is wrapped in.</param>
+    /// <param name="ribbonType">The ribbon the box carries.</param>
+    /// <param name="color">The wrapping color.</param>
+    /// <param name="anonymous"><see langword="true"/> to hide the sender's name; otherwise, <see langword="false"/>.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds. It is currently not used, because the call does not wait for an answer.</param>
+    /// <returns>
+    /// An outcome with <see cref="CatalogPurchaseStatus.Dispatched"/>, no offer and error code 0.
+    /// </returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="receiverName"/> is <see langword="null"/>, empty or white space.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no active hotel session or the catalog state changed before sending.</exception>
     public Task<CatalogPurchaseOutcome> BuyGiftFromCatalog(
         int pageId,
         int offerId,
@@ -147,16 +196,24 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Reads the membership offers the hotel sells, and how much membership the account already
+    /// Requests the membership offers the hotel sells, and how much membership the account already
     /// holds.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Each offer prices in credits and optionally in an activity currency, and carries the expiry
     /// the account would reach if it were bought, which is what makes it worth reading before a
     /// purchase rather than after.
+    /// </para>
+    /// <para>
+    /// The request is sent once without a retry, and the reply is not blocked from the game
+    /// client. All pages of the reply are collected into one result.
+    /// </para>
     /// </remarks>
-    /// <param name="offerType">Which set of offers to list.</param>
-    /// <param name="timeoutMs">Total budget in milliseconds.</param>
+    /// <param name="offerType">The offer set selector sent to the hotel.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds.</param>
+    /// <returns>The offers and the number of membership days the account has left.</returns>
+    /// <exception cref="InvalidDataException">Thrown when the offers changed while the pages were being collected, or a page was inconsistent.</exception>
     public async Task<HabboClubOffers> GetClubOffers(
         int offerType = 1,
         int timeoutMs = 10000)
@@ -281,10 +338,11 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Subscribes to every catalog purchase the hotel answers, including refusals.
+    /// Registers a handler that runs when the hotel answers a catalog purchase, including refusals.
     /// </summary>
-    /// <param name="handler">Receives the outcome.</param>
-    /// <returns>A handle that unsubscribes when disposed; also disposed when the script stops.</returns>
+    /// <param name="handler">The handler to call with the purchase outcome.</param>
+    /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public IDisposable OnPurchase(Action<CatalogPurchaseOutcome> handler)
         => Subscribe(
             handler,
@@ -292,10 +350,16 @@ public partial class ScriptGlobals
             value => Game.Catalog.PurchaseAnswered -= value);
 
     /// <summary>
-    /// Subscribes to the hotel republishing its catalog, which invalidates any page already loaded.
+    /// Registers a handler that runs when the hotel republishes its catalog.
     /// </summary>
-    /// <param name="handler">Receives the new catalog identifier.</param>
-    /// <returns>A handle that unsubscribes when disposed; also disposed when the script stops.</returns>
+    /// <remarks>
+    /// A republish invalidates every catalog page already loaded.
+    /// </remarks>
+    /// <param name="handler">
+    /// The handler to call with the server's message, which says whether the client should
+    /// refresh the catalog at once and carries the new furni data hash, if any.
+    /// </param>
+    /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnCatalogPublished(Action<CatalogPublished> handler)
     {
         return Track(Application.Subscribe<CatalogPublishedEvent>(

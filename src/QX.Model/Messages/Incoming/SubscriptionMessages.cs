@@ -3,6 +3,21 @@ using Qx.Model.Subscriptions;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the <c>ScrSendUserInfo</c> message, received with the user's subscription info for one product.</summary>
+/// <param name="ProductName">The subscription product name, such as <c>habbo_club</c> or <c>builders_club</c>.</param>
+/// <param name="DaysToPeriodEnd">The number of days until the current period ends.</param>
+/// <param name="MemberPeriods">The number of periods the user has been a member.</param>
+/// <param name="PeriodsSubscribedAhead">The number of periods paid in advance.</param>
+/// <param name="ResponseType">The response type code sent by the hotel.</param>
+/// <param name="HasEverBeenMember">Whether the user has ever been a member.</param>
+/// <param name="IsVip">Whether the subscription is a VIP subscription.</param>
+/// <param name="PastClubDays">The number of days of past club membership.</param>
+/// <param name="PastVipDays">The number of days of past VIP membership.</param>
+/// <param name="MinutesUntilExpiration">The number of minutes until the subscription expires.</param>
+/// <param name="MinutesSinceLastModified">
+/// The number of minutes since the subscription was last modified, or <see langword="null"/> when the
+/// packet ends before it.
+/// </param>
 public sealed record ScrSendUserInfo(
     string ProductName,
     int DaysToPeriodEnd,
@@ -16,6 +31,8 @@ public sealed record ScrSendUserInfo(
     int MinutesUntilExpiration,
     int? MinutesSinceLastModified) : IParserComposer<ScrSendUserInfo>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ScrSendUserInfo Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -52,6 +69,8 @@ public sealed record ScrSendUserInfo(
             minutes_since_last_modified);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -77,6 +96,16 @@ public sealed record ScrSendUserInfo(
     }
 }
 
+/// <summary>Represents the <c>ScrSendKickbackInfo</c> message, received with the user's Habbo Club kickback summary.</summary>
+/// <param name="CurrentHcStreak">The length of the current Habbo Club streak.</param>
+/// <param name="FirstSubscriptionDate">The date of the first subscription as sent by the hotel.</param>
+/// <param name="KickbackPercentage">The kickback percentage.</param>
+/// <param name="TotalCreditsMissed">The total credits missed.</param>
+/// <param name="TotalCreditsRewarded">The total credits rewarded.</param>
+/// <param name="TotalCreditsSpent">The total credits spent.</param>
+/// <param name="CreditRewardForStreakBonus">The credit reward for the streak bonus.</param>
+/// <param name="CreditRewardForMonthlySpent">The credit reward for the credits spent this month.</param>
+/// <param name="TimeUntilPayday">The time until the next payday as sent by the hotel.</param>
 public sealed record ScrSendKickbackInfo(
     int CurrentHcStreak,
     string FirstSubscriptionDate,
@@ -88,6 +117,8 @@ public sealed record ScrSendKickbackInfo(
     int CreditRewardForMonthlySpent,
     int TimeUntilPayday) : IParserComposer<ScrSendKickbackInfo>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ScrSendKickbackInfo Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -109,6 +140,8 @@ public sealed record ScrSendKickbackInfo(
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -133,9 +166,13 @@ public sealed record ScrSendKickbackInfo(
     }
 }
 
+/// <summary>Represents the <c>BuildersClubFurniCount</c> message, received with the number of Builders Club furni the user has placed.</summary>
+/// <param name="FurniCount">The number of Builders Club furni placed.</param>
 public sealed record BuildersClubFurniCount(int FurniCount)
     : IParserComposer<BuildersClubFurniCount>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BuildersClubFurniCount Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -148,6 +185,8 @@ public sealed record BuildersClubFurniCount(int FurniCount)
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -157,14 +196,25 @@ public sealed record BuildersClubFurniCount(int FurniCount)
     }
 }
 
+/// <summary>Represents the <c>BuildersClubSubscriptionStatus</c> message, received with the user's Builders Club membership status.</summary>
+/// <param name="SecondsLeft">The number of seconds left in the membership.</param>
+/// <param name="FurniLimit">The number of Builders Club furni the user can place.</param>
+/// <param name="MaxFurniLimit">The maximum Builders Club furni limit.</param>
+/// <param name="SecondsLeftWithGrace">
+/// The number of seconds left including the grace period, or <see langword="null"/> when the packet
+/// ends before it.
+/// </param>
 public sealed record BuildersClubMembershipStatus(
     int SecondsLeft,
     int FurniLimit,
     int MaxFurniLimit,
     int? SecondsLeftWithGrace) : IParserComposer<BuildersClubMembershipStatus>
 {
+    /// <summary>Gets <see cref="SecondsLeftWithGrace"/>, or <see cref="SecondsLeft"/> when it was not sent.</summary>
     public int EffectiveSecondsLeftWithGrace => SecondsLeftWithGrace ?? SecondsLeft;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BuildersClubMembershipStatus Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -184,6 +234,8 @@ public sealed record BuildersClubMembershipStatus(
             seconds_left_with_grace);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -197,12 +249,23 @@ public sealed record BuildersClubMembershipStatus(
     }
 }
 
+/// <summary>Represents the <c>BuildersClubPlacementWarning</c> message, received when the hotel warns about a Builders Club furni placement.</summary>
+/// <remarks>
+/// The packet starts with a type code: 0 is followed by a floor placement and 1 by a wall placement.
+/// Any other code makes parsing throw <see cref="InvalidDataException"/>.
+/// </remarks>
+/// <param name="PageId">The catalog page ID of the placement.</param>
+/// <param name="OfferId">The offer ID of the placement.</param>
+/// <param name="ExtraParam">The extra parameter of the placement.</param>
+/// <param name="Placement">The placement, a <see cref="BuildersClubFloorPlacement"/> or a <see cref="BuildersClubWallPlacement"/>.</param>
 public sealed record BuildersClubPlacementWarning(
     int PageId,
     int OfferId,
     string ExtraParam,
     BuildersClubPlacement Placement) : IParserComposer<BuildersClubPlacementWarning>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BuildersClubPlacementWarning Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -231,6 +294,8 @@ public sealed record BuildersClubPlacementWarning(
             placement);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -283,9 +348,14 @@ public sealed record BuildersClubPlacementWarning(
     }
 }
 
+/// <summary>Represents the outgoing <c>ScrGetUserInfo</c> message, sent to request the user's subscription info for one product.</summary>
+/// <remarks>The hotel answers with <see cref="ScrSendUserInfo"/>.</remarks>
+/// <param name="ProductName">The subscription product name, such as <c>habbo_club</c> or <c>builders_club</c>.</param>
 public sealed record SubscriptionGetUserInfo(string ProductName)
     : IParserComposer<SubscriptionGetUserInfo>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SubscriptionGetUserInfo Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -298,6 +368,8 @@ public sealed record SubscriptionGetUserInfo(string ProductName)
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -308,9 +380,13 @@ public sealed record SubscriptionGetUserInfo(string ProductName)
     }
 }
 
+/// <summary>Represents the outgoing <c>ScrGetKickbackInfo</c> message, sent to request the user's Habbo Club kickback summary.</summary>
+/// <remarks>The message carries no data. The hotel answers with <see cref="ScrSendKickbackInfo"/>.</remarks>
 public sealed record SubscriptionGetKickbackInfo
     : IParserComposer<SubscriptionGetKickbackInfo>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SubscriptionGetKickbackInfo Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -322,15 +398,21 @@ public sealed record SubscriptionGetKickbackInfo
         return new SubscriptionGetKickbackInfo();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(SubscriptionGetKickbackInfo value, in PacketWriter p) { }
 }
 
+/// <summary>Represents the outgoing <c>BuildersClubQueryFurniCount</c> message, sent to request the number of Builders Club furni the user has placed.</summary>
+/// <remarks>The message carries no data. The hotel answers with <see cref="BuildersClubFurniCount"/>.</remarks>
 public sealed record BuildersClubQueryFurniCount
     : IParserComposer<BuildersClubQueryFurniCount>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BuildersClubQueryFurniCount Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -342,6 +424,8 @@ public sealed record BuildersClubQueryFurniCount
         return new BuildersClubQueryFurniCount();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

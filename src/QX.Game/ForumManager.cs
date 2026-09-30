@@ -8,28 +8,61 @@ using System.Collections.ObjectModel;
 
 namespace Qx.Game;
 
+/// <summary>Represents the key of a cached page of the forum list.</summary>
+/// <param name="ListCode">The forum list the page belongs to.</param>
+/// <param name="StartIndex">The index of the first forum on the page.</param>
 public readonly record struct ForumListPageKey(
     ForumListCode ListCode,
     int StartIndex);
 
+/// <summary>Represents the key of a cached page of threads in a forum.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="StartIndex">The index of the first thread on the page.</param>
 public readonly record struct ForumThreadPageKey(
     Id GroupId,
     int StartIndex);
 
+/// <summary>Represents the key of a cached page of messages in a forum thread.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="ThreadId">The id of the thread.</param>
+/// <param name="StartIndex">The index of the first message on the page.</param>
 public readonly record struct ForumMessagePageKey(
     Id GroupId,
     Id ThreadId,
     int StartIndex);
 
+/// <summary>Represents the key of a cached forum thread.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="ThreadId">The id of the thread.</param>
 public readonly record struct ForumThreadKey(
     Id GroupId,
     Id ThreadId);
 
+/// <summary>Represents the key of a cached forum message.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="ThreadId">The id of the thread that contains the message.</param>
+/// <param name="MessageId">The id of the message.</param>
 public readonly record struct ForumMessageKey(
     Id GroupId,
     Id ThreadId,
     Id MessageId);
 
+/// <summary>Represents an immutable snapshot of the forum data received in the current session.</summary>
+/// <param name="ForumPages">The received pages of the forum list, by list and start index.</param>
+/// <param name="KnownForums">The forum summaries by group id, collected from forum list pages and forum details.</param>
+/// <param name="ForumDetails">The received forum details by group id.</param>
+/// <param name="ThreadPages">The received pages of forum threads, by group id and start index.</param>
+/// <param name="KnownThreads">
+/// The forum threads by group and thread id, collected from thread pages and from created and updated threads.
+/// </param>
+/// <param name="MessagePages">The received pages of thread messages, by group id, thread id and start index.</param>
+/// <param name="KnownMessages">
+/// The forum messages by group, thread and message id, collected from message pages and from created and
+/// updated messages.
+/// </param>
+/// <param name="UnreadForumsCount">
+/// The number of forums with unread messages, or <see langword="null"/> if the server has not sent it.
+/// </param>
 public sealed record ForumSnapshot(
     IReadOnlyDictionary<ForumListPageKey, ForumsList> ForumPages,
     IReadOnlyDictionary<Id, ForumSummary> KnownForums,
@@ -40,6 +73,7 @@ public sealed record ForumSnapshot(
     IReadOnlyDictionary<ForumMessageKey, ForumPost> KnownMessages,
     int? UnreadForumsCount)
 {
+    /// <summary>Gets a snapshot that contains no forum data.</summary>
     public static ForumSnapshot Empty { get; } = new(
         EmptyMap<ForumListPageKey, ForumsList>(),
         EmptyMap<Id, ForumSummary>(),
@@ -50,15 +84,30 @@ public sealed record ForumSnapshot(
         EmptyMap<ForumMessageKey, ForumPost>(),
         null);
 
+    /// <summary>Gets the summary of a forum.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <returns>The forum summary, or <see langword="null"/> if it has not been received.</returns>
     public ForumSummary? FindForum(Id group_id) =>
         KnownForums.GetValueOrDefault(group_id);
 
+    /// <summary>Gets the details of a forum.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <returns>The forum details, or <see langword="null"/> if they have not been received.</returns>
     public ForumDetails? FindDetails(Id group_id) =>
         ForumDetails.GetValueOrDefault(group_id);
 
+    /// <summary>Gets a forum thread.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread.</param>
+    /// <returns>The thread, or <see langword="null"/> if it has not been received.</returns>
     public ForumThreadData? FindThread(Id group_id, Id thread_id) =>
         KnownThreads.GetValueOrDefault(new ForumThreadKey(group_id, thread_id));
 
+    /// <summary>Gets a forum message.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread that contains the message.</param>
+    /// <param name="message_id">The id of the message.</param>
+    /// <returns>The message, or <see langword="null"/> if it has not been received.</returns>
     public ForumPost? FindMessage(
         Id group_id,
         Id thread_id,
@@ -66,18 +115,31 @@ public sealed record ForumSnapshot(
         KnownMessages.GetValueOrDefault(
             new ForumMessageKey(group_id, thread_id, message_id));
 
+    /// <summary>Gets a page of the forum list.</summary>
+    /// <param name="list_code">The forum list.</param>
+    /// <param name="start_index">The index of the first forum on the page.</param>
+    /// <returns>The page, or <see langword="null"/> if it has not been received.</returns>
     public ForumsList? FindForumPage(
         ForumListCode list_code,
         int start_index = 0) =>
         ForumPages.GetValueOrDefault(
             new ForumListPageKey(list_code, start_index));
 
+    /// <summary>Gets a page of threads in a forum.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="start_index">The index of the first thread on the page.</param>
+    /// <returns>The page, or <see langword="null"/> if it has not been received.</returns>
     public ForumThreads? FindThreadPage(
         Id group_id,
         int start_index = 0) =>
         ThreadPages.GetValueOrDefault(
             new ForumThreadPageKey(group_id, start_index));
 
+    /// <summary>Gets a page of messages in a forum thread.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread.</param>
+    /// <param name="start_index">The index of the first message on the page.</param>
+    /// <returns>The page, or <see langword="null"/> if it has not been received.</returns>
     public ThreadMessages? FindMessagePage(
         Id group_id,
         Id thread_id,
@@ -91,6 +153,16 @@ public sealed record ForumSnapshot(
             new Dictionary<TKey, TValue>());
 }
 
+/// <summary>Manages the group forum data received in the current session.</summary>
+/// <remarks>
+/// <para>All members are safe to call from any thread.</para>
+/// <para>
+/// Every received forum message is merged into a new immutable <see cref="ForumSnapshot"/>. After each
+/// change the specific event is raised first, then <see cref="SnapshotChanged"/>. Delivery stops when a
+/// newer snapshot is published while listeners are running. The state is cleared when the hotel
+/// connection closes.
+/// </para>
+/// </remarks>
 public sealed class ForumManager : GameStateManager
 {
     private readonly ManagerStateGate _state = new();
@@ -104,20 +176,42 @@ public sealed class ForumManager : GameStateManager
     private ForumSnapshot _snapshot = ForumSnapshot.Empty;
     private int? _unread_forums_count;
 
+    /// <summary>Gets the current snapshot of the forum data.</summary>
     public ForumSnapshot Snapshot => Volatile.Read(ref _snapshot);
     internal long SessionGeneration => CurrentStateGeneration;
     internal Session? Session => CurrentSession;
 
+    /// <summary>Occurs when the forum data changes.</summary>
+    /// <remarks>
+    /// The argument is the new value of <see cref="Snapshot"/>. Raised after the event that describes
+    /// the specific change, including <see cref="ResetCompleted"/>.
+    /// </remarks>
     public event Action<ForumSnapshot>? SnapshotChanged;
+    /// <summary>Occurs when the server sends the details of a forum.</summary>
+    /// <remarks>The argument is the received details. The forum summary they contain is also stored.</remarks>
     public event Action<ForumDetails>? DetailsChanged;
+    /// <summary>Occurs when the server sends a page of the forum list.</summary>
+    /// <remarks>The argument is the received page.</remarks>
     public event Action<ForumsList>? ForumPageReceived;
+    /// <summary>Occurs when the server sends a page of threads in a forum.</summary>
+    /// <remarks>The argument is the received page.</remarks>
     public event Action<ForumThreads>? ThreadPageReceived;
+    /// <summary>Occurs when the server sends a page of messages in a forum thread.</summary>
+    /// <remarks>The argument is the received page.</remarks>
     public event Action<ThreadMessages>? MessagePageReceived;
+    /// <summary>Occurs when the server reports a created or updated forum thread.</summary>
+    /// <remarks>The arguments are the id of the group that owns the forum and the thread.</remarks>
     public event Action<Id, ForumThreadData>? ThreadChanged;
+    /// <summary>Occurs when the server reports a created or updated forum message.</summary>
+    /// <remarks>The arguments are the group id, the thread id and the message.</remarks>
     public event Action<Id, Id, ForumPost>? MessageChanged;
+    /// <summary>Occurs when the server sends the number of forums with unread messages.</summary>
+    /// <remarks>The argument is the received count.</remarks>
     public event Action<int>? UnreadForumsCountChanged;
+    /// <summary>Occurs when the forum data is cleared after the hotel connection closes.</summary>
     public event Action? ResetCompleted;
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         OnIncoming(
@@ -180,26 +274,58 @@ public sealed class ForumManager : GameStateManager
             StoreUnreadForumsCount);
     }
 
+    /// <summary>Gets the summary of a forum from the current snapshot.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <returns>The forum summary, or <see langword="null"/> if it has not been received.</returns>
     public ForumSummary? FindForum(Id group_id) =>
         Snapshot.FindForum(group_id);
 
+    /// <summary>Gets the details of a forum from the current snapshot.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <returns>The forum details, or <see langword="null"/> if they have not been received.</returns>
     public ForumDetails? FindDetails(Id group_id) =>
         Snapshot.FindDetails(group_id);
 
+    /// <summary>Gets a forum thread from the current snapshot.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread.</param>
+    /// <returns>The thread, or <see langword="null"/> if it has not been received.</returns>
     public ForumThreadData? FindThread(Id group_id, Id thread_id) =>
         Snapshot.FindThread(group_id, thread_id);
 
+    /// <summary>Gets a forum message from the current snapshot.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread that contains the message.</param>
+    /// <param name="message_id">The id of the message.</param>
+    /// <returns>The message, or <see langword="null"/> if it has not been received.</returns>
     public ForumPost? FindMessage(
         Id group_id,
         Id thread_id,
         Id message_id) =>
         Snapshot.FindMessage(group_id, thread_id, message_id);
 
+    /// <summary>Requests the details of a forum from the server.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response raises
+    /// <see cref="DetailsChanged"/>.
+    /// </remarks>
     public void RequestStats(Id group_id) =>
         SendMessage(
             MessageContracts.Forums.StatsRequest,
             new GetForumStats(group_id));
 
+    /// <summary>Requests a page of the forum list from the server.</summary>
+    /// <param name="list_code">The forum list to request.</param>
+    /// <param name="start_index">The index of the first forum on the page.</param>
+    /// <param name="max_count">The maximum number of forums on the page.</param>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response raises
+    /// <see cref="ForumPageReceived"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="start_index"/> is negative or <paramref name="max_count"/> is zero or negative.
+    /// </exception>
     public void RequestForums(
         ForumListCode list_code,
         int start_index = 0,
@@ -211,6 +337,17 @@ public sealed class ForumManager : GameStateManager
             new GetForumsList(list_code, start_index, max_count));
     }
 
+    /// <summary>Requests a page of threads in a forum from the server.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="start_index">The index of the first thread on the page.</param>
+    /// <param name="max_count">The maximum number of threads on the page.</param>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response raises
+    /// <see cref="ThreadPageReceived"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="start_index"/> is negative or <paramref name="max_count"/> is zero or negative.
+    /// </exception>
     public void RequestThreads(
         Id group_id,
         int start_index = 0,
@@ -222,6 +359,18 @@ public sealed class ForumManager : GameStateManager
             new GetForumThreads(group_id, start_index, max_count));
     }
 
+    /// <summary>Requests a page of messages in a forum thread from the server.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread.</param>
+    /// <param name="start_index">The index of the first message on the page.</param>
+    /// <param name="max_count">The maximum number of messages on the page.</param>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response raises
+    /// <see cref="MessagePageReceived"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="start_index"/> is negative or <paramref name="max_count"/> is zero or negative.
+    /// </exception>
     public void RequestMessages(
         Id group_id,
         Id thread_id,
@@ -238,16 +387,37 @@ public sealed class ForumManager : GameStateManager
                 max_count));
     }
 
+    /// <summary>Requests a forum thread from the server.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread.</param>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response raises
+    /// <see cref="ThreadChanged"/>.
+    /// </remarks>
     public void RequestThread(Id group_id, Id thread_id) =>
         SendMessage(
             MessageContracts.Forums.ThreadRequest,
             new GetForumThread(group_id, thread_id));
 
+    /// <summary>Requests the number of forums with unread messages from the server.</summary>
+    /// <remarks>
+    /// The request is sent without waiting for a response. The response raises
+    /// <see cref="UnreadForumsCountChanged"/>.
+    /// </remarks>
     public void RequestUnreadForumsCount() =>
         SendMessage(
             MessageContracts.Forums.UnreadCountRequest,
             new GetUnreadForumsCount());
 
+    /// <summary>Posts a message to a forum, creating a new thread when <paramref name="thread_id"/> is 0.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread to reply to, or 0 to create a new thread.</param>
+    /// <param name="subject">The subject of a new thread, or an empty string for a reply.</param>
+    /// <param name="message_text">The text of the message.</param>
+    /// <remarks>The request is sent without waiting for a response.</remarks>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="subject"/> or <paramref name="message_text"/> is <see langword="null"/>.
+    /// </exception>
     public void Post(
         Id group_id,
         Id thread_id,
@@ -265,18 +435,39 @@ public sealed class ForumManager : GameStateManager
                 message_text));
     }
 
+    /// <summary>Creates a new thread in a forum.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="subject">The subject of the thread.</param>
+    /// <param name="message_text">The text of the first message.</param>
+    /// <remarks>The request is sent without waiting for a response.</remarks>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="subject"/> or <paramref name="message_text"/> is <see langword="null"/>.
+    /// </exception>
     public void CreateThread(
         Id group_id,
         string subject,
         string message_text) =>
         Post(group_id, 0, subject, message_text);
 
+    /// <summary>Replies to a forum thread.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread.</param>
+    /// <param name="message_text">The text of the reply.</param>
+    /// <remarks>The request is sent without waiting for a response.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="message_text"/> is <see langword="null"/>.</exception>
     public void Reply(
         Id group_id,
         Id thread_id,
         string message_text) =>
         Post(group_id, thread_id, "", message_text);
 
+    /// <summary>Sets the moderation state of a forum thread.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread.</param>
+    /// <param name="state">
+    /// The moderation state to set, using the values of <see cref="Qx.Model.Forums.ForumThread.State"/>.
+    /// </param>
+    /// <remarks>The request is sent without waiting for a response.</remarks>
     public void ModerateThread(
         Id group_id,
         Id thread_id,
@@ -285,6 +476,12 @@ public sealed class ForumManager : GameStateManager
             MessageContracts.Forums.ThreadModerate,
             new ModerateForumThread(group_id, thread_id, state));
 
+    /// <summary>Sets the moderation state of a forum message.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread that contains the message.</param>
+    /// <param name="message_id">The id of the message.</param>
+    /// <param name="state">The moderation state to set, using the values of <see cref="ForumPost.State"/>.</param>
+    /// <remarks>The request is sent without waiting for a response.</remarks>
     public void ModerateMessage(
         Id group_id,
         Id thread_id,
@@ -298,6 +495,13 @@ public sealed class ForumManager : GameStateManager
                 message_id,
                 state));
 
+    /// <summary>Updates the permission levels of a forum.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="read_level">The permission level required to read the forum.</param>
+    /// <param name="post_message_level">The permission level required to reply to threads.</param>
+    /// <param name="post_thread_level">The permission level required to create threads.</param>
+    /// <param name="moderate_level">The permission level required to moderate the forum.</param>
+    /// <remarks>The request is sent without waiting for a response.</remarks>
     public void UpdateSettings(
         Id group_id,
         int read_level,
@@ -313,6 +517,10 @@ public sealed class ForumManager : GameStateManager
                 post_thread_level,
                 moderate_level));
 
+    /// <summary>Updates the read markers of one or more forums.</summary>
+    /// <param name="markers">The read markers to send. The list is copied before sending.</param>
+    /// <remarks>The request is sent without waiting for a response.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="markers"/> is <see langword="null"/>.</exception>
     public void UpdateReadMarkers(
         IReadOnlyList<ForumReadMarker> markers)
     {
@@ -323,6 +531,12 @@ public sealed class ForumManager : GameStateManager
             new UpdateForumReadMarkers(snapshot));
     }
 
+    /// <summary>Sets whether a forum thread is sticky and whether it is locked.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread.</param>
+    /// <param name="is_sticky">Whether the thread is pinned to the top of the forum.</param>
+    /// <param name="is_locked">Whether the thread is closed to new replies.</param>
+    /// <remarks>The request is sent without waiting for a response.</remarks>
     public void UpdateThread(
         Id group_id,
         Id thread_id,
@@ -336,6 +550,15 @@ public sealed class ForumManager : GameStateManager
                 is_sticky,
                 is_locked));
 
+    /// <summary>Reports a forum thread to the moderators.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread.</param>
+    /// <param name="category_id">The id of the report category.</param>
+    /// <param name="report">The text of the report.</param>
+    /// <param name="first_context">The first context string of the Flash report message.</param>
+    /// <param name="second_context">The second context string of the Flash report message.</param>
+    /// <remarks>The request is sent without waiting for a response.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when a string argument is <see langword="null"/>.</exception>
     public void ReportThread(
         Id group_id,
         Id thread_id,
@@ -358,6 +581,16 @@ public sealed class ForumManager : GameStateManager
                 second_context));
     }
 
+    /// <summary>Reports a forum message to the moderators.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The id of the thread that contains the message.</param>
+    /// <param name="message_id">The id of the message.</param>
+    /// <param name="category_id">The id of the report category.</param>
+    /// <param name="report">The text of the report.</param>
+    /// <param name="first_context">The first context string of the Flash report message.</param>
+    /// <param name="second_context">The second context string of the Flash report message.</param>
+    /// <remarks>The request is sent without waiting for a response.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown when a string argument is <see langword="null"/>.</exception>
     public void ReportMessage(
         Id group_id,
         Id thread_id,
@@ -382,6 +615,7 @@ public sealed class ForumManager : GameStateManager
                 second_context));
     }
 
+    /// <inheritdoc/>
     protected override void Reset()
     {
         ForumSnapshot snapshot = ForumSnapshot.Empty;

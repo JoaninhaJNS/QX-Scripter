@@ -2,13 +2,24 @@ using Qx.Messages;
 
 namespace Qx.Model.Crafting;
 
+/// <summary>Represents a product that a crafting recipe yields.</summary>
+/// <param name="RecipeCode">The recipe code, which names the recipe when requesting its ingredients or crafting it.</param>
+/// <param name="ProductCode">The product code of the crafted item, or <see langword="null"/> when absent. Flash always sends it.</param>
+/// <param name="FurnitureClassName">The furniture class name of the crafted item.</param>
 public sealed record CraftingProduct(
     string RecipeCode,
     string? ProductCode,
     string FurnitureClassName) : IComposer
 {
+    /// <summary>Gets whether <see cref="ProductCode"/> is set.</summary>
     public bool HasProductCode => ProductCode is not null;
 
+    /// <summary>Parses a crafting product from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
+    /// <param name="has_product_code">Whether the product carries a product code. Flash products always do.</param>
+    /// <returns>The parsed product.</returns>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when <paramref name="has_product_code"/> is <see langword="false"/>, or the payload is malformed.</exception>
     public static CraftingProduct Parse(
         in PacketReader p,
         bool has_product_code)
@@ -23,6 +34,10 @@ public sealed record CraftingProduct(
             ref strings);
     }
 
+    /// <summary>Composes the product into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when <see cref="ProductCode"/> is <see langword="null"/>, or a string exceeds the wire limit.</exception>
     public void Compose(in PacketWriter p)
     {
         CraftingWire.RequireSupportedClient(p.Client);
@@ -32,10 +47,15 @@ public sealed record CraftingProduct(
     }
 }
 
+/// <summary>Represents one ingredient of a crafting recipe.</summary>
+/// <param name="Count">The number of items of the ingredient the recipe needs.</param>
+/// <param name="FurnitureClassName">The furniture class name of the ingredient.</param>
 public sealed record CraftingIngredient(
     int Count,
     string FurnitureClassName) : IParserComposer<CraftingIngredient>
 {
+    /// <summary>Parses a crafting ingredient from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CraftingIngredient Parse(in PacketReader p)
     {
         CraftingWire.RequireSupportedClient(p.Client);
@@ -43,6 +63,8 @@ public sealed record CraftingIngredient(
         return CraftingWire.ParseIngredient(in p, 0, ref strings);
     }
 
+    /// <summary>Composes the ingredient into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         CraftingWire.RequireSupportedClient(p.Client);

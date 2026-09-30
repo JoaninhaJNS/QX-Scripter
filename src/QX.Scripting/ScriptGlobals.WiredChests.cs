@@ -17,66 +17,80 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// Raised when a chest reports its coin balance, both on opening and on later updates. The
-    /// update flag distinguishes the initial dump from an incremental change.
+    /// Registers a handler that runs when a chest reports its coin balance, both on opening and on
+    /// later updates.
     /// </summary>
-    /// <param name="handler">Receives the chest id, the coin count and the update flag.</param>
-    /// <returns>
-    /// A handle that removes the handler when disposed. The subscription is also torn down when
-    /// the script stops, so the handle only has to be kept to unsubscribe earlier.
-    /// </returns>
+    /// <remarks>
+    /// The update flag distinguishes the initial balance from an incremental change.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the chest id, the coin count and the update flag.</param>
+    /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnChestCoins(Action<CoinsChestContents> handler) =>
         wired_event(ApplicationMemberIds.WiredChestCoinsReceived, handler);
 
     /// <summary>
-    /// Raised for each fragment of a chest's item contents. A full chest arrives across several
-    /// fragments; use the fragment number and total to know when the dump is complete.
+    /// Registers a handler that runs for each fragment of a chest's item contents.
     /// </summary>
-    /// <param name="handler">Receives one fragment.</param>
+    /// <remarks>
+    /// A full chest arrives across several fragments; use the fragment number and total to know
+    /// when the contents are complete.
+    /// </remarks>
+    /// <param name="handler">The handler to call with one fragment.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnChestItems(Action<WiredChestItemsChunkSnapshot> handler) =>
         wired_event(ApplicationMemberIds.WiredChestItemsChunkReceived, handler);
 
     /// <summary>
-    /// Raised when a chest's contents change incrementally after a deposit or a withdrawal,
-    /// carrying the removed inventory ids and the added storage rows rather than a full dump.
+    /// Registers a handler that runs when a chest's contents change after a deposit or a withdrawal.
     /// </summary>
-    /// <param name="handler">Receives the delta.</param>
+    /// <remarks>
+    /// The update carries the removed inventory ids and the added storage rows rather than the full
+    /// contents.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the change.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnChestItemsUpdated(Action<WiredChestItemsUpdatedSnapshot> handler) =>
         wired_event(ApplicationMemberIds.WiredChestItemsUpdated, handler);
 
-    /// <summary>Raised when the server resolves a chest capacity upgrade.</summary>
+    /// <summary>Registers a handler that runs when the server resolves a chest capacity upgrade.</summary>
     /// <param name="handler">
-    /// Receives the chest id and the result code, where 0 means success.
+    /// The handler to call with the chest id and the result code, where 0 means success.
     /// </param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnChestUpgradeResult(Action<UpgradeChestResult> handler) =>
         wired_event(ApplicationMemberIds.WiredChestUpgradeResult, handler);
 
     /// <summary>
-    /// Raised when the server acknowledges a chest preference change. The carried flag says which
-    /// of the two preference messages it answers: true for the notification preferences, false for
-    /// the general chest preferences.
+    /// Registers a handler that runs when the server acknowledges a chest preference change.
     /// </summary>
-    /// <param name="handler">Receives the chest id and the notification-preferences flag.</param>
+    /// <remarks>
+    /// The carried flag says which of the two preference messages it answers:
+    /// <see langword="true"/> for the notification preferences, <see langword="false"/> for the
+    /// general chest preferences.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the chest id and the notification preferences flag.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnChestPreferencesSaved(Action<ChestPreferencesUpdateSuccess> handler) =>
         wired_event(ApplicationMemberIds.WiredChestPreferencesUpdated, handler);
 
     /// <summary>
-    /// Raised when the server confirms a chest was opened. The coin balance and the item fragments
-    /// follow immediately after.
+    /// Registers a handler that runs when the server confirms a chest was opened.
     /// </summary>
-    /// <param name="handler">Receives the chest id.</param>
+    /// <remarks>
+    /// The coin balance and the item fragments follow immediately after.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the chest id.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnChestOpen(Action<OpenChest> handler) =>
         wired_event(ApplicationMemberIds.WiredChestOpened, handler);
 
     /// <summary>
-    /// Opens a chest and asks for its contents. Returns immediately; the server answers with the
-    /// open confirmation, then the coin balance, then the item fragments.
+    /// Opens a chest and asks for its contents without waiting for them.
     /// </summary>
+    /// <remarks>
+    /// The server answers with the open confirmation, then the coin balance, then the item
+    /// fragments.
+    /// </remarks>
     /// <param name="chestId">The chest's item id.</param>
     public void OpenChest(Id chestId) =>
         wired_send(
@@ -84,8 +98,9 @@ public partial class ScriptGlobals
             new WiredChestRequest(chestId));
 
     /// <summary>
-    /// Closes a chest that was opened. Returns immediately; the server sends no acknowledgement.
+    /// Closes a chest that was opened.
     /// </summary>
+    /// <remarks>The request is sent without waiting; the server sends no acknowledgement.</remarks>
     /// <param name="chestId">The chest's item id.</param>
     public void CloseChest(Id chestId) =>
         wired_send(
@@ -93,12 +108,14 @@ public partial class ScriptGlobals
             new WiredChestRequest(chestId));
 
     /// <summary>
-    /// Locks or unlocks chests in bulk. Returns immediately; the server sends no acknowledgement.
+    /// Locks or unlocks chests in bulk.
     /// </summary>
-    /// <param name="locked">True to lock, false to unlock.</param>
+    /// <remarks>The request is sent without waiting; the server sends no acknowledgement.</remarks>
+    /// <param name="locked"><see langword="true"/> to lock; <see langword="false"/> to unlock.</param>
     /// <param name="applyToAllInRoom">
-    /// False applies to the nearby or selected chests only; true applies to every chest in the
-    /// room, which the game client guards behind a confirmation dialog.
+    /// <see langword="true"/> to apply to every chest in the room, which the game client guards
+    /// behind a confirmation dialog; <see langword="false"/> to apply to the nearby or selected
+    /// chests only.
     /// </param>
     public void LockChests(bool locked, bool applyToAllInRoom = false) =>
         wired_send(
@@ -106,23 +123,29 @@ public partial class ScriptGlobals
             new WiredChestsLockRequest(locked, applyToAllInRoom));
 
     /// <summary>
-    /// Buys extra capacity for a chest. Returns immediately; the outcome arrives as an upgrade
-    /// result.
+    /// Buys extra capacity for a chest.
     /// </summary>
+    /// <remarks>
+    /// The request is sent without waiting; the outcome arrives as an upgrade result, see
+    /// <see cref="OnChestUpgradeResult(Action{UpgradeChestResult})"/>.
+    /// </remarks>
     /// <param name="chestId">The chest's item id.</param>
     /// <param name="upgradeAmount">
-    /// How many capacity steps to buy. The game client sends the selected dropdown index plus one,
-    /// so the smallest upgrade is 1.
+    /// The number of capacity steps to buy. The game client sends the selected dropdown index plus
+    /// one, so the smallest upgrade is 1.
     /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="chestId"/> or <paramref name="upgradeAmount"/> is zero or negative.
+    /// </exception>
     public void UpgradeChest(int chestId, int upgradeAmount) =>
         wired_send(
             ApplicationMemberIds.WiredChestUpgrade,
             new WiredChestUpgradeRequest(chestId, upgradeAmount));
 
     /// <summary>
-    /// Takes everything out of a chest at once. Returns immediately; the change arrives as a
-    /// contents update.
+    /// Takes everything out of a chest at once.
     /// </summary>
+    /// <remarks>The request is sent without waiting; the change arrives as a contents update.</remarks>
     /// <param name="chestId">The chest's item id.</param>
     public void WithdrawAllFromChest(Id chestId) =>
         wired_send(
@@ -130,27 +153,36 @@ public partial class ScriptGlobals
             new WiredChestRequest(chestId));
 
     /// <summary>
-    /// Takes coins out of a chest. Returns immediately; the new balance arrives as a coin-contents
-    /// message with the update flag set.
+    /// Takes coins out of a chest.
     /// </summary>
+    /// <remarks>
+    /// The request is sent without waiting; the new balance arrives as a coin contents message
+    /// with the update flag set.
+    /// </remarks>
     /// <param name="chestId">The chest's item id.</param>
-    /// <param name="coinAmount">How many coins to withdraw.</param>
+    /// <param name="coinAmount">The number of coins to withdraw.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="coinAmount"/> is zero or negative.</exception>
     public void WithdrawCoinsFromChest(Id chestId, int coinAmount) =>
         wired_send(
             ApplicationMemberIds.WiredChestWithdrawCoins,
             new WiredChestCoinsWithdrawRequest(chestId, coinAmount));
 
     /// <summary>
-    /// Takes items of one furni type out of a chest. Returns immediately; the change arrives as a
-    /// contents update.
+    /// Takes items of one furni type out of a chest.
     /// </summary>
+    /// <remarks>The request is sent without waiting; the change arrives as a contents update.</remarks>
     /// <param name="chestId">The chest's item id.</param>
-    /// <param name="isWallItem">Whether the furni type is a wall item rather than a floor item.</param>
-    /// <param name="typeId">The furni type id, shared by every copy of that furni.</param>
-    /// <param name="count">How many copies to withdraw.</param>
-    /// <param name="legacyPosterId">
-    /// The poster variant discriminator, needed only for legacy poster wall items. Empty otherwise.
+    /// <param name="isWallItem">
+    /// <see langword="true"/> when the furni type is a wall item; <see langword="false"/> for a
+    /// floor item.
     /// </param>
+    /// <param name="typeId">The furni type id, shared by every copy of that furni.</param>
+    /// <param name="count">The number of copies to withdraw.</param>
+    /// <param name="legacyPosterId">
+    /// The poster variant discriminator, needed only for legacy poster wall items and empty
+    /// otherwise.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="count"/> is zero or negative.</exception>
     public void WithdrawItemsFromChest(Id chestId, bool isWallItem, int typeId, int count, string legacyPosterId = "") =>
         wired_send(
             ApplicationMemberIds.WiredChestWithdrawItems,
@@ -160,9 +192,14 @@ public partial class ScriptGlobals
                 count));
 
     /// <summary>
-    /// Puts the client into "adding to this chest" mode, which is what the game client sends
-    /// before items are dropped in. Returns immediately; deposits then arrive as contents updates.
+    /// Starts adding items to a chest, which is what the game client sends before items are put in.
     /// </summary>
+    /// <remarks>
+    /// The request is sent without waiting. The server answers by starting a wired trade with the
+    /// chest; offer items with <see cref="WiredTradeAddItems(IReadOnlyList{Id})"/> and confirm with
+    /// <see cref="WiredTradeConfirm(bool)"/>. <see cref="DepositToChest(Id, IEnumerable{Id}, int)"/>
+    /// runs the whole exchange.
+    /// </remarks>
     /// <param name="chestId">The chest's item id.</param>
     public void StartAddingToChest(Id chestId) =>
         wired_send(
@@ -170,13 +207,17 @@ public partial class ScriptGlobals
             new WiredChestRequest(chestId));
 
     /// <summary>
-    /// Sets a chest's lock and capacity options. All three values travel together, so pass the
-    /// current value for anything that should stay as it is. Returns immediately.
+    /// Sets a chest's lock and capacity options.
     /// </summary>
+    /// <remarks>
+    /// All three values travel together, so pass the current value for anything that should stay as
+    /// it is. The request is sent without waiting.
+    /// </remarks>
     /// <param name="chestId">The chest's item id.</param>
-    /// <param name="locked">Whether the chest is locked.</param>
-    /// <param name="autoLock">Whether the chest re-locks itself.</param>
+    /// <param name="locked"><see langword="true"/> to lock the chest; otherwise, <see langword="false"/>.</param>
+    /// <param name="autoLock"><see langword="true"/> to have the chest lock itself again; otherwise, <see langword="false"/>.</param>
     /// <param name="capacity">The chest's item capacity.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="capacity"/> is negative.</exception>
     public void SetChestOptions(Id chestId, bool locked, bool autoLock, int capacity) =>
         wired_send(
             ApplicationMemberIds.WiredChestOptionsSet,
@@ -184,49 +225,59 @@ public partial class ScriptGlobals
                 new SetChestOptions(chestId, locked, autoLock, capacity)));
 
     /// <summary>
-    /// Stores a chest's general preferences: name, description, two display flags, the chest state
-    /// and, for furni chests, the open state and amount preview. Returns immediately; the server
-    /// acknowledges with a preferences-saved message whose notification flag is false.
+    /// Stores a chest's general preferences.
     /// </summary>
-    /// <param name="preferences">The complete preference set — every field is sent together.</param>
+    /// <remarks>
+    /// The preferences are the name, description, two display flags, the chest state and, for furni
+    /// chests, the open state and amount preview. The request is sent without waiting; the server
+    /// acknowledges with a preferences saved message whose notification flag is
+    /// <see langword="false"/>.
+    /// </remarks>
+    /// <param name="preferences">The complete preference set, since every field is sent together.</param>
     public void SetChestPreferences(SetChestPreferences preferences) =>
         wired_send(
             ApplicationMemberIds.WiredChestPreferencesSet,
             new WiredChestPreferencesSetRequest(preferences));
 
     /// <summary>
-    /// Stores a chest's notification preferences: the notification mode plus the notify and event
-    /// toggles. Returns immediately; the server acknowledges with a preferences-saved message whose
-    /// notification flag is true.
+    /// Stores a chest's notification preferences.
     /// </summary>
-    /// <param name="preferences">The complete preference set — every field is sent together.</param>
+    /// <remarks>
+    /// The preferences are the notification mode plus the notify and event toggles. The request is
+    /// sent without waiting; the server acknowledges with a preferences saved message whose
+    /// notification flag is <see langword="true"/>.
+    /// </remarks>
+    /// <param name="preferences">The complete preference set, since every field is sent together.</param>
     public void SetChestNotificationPreferences(SetChestNotificationPreferences preferences) =>
         wired_send(
             ApplicationMemberIds.WiredChestNotificationPreferencesSet,
             new WiredChestNotificationPreferencesSetRequest(preferences));
 
     /// <summary>
-    /// Raised when a wired transaction completes. The message carries a success type and, for
-    /// reward transactions, the reward contents and text.
+    /// Registers a handler that runs when a wired transaction completes.
     /// </summary>
-    /// <param name="handler">Receives the success notification.</param>
+    /// <remarks>
+    /// The message carries a success type and, for reward transactions, the reward contents and
+    /// text.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the success notification.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnTransactionSuccess(Action<WiredTransactionSuccess> handler) =>
         wired_event(ApplicationMemberIds.WiredTransactionSucceeded, handler);
 
-    /// <summary>Asks for a page of one chest's transaction log.</summary>
+    /// <summary>Requests a page of one chest's transaction log.</summary>
     /// <param name="logListId">
-    /// Which log to read. For a chest log this is the chest's id, echoed back as the page's log
-    /// list id.
+    /// The log to read. For a chest log this is the chest's id, echoed back as the page's log list
+    /// id.
     /// </param>
     /// <param name="page">The one-based page number.</param>
-    /// <param name="pageSize">How many entries per page; the game client uses 50.</param>
-    /// <param name="timeoutMs">How long to wait for the reply, in milliseconds.</param>
+    /// <param name="pageSize">The number of entries per page, from 1 to 250; the game client uses 50.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds.</param>
     /// <returns>
     /// One page of transactions. The room and chest logs share a reply message, distinguished by
     /// its log list type: 0 for a chest log, 1 for a room log.
     /// </returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No reply arrived in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no reply arrived in time.</exception>
     public Task<WiredTransactionLogList> GetChestTransactionLogs(int logListId, int page = 1, int pageSize = 50, int timeoutMs = 10000) =>
         wired_call<WiredTransactionChestLogsRequest, WiredTransactionLogList>(
             ApplicationMemberIds.WiredTransactionChestLogsGet,
@@ -236,160 +287,188 @@ public partial class ScriptGlobals
                 pageSize,
                 timeoutMs));
 
-    /// <summary>Asks for a page of the whole room's transaction log.</summary>
+    /// <summary>Requests a page of the whole room's transaction log.</summary>
     /// <param name="page">The one-based page number.</param>
-    /// <param name="pageSize">How many entries per page; the game client uses 50.</param>
-    /// <param name="timeoutMs">How long to wait for the reply, in milliseconds.</param>
+    /// <param name="pageSize">The number of entries per page, from 1 to 250; the game client uses 50.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds.</param>
     /// <returns>One page of transactions, with a log list type of 1.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No reply arrived in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no reply arrived in time.</exception>
     public Task<WiredTransactionLogList> GetRoomTransactionLogs(int page = 1, int pageSize = 50, int timeoutMs = 10000) =>
         wired_call<WiredTransactionRoomLogsRequest, WiredTransactionLogList>(
             ApplicationMemberIds.WiredTransactionRoomLogsGet,
             new WiredTransactionRoomLogsRequest(page, pageSize, timeoutMs));
 
-    /// <summary>Asks for the full detail of one transaction from a log page.</summary>
+    /// <summary>Requests the full detail of one transaction from a log page.</summary>
     /// <param name="transactionId">
     /// The transaction id from a log entry. It is a 64-bit value on the wire, so do not truncate it.
     /// </param>
-    /// <param name="timeoutMs">How long to wait for the reply, in milliseconds.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds.</param>
     /// <returns>The transaction's details, including the deposited and withdrawn furni counts.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No reply arrived in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no reply arrived in time.</exception>
     public Task<WiredTransactionLogDetails> GetTransactionDetails(long transactionId, int timeoutMs = 10000) =>
         wired_call<WiredTransactionDetailsRequest, WiredTransactionLogDetails>(
             ApplicationMemberIds.WiredTransactionDetailsGet,
             new WiredTransactionDetailsRequest(transactionId, timeoutMs));
 
     /// <summary>
-    /// Raised when the server sends a contract's contents. The shape depends on the contract type:
-    /// 0 payment, 1 trade, 2 reward — only a payment carries the payment mode, receive text and
-    /// layout, and only a reward carries the reward category, dialog flag and reward text.
+    /// Registers a handler that runs when the server sends a contract's contents.
     /// </summary>
-    /// <param name="handler">Receives the contract.</param>
+    /// <remarks>
+    /// The shape depends on the contract type, which is 0 for payment, 1 for trade and 2 for
+    /// reward. Only a payment carries the payment mode, receive text and layout, and only a reward
+    /// carries the reward category, dialog flag and reward text.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the contract.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnContractContents(Action<WiredContractContents> handler) =>
         wired_event(ApplicationMemberIds.WiredContractContentsReceived, handler);
 
     /// <summary>
-    /// Raised when the server asks the client to open a contract editor, carrying only the
-    /// contract id.
+    /// Registers a handler that runs when the server asks the client to open a contract editor.
     /// </summary>
-    /// <param name="handler">Receives the contract id.</param>
+    /// <param name="handler">The handler to call with the message, which carries only the contract id.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnOpenContract(Action<WiredOpenContract> handler) =>
         wired_event(ApplicationMemberIds.WiredContractOpened, handler);
 
     /// <summary>
-    /// Saves a contract and waits for the server's verdict. The whole contract is replaced, so
-    /// start from the contents the server sent rather than building a partial update.
+    /// Saves a contract and waits for the server's verdict.
     /// </summary>
+    /// <remarks>
+    /// The whole contract is replaced, so start from the contents the server sent rather than
+    /// building a partial update.
+    /// </remarks>
     /// <param name="contract">The complete new contract, including its type-specific fields.</param>
-    /// <param name="timeoutMs">How long to wait for the reply, in milliseconds.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds.</param>
     /// <returns>
     /// The result: the contract id, whether it was accepted, and a failure code string when it
     /// was not.
     /// </returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">No reply arrived in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no reply arrived in time.</exception>
     public Task<WiredContractUpdateResult> UpdateContract(WiredContractContents contract, int timeoutMs = 10000) =>
         wired_call<WiredContractUpdateRequest, WiredContractUpdateResult>(
             ApplicationMemberIds.WiredContractUpdate,
             new WiredContractUpdateRequest(contract, timeoutMs));
 
     /// <summary>
-    /// Raised when wired starts a trade with the local user, carrying what is being asked for and
-    /// offered, whether the requirements dialog should open at once, whether it replaces a trade
-    /// already in progress, and the timeout in seconds.
+    /// Registers a handler that runs when wired starts a trade with the local user.
     /// </summary>
-    /// <param name="handler">Receives the trade offer.</param>
+    /// <remarks>
+    /// The message carries what is being asked for and offered, whether the requirements dialog
+    /// should open at once, whether it replaces a trade already in progress, and the timeout in
+    /// seconds.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the trade offer.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnWiredTradeInitiate(Action<WiredTradeInitiate> handler) =>
         wired_event(ApplicationMemberIds.WiredTradeInitiated, handler);
 
     /// <summary>
-    /// Raised whenever the items on either side of a wired trade change, carrying both sides'
-    /// contents and whether the trade may currently be confirmed.
+    /// Registers a handler that runs whenever the items on either side of a wired trade change.
     /// </summary>
-    /// <param name="handler">Receives the trade contents.</param>
+    /// <remarks>
+    /// The update carries both sides' contents and whether the trade may currently be confirmed.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the trade contents.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnWiredTradeItems(Action<WiredTradingItemsSnapshot> handler) =>
         wired_event(ApplicationMemberIds.WiredTradeItemsUpdated, handler);
 
     /// <summary>
-    /// Raised when a wired trade is cancelled, carrying only a failure type code that says why.
+    /// Registers a handler that runs when a wired trade is canceled.
     /// </summary>
-    /// <param name="handler">Receives the failure type code.</param>
+    /// <param name="handler">The handler to call with the message, which carries only a failure type code.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnWiredTradeCancelled(Action<WiredTradeCancelled> handler) =>
         wired_event(ApplicationMemberIds.WiredTradeCancelled, handler);
 
     /// <summary>
-    /// Raised when a wired trade completes. The message has no payload — it is a pure signal.
+    /// Registers a handler that runs when a wired trade completes.
     /// </summary>
-    /// <param name="handler">Receives the empty completion message.</param>
+    /// <param name="handler">The handler to call with the completion message, which has no payload.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
     public IDisposable OnWiredTradeCompleted(Action<WiredTradeCompleted> handler) =>
         wired_event(ApplicationMemberIds.WiredTradeCompleted, handler);
 
     /// <summary>
-    /// Adds inventory items to the open wired trade, taking 32-bit ids. Returns immediately; the
-    /// new contents arrive as a trade items update.
+    /// Adds inventory items to the open wired trade, taking 32-bit ids.
     /// </summary>
-    /// <param name="inventory_ids">The inventory item ids to offer.</param>
+    /// <remarks>
+    /// The request is sent without waiting; the new contents arrive as a trade items update.
+    /// </remarks>
+    /// <param name="inventory_ids">The inventory item ids to offer, between 1 and 1000 unique non-zero ids.</param>
     public void WiredTradeAddItems(IReadOnlyList<int> inventory_ids) =>
         WiredTradeAddItems(inventory_ids.Select(value => (Id)(long)value).ToArray());
 
     /// <summary>
-    /// Adds inventory items to the open wired trade, taking ids as long values. Returns immediately.
+    /// Adds inventory items to the open wired trade, taking ids as <see cref="long"/> values.
     /// </summary>
-    /// <param name="inventory_ids">The inventory item ids to offer.</param>
+    /// <remarks>
+    /// The request is sent without waiting; the new contents arrive as a trade items update.
+    /// </remarks>
+    /// <param name="inventory_ids">The inventory item ids to offer, between 1 and 1000 unique non-zero 32-bit ids.</param>
     public void WiredTradeAddItems(IReadOnlyList<long> inventory_ids) =>
         WiredTradeAddItems(inventory_ids.Select(value => (Id)value).ToArray());
 
     /// <summary>
-    /// Adds inventory items to the open wired trade. Returns immediately; the new contents arrive
-    /// as a trade items update.
+    /// Adds inventory items to the open wired trade.
     /// </summary>
-    /// <param name="inventory_ids">The inventory item ids to offer.</param>
+    /// <remarks>
+    /// The request is sent without waiting; the new contents arrive as a trade items update.
+    /// </remarks>
+    /// <param name="inventory_ids">The inventory item ids to offer, between 1 and 1000 unique non-zero 32-bit ids.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the list is empty, too long, or holds an id that is zero or does not fit 32 bits.</exception>
+    /// <exception cref="ArgumentException">Thrown when the list holds the same id twice.</exception>
     public void WiredTradeAddItems(IReadOnlyList<Id> inventory_ids) =>
         wired_send(
             ApplicationMemberIds.WiredTradeItemsAdd,
             new WiredTradeItemsRequest(inventory_ids));
 
     /// <summary>
-    /// Takes inventory items back off the open wired trade, taking 32-bit ids. Returns immediately.
+    /// Takes inventory items back off the open wired trade, taking 32-bit ids.
     /// </summary>
-    /// <param name="inventory_ids">The inventory item ids to withdraw from the offer.</param>
+    /// <remarks>The request is sent without waiting.</remarks>
+    /// <param name="inventory_ids">The inventory item ids to withdraw from the offer, between 1 and 1000 unique non-zero ids.</param>
     public void WiredTradeRemoveItems(IReadOnlyList<int> inventory_ids) =>
         WiredTradeRemoveItems(inventory_ids.Select(value => (Id)(long)value).ToArray());
 
     /// <summary>
-    /// Takes inventory items back off the open wired trade, taking ids as long values. Returns immediately.
+    /// Takes inventory items back off the open wired trade, taking ids as <see cref="long"/> values.
     /// </summary>
-    /// <param name="inventory_ids">The inventory item ids to withdraw from the offer.</param>
+    /// <remarks>The request is sent without waiting.</remarks>
+    /// <param name="inventory_ids">The inventory item ids to withdraw from the offer, between 1 and 1000 unique non-zero 32-bit ids.</param>
     public void WiredTradeRemoveItems(IReadOnlyList<long> inventory_ids) =>
         WiredTradeRemoveItems(inventory_ids.Select(value => (Id)value).ToArray());
 
     /// <summary>
-    /// Takes inventory items back off the open wired trade. The add and remove paths share one
-    /// wire message, distinguished by a leading flag. Returns immediately.
+    /// Takes inventory items back off the open wired trade.
     /// </summary>
-    /// <param name="inventory_ids">The inventory item ids to withdraw from the offer.</param>
+    /// <remarks>
+    /// The add and remove paths share one wire message, distinguished by a leading flag. The
+    /// request is sent without waiting.
+    /// </remarks>
+    /// <param name="inventory_ids">The inventory item ids to withdraw from the offer, between 1 and 1000 unique non-zero 32-bit ids.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the list is empty, too long, or holds an id that is zero or does not fit 32 bits.</exception>
+    /// <exception cref="ArgumentException">Thrown when the list holds the same id twice.</exception>
     public void WiredTradeRemoveItems(IReadOnlyList<Id> inventory_ids) =>
         wired_send(
             ApplicationMemberIds.WiredTradeItemsRemove,
             new WiredTradeItemsRequest(inventory_ids));
 
     /// <summary>
-    /// The wired chests standing in the room.
+    /// Gets the wired chests standing in the room.
     /// </summary>
     /// <remarks>
-    /// Recognised by furni class: the hotel's chests are the <c>wf_storage</c> family. Whether one
-    /// takes coins or furni is read from its class name too, because nothing in the room data says
-    /// so — only opening a chest reveals which contents message it answers with.
+    /// Chests are recognized by furni class: the hotel's chests are the <c>wf_storage</c> family,
+    /// matched case insensitively. Whether one takes coins or furni is read from its class name too
+    /// (a coin chest contains <c>coin</c>), because nothing in the room data says so. Only opening
+    /// a chest reveals which contents message it answers with.
     /// </remarks>
     /// <param name="coins">
     /// <see langword="null"/> for every chest, <see langword="true"/> for coin chests only,
     /// <see langword="false"/> for furni chests only.
     /// </param>
+    /// <returns>The matching chests, ordered by item id.</returns>
     public IReadOnlyList<FloorItem> Chests(bool? coins = null) =>
     [
         .. Room.FloorItems
@@ -406,28 +485,46 @@ public partial class ScriptGlobals
     ];
 
     /// <summary>
-    /// The first wired chest in the room, or <see langword="null"/> when there is none.
+    /// Gets the first wired chest in the room, in item id order, or <see langword="null"/> when
+    /// there is none.
     /// </summary>
     /// <param name="coins">
     /// <see langword="null"/> for any chest, <see langword="true"/> for a coin chest,
     /// <see langword="false"/> for a furni chest.
     /// </param>
+    /// <returns>The chest, or <see langword="null"/> when the room has no matching chest.</returns>
     public FloorItem? FirstChest(bool? coins = null) => Chests(coins).FirstOrDefault();
 
     /// <summary>
     /// Puts inventory items into a wired chest and waits for the hotel to confirm.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// A deposit is a trade with the chest rather than a single message, which is why the pieces
     /// are named after trades: the chest is opened for adding, the items are offered, and the offer
     /// is confirmed. This drives all three and reports what actually landed, so a script does not
     /// have to sequence them or guess when each step is done.
+    /// </para>
+    /// <para>
+    /// The chest is opened and its contents read first, and the final confirmation follows the
+    /// first one after a pause of 3 seconds, as in the game client. Every step shares
+    /// <paramref name="timeoutMs"/>, so a budget of less than about 3 seconds cannot succeed.
+    /// Deposits are served one at a time. When the call fails or times out while the trade is still
+    /// open, the trade is canceled.
+    /// </para>
     /// </remarks>
     /// <param name="chestId">The chest's room item id.</param>
-    /// <param name="inventoryIds">The inventory item ids to put in.</param>
-    /// <param name="timeoutMs">How long to wait for the deposit to finish, in milliseconds.</param>
-    /// <returns>Whether it went through, and what the chest reported taking.</returns>
-    /// <exception cref="ArgumentException">No items were named.</exception>
+    /// <param name="inventoryIds">The inventory item ids to put in, at most 1000 unique ids.</param>
+    /// <param name="timeoutMs">The total timeout in milliseconds for the whole deposit, from 1 to 120000.</param>
+    /// <returns>
+    /// Whether it went through, and what the chest reported taking. A canceled or refused trade is
+    /// reported through <see cref="ChestDeposit.Success"/> and <see cref="ChestDeposit.Failure"/>
+    /// rather than thrown.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="inventoryIds"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when no items were named, or an id is repeated.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is out of range, or an id is invalid.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when the deposit did not finish in time.</exception>
     public async Task<ChestDeposit> DepositToChest(
         Id chestId,
         IEnumerable<Id> inventoryIds,
@@ -459,11 +556,17 @@ public partial class ScriptGlobals
     /// </summary>
     /// <remarks>
     /// Untradeable items are left out and listed in <see cref="ChestDeposit.Skipped"/>: a chest
-    /// will not take them, and offering one drags the whole exchange down with it.
+    /// will not take them, and offering one drags the whole exchange down with it. When no
+    /// tradeable item is left, nothing is sent and an unsuccessful result is returned. Otherwise
+    /// this runs <see cref="DepositToChest(Id, IEnumerable{Id}, int)"/>, and
+    /// <see cref="ChestDeposit.Requested"/> counts every item named, skipped ones included.
     /// </remarks>
     /// <param name="chest">The chest standing in the room.</param>
     /// <param name="items">The inventory items to put in.</param>
-    /// <param name="timeoutMs">How long to wait for the deposit to finish, in milliseconds.</param>
+    /// <param name="timeoutMs">The total timeout in milliseconds for the whole deposit.</param>
+    /// <returns>Whether it went through, what the chest reported taking, and which items were skipped.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="chest"/> or <paramref name="items"/> is <see langword="null"/>.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when the deposit did not finish in time.</exception>
     public async Task<ChestDeposit> DepositToChest(
         FloorItem chest,
         IEnumerable<InventoryItem> items,
@@ -493,26 +596,34 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Confirms or un-confirms the open wired trade. Returns immediately; the outcome arrives as a
-    /// trade completion or cancellation.
+    /// Confirms or withdraws the confirmation of the open wired trade.
     /// </summary>
-    /// <param name="confirm">True to confirm, false to withdraw a previous confirmation.</param>
+    /// <remarks>
+    /// The request is sent without waiting; the outcome arrives as a trade completion or
+    /// cancellation.
+    /// </remarks>
+    /// <param name="confirm">
+    /// <see langword="true"/> to confirm; <see langword="false"/> to withdraw a previous
+    /// confirmation.
+    /// </param>
     public void WiredTradeConfirm(bool confirm = true) =>
         wired_send(
             ApplicationMemberIds.WiredTradeConfirm,
             new WiredTradeConfirmRequest(confirm));
 
     /// <summary>
-    /// Cancels the open wired trade. Returns immediately; the server answers with a trade
-    /// cancellation.
+    /// Cancels the open wired trade.
     /// </summary>
+    /// <remarks>
+    /// The request is sent without waiting; the server answers with a trade cancellation.
+    /// </remarks>
     public void WiredTradeCancel() =>
         wired_send(
             ApplicationMemberIds.WiredTradeCancel,
             new WiredCommandRequest());
 
     /// <summary>
-    /// How much a wired chest in the room can hold, and how far it can still be upgraded.
+    /// Gets how much a wired chest in the room can hold, and how far it can still be upgraded.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -528,9 +639,14 @@ public partial class ScriptGlobals
     /// </remarks>
     /// <param name="chest">The chest furni, taken from the room's floor items.</param>
     /// <param name="coins">
-    /// <see langword="true"/> for a coin chest, <see langword="false"/> for a furni chest. The two
+    /// <see langword="true"/> for a coin chest; <see langword="false"/> for a furni chest. The two
     /// are configured separately.
     /// </param>
+    /// <returns>
+    /// The chest's capacity, upgrade level and limits, with the price of one upgrade. Configuration
+    /// figures read as 0 until the game data has downloaded.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="chest"/> is <see langword="null"/>.</exception>
     public WiredChestCapacity ChestCapacityOf(FloorItem chest, bool coins)
     {
         ArgumentNullException.ThrowIfNull(chest);
@@ -559,13 +675,18 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// How many capacity upgrades a chest furni has had, read from its stuff data.
+    /// Gets how many capacity upgrades a chest furni has had, read from its stuff data.
     /// </summary>
     /// <remarks>
-    /// Returns zero for a furni that is not a chest, or one whose stuff data has not arrived: the
-    /// client casts the same missing value to zero rather than treating it as unknown.
+    /// The value is the <c>capacity_level</c> entry of the furni's map data. The client casts a
+    /// missing value to zero rather than treating it as unknown, and so does this.
     /// </remarks>
     /// <param name="chest">The chest furni.</param>
+    /// <returns>
+    /// The upgrade level, or 0 for a furni that is not a chest, has no map data, or has no
+    /// parsable <c>capacity_level</c>.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="chest"/> is <see langword="null"/>.</exception>
     public int ChestCapacityLevel(FloorItem chest)
     {
         ArgumentNullException.ThrowIfNull(chest);
@@ -578,14 +699,17 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// What it costs to buy several capacity upgrades for a chest at once.
+    /// Gets what it costs to buy several capacity upgrades for a chest at once.
     /// </summary>
     /// <remarks>
     /// The client offers one upgrade, then every amount up to the ceiling the chest has left, so an
     /// amount beyond <see cref="WiredChestCapacity.UpgradesRemaining"/> is not something it can
-    /// send. Diamonds are activity point type 5.
+    /// send. Diamonds are activity point type 5. Same as
+    /// <see cref="WiredChestUpgradeCost(int)"/>.
     /// </remarks>
-    /// <param name="upgrades">How many upgrades to buy.</param>
+    /// <param name="upgrades">The number of upgrades to buy.</param>
+    /// <returns>The total credit and diamond price of <paramref name="upgrades"/> upgrades.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="upgrades"/> is negative.</exception>
     public (int Credits, int Diamonds) ChestUpgradeCostFor(int upgrades) =>
         WiredChestUpgradeCost(upgrades);
 
@@ -594,17 +718,20 @@ public partial class ScriptGlobals
 }
 
 /// <summary>
-/// What a wired chest holds and how much room it has left to grow, worked out from the chest furni
-/// and the hotel configuration together.
+/// Represents what a wired chest holds and how much room it has left to grow.
 /// </summary>
-/// <param name="Capacity">How much the chest holds now.</param>
-/// <param name="CapacityLevel">How many upgrades it has had.</param>
+/// <remarks>
+/// It is worked out from the chest furni and the hotel configuration together, see
+/// <see cref="ScriptGlobals.ChestCapacityOf(FloorItem, bool)"/>.
+/// </remarks>
+/// <param name="Capacity">The number of items the chest holds now.</param>
+/// <param name="CapacityLevel">The number of upgrades it has had.</param>
 /// <param name="MaxUpgrades">The most upgrades the hotel allows on a chest of this kind.</param>
-/// <param name="UpgradesRemaining">How many more it will accept; zero for a starter chest.</param>
-/// <param name="IsStarterChest">Whether this is a starter chest, which cannot be upgraded.</param>
-/// <param name="CapacityPerUpgrade">How much one upgrade adds.</param>
-/// <param name="UpgradeCostCredits">What one upgrade costs in credits.</param>
-/// <param name="UpgradeCostDiamonds">What one upgrade costs in diamonds.</param>
+/// <param name="UpgradesRemaining">The number of further upgrades it will accept, which is zero for a starter chest.</param>
+/// <param name="IsStarterChest">A value indicating whether this is a starter chest, which cannot be upgraded.</param>
+/// <param name="CapacityPerUpgrade">The capacity one upgrade adds.</param>
+/// <param name="UpgradeCostCredits">The price of one upgrade in credits.</param>
+/// <param name="UpgradeCostDiamonds">The price of one upgrade in diamonds.</param>
 public sealed record WiredChestCapacity(
     int Capacity,
     int CapacityLevel,
@@ -615,20 +742,20 @@ public sealed record WiredChestCapacity(
     int UpgradeCostCredits,
     int UpgradeCostDiamonds)
 {
-    /// <summary>Whether the chest will accept at least one more capacity upgrade.</summary>
+    /// <summary>Gets whether the chest will accept at least one more capacity upgrade.</summary>
     public bool CanUpgrade => UpgradesRemaining > 0;
 }
 
 /// <summary>
-/// What came of putting items into a wired chest.
+/// Represents the outcome of putting items into a wired chest.
 /// </summary>
-/// <param name="Success">Whether the exchange completed.</param>
-/// <param name="Failure">Why it did not, empty when it did.</param>
-/// <param name="Requested">How many items were offered.</param>
+/// <param name="Success">A value indicating whether the exchange completed and the chest reported storing the accepted items.</param>
+/// <param name="Failure">The reason the deposit failed, or an empty string when it succeeded.</param>
+/// <param name="Requested">The number of items named for the deposit.</param>
 /// <param name="Stored">
-/// What the chest reported taking. Can be shorter than <paramref name="Requested"/> when the chest
-/// filled up or refused an item, and can be empty on a chest that reports its contents only when
-/// reopened.
+/// The storage rows the chest reported for the items it took, one per accepted item. It is shorter
+/// than <paramref name="Requested"/> when the offer did not take every item, and empty when the
+/// deposit failed.
 /// </param>
 public sealed record ChestDeposit(
     bool Success,
@@ -636,23 +763,26 @@ public sealed record ChestDeposit(
     int Requested,
     IReadOnlyList<WiredChestStorageSnapshot> Stored)
 {
-    /// <summary>How many items the chest had in the offer when it was confirmed.</summary>
+    /// <summary>Gets the number of requested items the chest had in the offer when it was confirmed.</summary>
     public int Accepted { get; init; }
 
     /// <summary>
-    /// Items that were never offered because a chest will not take them.
+    /// Gets the ids of the items that were never offered because a chest will not take them.
     /// </summary>
     /// <remarks>
-    /// Untradeable furni, which the hotel refuses rather than stores. This is read off the item
-    /// rather than proven from the client, whose own filter lives in the inventory view that
-    /// decides what is clickable, so it is reported here instead of dropped quietly.
+    /// These are untradeable furni, which the hotel refuses rather than stores. This is read off
+    /// the item rather than proven from the client, whose own filter lives in the inventory view
+    /// that decides what is clickable, so it is reported here instead of dropped quietly.
     /// </remarks>
     public IReadOnlyList<Id> Skipped { get; init; } = [];
 
+    /// <summary>Gets the wired state generation the result was taken at.</summary>
+    /// <remarks>The generation changes when the wired state is reset, for example on a room change.</remarks>
     public long Generation { get; init; }
 
+    /// <summary>Gets the wired state revision the result was taken at.</summary>
     public long Revision { get; init; }
 
-    /// <summary>Whether every offered item was reported as taken.</summary>
+    /// <summary>Gets whether the deposit succeeded and the chest stored every requested item.</summary>
     public bool StoredEverything => Success && Stored.Count >= Requested;
 }

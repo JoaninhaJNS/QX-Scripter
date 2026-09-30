@@ -8,30 +8,49 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// The daily tasks: the hotel's short repeatable goals, their progress and their rewards.
+    /// Gets the daily task manager, which tracks the hotel's short repeatable goals, their progress
+    /// and their rewards.
     /// </summary>
     /// <remarks>Flash only. <see cref="DailyTaskManager.IsSupported"/> reports whether it applies.</remarks>
     public DailyTaskManager DailyTasks => Game.DailyTasks;
 
     /// <summary>
-    /// The running daily tasks, fetching them from the hotel on first use.
+    /// Gets the running daily tasks, requesting them from the hotel when they have not been
+    /// loaded yet.
     /// </summary>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <remarks>
+    /// Once the task list is loaded, the cached copy is read without a request.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds for the task list request.</param>
+    /// <returns>The running daily tasks.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the task list changed while it was read.</exception>
     public async Task<IReadOnlyList<DailyTask>> GetDailyTasks(int timeoutMs = 10000) =>
         (await ReadDailyTaskSnapshot(timeoutMs).ConfigureAwait(false)).Tasks;
 
     /// <summary>
-    /// The daily tasks that are finished and still owe a reward.
+    /// Gets the daily tasks that are finished and still owe a reward.
     /// </summary>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <remarks>
+    /// The task list is requested from the hotel only when it has not been loaded yet.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds for the task list request.</param>
+    /// <returns>The claimable daily tasks.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the task list changed while it was read.</exception>
     public async Task<IReadOnlyList<DailyTask>> GetClaimableDailyTasks(int timeoutMs = 10000)
     {
         IReadOnlyList<DailyTask> tasks = await GetDailyTasks(timeoutMs);
         return tasks.Where(task => task.IsClaimable).ToArray();
     }
 
-    /// <summary>Claims the reward for one finished daily task.</summary>
-    /// <param name="taskId">The task to claim.</param>
+    /// <summary>Sends a claim for the reward of one finished daily task.</summary>
+    /// <remarks>
+    /// It returns without waiting for the answer; <see cref="OnDailyTaskClaimed"/> reports the
+    /// claim once the hotel confirms it.
+    /// </remarks>
+    /// <param name="taskId">The id of the task to claim.</param>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the application runtime is not active.</exception>
     public void ClaimDailyTask(long taskId) => Game.DailyTasks.Claim(taskId);
 
     /// <summary>
@@ -39,11 +58,14 @@ public partial class ScriptGlobals
     /// </summary>
     /// <remarks>
     /// The hotel answers each claim with its own update, so this returns as soon as the requests
-    /// are away rather than waiting for the confirmations. Subscribe with
-    /// <see cref="OnDailyTaskClaimed"/> to see them land.
+    /// are sent, one per claimable task, rather than waiting for the confirmations. Subscribe with
+    /// <see cref="OnDailyTaskClaimed"/> to see them land. The task list is requested from the
+    /// hotel first when it has not been loaded yet.
     /// </remarks>
-    /// <param name="timeoutMs">How long to wait for the task list.</param>
-    /// <returns>How many claims were sent.</returns>
+    /// <param name="timeoutMs">The timeout in milliseconds for the task list request.</param>
+    /// <returns>The number of claims that were sent.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, the session changed, or the task list changed while it was read.</exception>
     public async Task<int> ClaimAllDailyTasks(int timeoutMs = 10000)
     {
         DailyTaskReadSnapshot snapshot = await ReadDailyTaskSnapshot(timeoutMs)
@@ -71,16 +93,24 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Asks the hotel to resend the daily task list.
+    /// Sends a request for the hotel to resend the daily task list.
     /// </summary>
+    /// <remarks>
+    /// It returns without waiting for the answer. Only one request is sent per ten seconds; a
+    /// call inside that window sends nothing.
+    /// </remarks>
     /// <returns>
-    /// Whether a request went out. The client allows one per ten seconds and silently drops the
-    /// rest, so this reports false when called again inside that window.
+    /// <see langword="true"/> when a request was sent; otherwise, <see langword="false"/>.
     /// </returns>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
     public bool RefreshDailyTasks() => Game.DailyTasks.Request();
 
-    /// <summary>Runs a callback whenever a daily task's progress or status changes.</summary>
-    /// <param name="handler">Receives the task as it now stands.</param>
+    /// <summary>Registers a handler that runs whenever a daily task's progress or status changes.</summary>
+    /// <remarks>
+    /// No handle is returned, so the handler stays registered until the script stops.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the task as it now stands.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnDailyTaskUpdated(Action<DailyTask> handler)
     {
         _ = Subscribe(
@@ -89,8 +119,13 @@ public partial class ScriptGlobals
             value => Game.DailyTasks.TaskUpdated -= value);
     }
 
-    /// <summary>Runs a callback whenever a daily task becomes claimable.</summary>
-    /// <param name="handler">Receives the finished task.</param>
+    /// <summary>Registers a handler that runs whenever a daily task becomes completed and claimable.</summary>
+    /// <remarks>
+    /// It runs after the <see cref="OnDailyTaskUpdated"/> handlers for the same update. No handle
+    /// is returned, so the handler stays registered until the script stops.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the finished task.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnDailyTaskCompleted(Action<DailyTask> handler)
     {
         _ = Subscribe(
@@ -99,8 +134,13 @@ public partial class ScriptGlobals
             value => Game.DailyTasks.TaskCompleted -= value);
     }
 
-    /// <summary>Runs a callback whenever a daily task's reward is taken.</summary>
-    /// <param name="handler">Receives the claimed task.</param>
+    /// <summary>Registers a handler that runs whenever a daily task's reward is claimed.</summary>
+    /// <remarks>
+    /// It runs after the <see cref="OnDailyTaskUpdated"/> handlers for the same update. No handle
+    /// is returned, so the handler stays registered until the script stops.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the claimed task.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnDailyTaskClaimed(Action<DailyTask> handler)
     {
         _ = Subscribe(

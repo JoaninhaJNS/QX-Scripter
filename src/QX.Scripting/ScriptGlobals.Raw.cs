@@ -7,22 +7,28 @@ using Qx.Protocol;
 namespace Qx.Scripting;
 
 /// <summary>
-/// Resolves message names to wire headers for one direction. Indexing it is the shorthand
-/// behind <c>Out["Move"]</c> and <c>In["Chat"]</c>.
+/// Provides lookup of wire headers by message name for one direction.
 /// </summary>
 /// <remarks>
+/// <para>
+/// Indexing it is the shorthand behind <c>Out["Move"]</c> and <c>In["Chat"]</c>.
+/// </para>
+/// <para>
 /// Resolution goes through the catalog loaded for the active session, so the same name can map
 /// to different header values on different hotels or client builds. Never hard-code a header
 /// number; look it up here, or use the constants on <see cref="Msg"/>.
+/// </para>
 /// </remarks>
+/// <param name="messages">The message manager that resolves names against the active catalog.</param>
+/// <param name="direction">The direction of the messages to resolve.</param>
 public sealed class HeaderIndex(MessageManager messages, Direction direction)
 {
     /// <summary>
-    /// The header the given message name resolves to on the active client.
+    /// Gets the header the given message name resolves to on the active client.
     /// </summary>
     /// <param name="name">The message name as spelled in the catalog.</param>
     /// <exception cref="InvalidOperationException">
-    /// The name is not in the catalog for this direction and client. Unlike an intercept
+    /// Thrown when the name is not in the catalog for this direction and client. Unlike an intercept
     /// registration, which binds nothing and stays silent, a lookup failure is always thrown.
     /// </exception>
     public Header this[string name] =>
@@ -56,107 +62,132 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Header lookup for outgoing (client to server) messages, for example <c>Out["Move"]</c>.
+    /// Gets the header lookup for outgoing (client to server) messages, for example <c>Out["Move"]</c>.
     /// </summary>
     public HeaderIndex Out => _out ??= new HeaderIndex(Ext.Messages, Direction.Out);
 
     /// <summary>
-    /// Header lookup for incoming (server to client) messages, for example <c>In["Chat"]</c>.
+    /// Gets the header lookup for incoming (server to client) messages, for example <c>In["Chat"]</c>.
     /// </summary>
     public HeaderIndex In => _in ??= new HeaderIndex(Ext.Messages, Direction.In);
 
     /// <summary>
-    /// Whether the local user's own account data has been received. Until it is,
-    /// <see cref="UserId"/> is -1 and the other <c>User...</c> properties are empty.
+    /// Gets whether the local user's own account data has been received.
     /// </summary>
+    /// <remarks>
+    /// Until it is, <see cref="UserId"/> is -1 and the other <c>User...</c> properties are empty.
+    /// </remarks>
     public bool IsIdentityLoaded => Profile.Identity is not null;
 
     /// <summary>
-    /// Whether a wallet balance has been observed. <see cref="Credits"/> reads 0 both for a
-    /// genuinely empty wallet and for one that has not been reported yet; this tells the two
-    /// apart.
+    /// Gets whether a credit balance has been observed.
     /// </summary>
+    /// <remarks>
+    /// <see cref="Credits"/> reads 0 both for a genuinely empty wallet and for one that has not
+    /// been reported yet; this tells the two apart.
+    /// </remarks>
     public bool IsCreditsLoaded => ReadWalletState().CreditsLoaded;
 
     /// <summary>
-    /// Whether the complete activity-point balance snapshot has been observed.
+    /// Gets whether the complete activity point balance snapshot has been observed.
     /// </summary>
     public bool IsPointsLoaded => ReadWalletState().PointsLoaded;
 
-    /// <summary>The local user's account id, or -1 before the identity has been received.</summary>
+    /// <summary>Gets the local user's account id, or -1 before the identity has been received.</summary>
     public Id UserId => Profile.Identity?.Id ?? -1;
 
-    /// <summary>The local user's name, or an empty string before the identity has been received.</summary>
+    /// <summary>Gets the local user's name, or an empty string before the identity has been received.</summary>
     public string UserName => Self?.Name ?? "";
 
-    /// <summary>The local user's figure string, or an empty string when not yet known.</summary>
+    /// <summary>Gets the local user's figure string, or an empty string before the identity has been received.</summary>
     public string UserFigure => Self?.Figure ?? "";
 
-    /// <summary>The local user's motto, or an empty string when not yet known.</summary>
+    /// <summary>Gets the local user's motto, or an empty string before the identity has been received.</summary>
     public string UserMotto => Self?.Motto ?? "";
 
     /// <summary>
-    /// The local user's gender, or <see cref="Gender.Unisex"/> when the identity has not been
+    /// Gets the local user's gender, or <see cref="Gender.Unisex"/> when the identity has not been
     /// received.
     /// </summary>
     public Gender UserGender => Self?.Gender ?? Gender.Unisex;
 
     /// <summary>
-    /// The game server host the session is connected to, for example
-    /// <c>"game-de.habbo.com"</c>. Empty before a connection has been observed.
+    /// Gets the game server host the session is connected to, for example <c>"game-de.habbo.com"</c>.
     /// </summary>
+    /// <remarks>Empty before a connection has been observed.</remarks>
     public string Host => Session?.Host ?? "";
 
     /// <summary>
-    /// The website host matching <see cref="Host"/>, for example <c>"www.habbo.de"</c>. Falls
-    /// back to <c>"www.habbo.com"</c> for hosts that are not in the mapping table.
+    /// Gets the website host matching <see cref="Host"/>, for example <c>"www.habbo.de"</c>.
     /// </summary>
+    /// <remarks>
+    /// Falls back to <c>"www.habbo.com"</c> for hosts that are not in the mapping table,
+    /// including the empty host before a connection has been observed.
+    /// </remarks>
     public string WebHost => Qx.Game.GameData.WebHostFor(Host);
 
-    /// <summary>The current room's id, or 0 when the user is not in a room.</summary>
+    /// <summary>Gets the current room's id, or 0 when the user is not in a room.</summary>
     public long RoomId => Room.RoomId;
 
     /// <summary>
-    /// The credit balance last reported by the server. Reads 0 until a wallet update has been
-    /// seen - check <see cref="IsCreditsLoaded"/> before trusting a zero.
+    /// Gets the credit balance last reported by the server.
     /// </summary>
+    /// <remarks>
+    /// Reads 0 until a credit balance has been seen, so check <see cref="IsCreditsLoaded"/>
+    /// before trusting a zero.
+    /// </remarks>
     public int Credits => ReadWalletState().Credits ?? 0;
 
     /// <summary>
-    /// The diamond balance (activity point type 5).
+    /// Gets the diamond balance (activity point type 5).
     /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no diamond balance has been reported and the activity point snapshot has not been loaded.
+    /// </exception>
     public int Diamonds => ReadWalletPoint(WalletPointTypes.Diamonds);
 
     /// <summary>
-    /// The ducket balance (activity point type 0).
+    /// Gets the ducket balance (activity point type 0).
     /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no ducket balance has been reported and the activity point snapshot has not been loaded.
+    /// </exception>
     public int Duckets => ReadWalletPoint(WalletPointTypes.Duckets);
 
     /// <summary>
-    /// The balance of an arbitrary activity-point currency.
+    /// Gets the balance of an activity point currency.
     /// </summary>
+    /// <remarks>
+    /// A currency that is missing from a loaded activity point snapshot reads 0.
+    /// </remarks>
     /// <param name="type">
-    /// The currency type id: 0 duckets, 5 diamonds; hotels define further ids for seasonal
-    /// currencies.
+    /// The currency type id: 0 for duckets, 5 for diamonds; hotels define further ids for
+    /// seasonal currencies.
     /// </param>
     /// <returns>The reported balance.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no balance for <paramref name="type"/> has been reported and the activity point snapshot
+    /// has not been loaded.
+    /// </exception>
     public int Points(int type) => ReadWalletPoint(type);
 
     /// <summary>
-    /// Whether the script is still allowed to run. Turns <see langword="false"/> as soon as the
-    /// script is asked to stop, which makes it the idiomatic loop condition:
-    /// <c>while (Run) { ... }</c>.
+    /// Gets whether the script is still allowed to run.
     /// </summary>
+    /// <remarks>
+    /// Turns <see langword="false"/> as soon as the script is asked to stop, which makes it the
+    /// idiomatic loop condition: <c>while (Run) { ... }</c>.
+    /// </remarks>
     public bool Run => !Ct.IsCancellationRequested;
 
     /// <summary>
     /// Blocks the calling thread for the given number of milliseconds, waking early if the
     /// script is stopped.
     /// </summary>
-    /// <param name="milliseconds">How long to sleep.</param>
-    /// <exception cref="OperationCanceledException">The script was stopped while sleeping.</exception>
+    /// <param name="milliseconds">The time to sleep, in milliseconds.</param>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while sleeping.</exception>
     /// <remarks>
-    /// This blocks a thread. Prefer <see cref="Delay(int)"/> inside async code; use this one in
+    /// It blocks a thread. Prefer <see cref="Delay(int)"/> inside async code; use <c>Sleep</c> in
     /// straight-line script bodies.
     /// </remarks>
     public void Sleep(int milliseconds)
@@ -168,13 +199,28 @@ public partial class ScriptGlobals
     /// <summary>
     /// Blocks the calling thread for the given interval, waking early if the script is stopped.
     /// </summary>
-    /// <exception cref="OperationCanceledException">The script was stopped while sleeping.</exception>
+    /// <param name="timeout">The time to sleep.</param>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while sleeping.</exception>
     public void Sleep(TimeSpan timeout)
     {
         if (Ct.WaitHandle.WaitOne(timeout))
             Ct.ThrowIfCancellationRequested();
     }
 
+    /// <summary>
+    /// Sends a packet with the given header and values in the direction of the header.
+    /// </summary>
+    /// <remarks>
+    /// Values are written in order: <see cref="int"/>, <see cref="string"/>, <see cref="bool"/>,
+    /// <see cref="short"/>, <see cref="long"/>, <see cref="byte"/>, <see cref="float"/>,
+    /// <see cref="double"/>, <see cref="char"/> (as a string), <see cref="Id"/>,
+    /// <see cref="Length"/> and <see cref="IComposer"/> are supported. An outgoing header goes to
+    /// the server, an incoming header to the game client.
+    /// </remarks>
+    /// <param name="header">The header of the message, usually looked up through <see cref="Out"/> or <see cref="In"/>.</param>
+    /// <param name="values">The values to write into the packet body.</param>
+    /// <exception cref="ArgumentException">Thrown when a value has an unsupported type.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no connection is active, or the session changed before the packet could be sent.</exception>
     public void Send(Header header, params object[] values)
     {
         using var packet = new Packet(header, CurrentClient);
@@ -183,15 +229,19 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Runs an action on a background thread, without waiting for it. Use it for a loop that
-    /// should keep going while the main script body does something else.
+    /// Runs an action on a background thread, without waiting for it.
     /// </summary>
-    /// <param name="action">The work to run. It is cancelled together with the script.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
+    /// <param name="action">The work to run. It is canceled together with the script.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="action"/> is <see langword="null"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// Use it for a loop that should keep going while the main script body does something else.
+    /// </para>
+    /// <para>
     /// The task is observed: an exception escaping it is reported as a script error and stops
-    /// the run, rather than being swallowed. Cancellation and <see cref="Finish"/> are treated
-    /// as a normal end.
+    /// the run, rather than being swallowed. Cancellation is treated as a normal end, and
+    /// <see cref="Finish"/> inside the task ends the whole run normally.
+    /// </para>
     /// </remarks>
     public void RunTask(Action action)
     {
@@ -202,11 +252,12 @@ public partial class ScriptGlobals
     /// <summary>
     /// Runs an asynchronous operation in the background, without waiting for it.
     /// </summary>
-    /// <param name="action">The work to run. It is cancelled together with the script.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
+    /// <param name="action">The work to run. It is canceled together with the script.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="action"/> is <see langword="null"/>.</exception>
     /// <remarks>
     /// The task is observed: an exception escaping it is reported as a script error and stops
-    /// the run.
+    /// the run. Cancellation is treated as a normal end, and <see cref="Finish"/> inside the
+    /// task ends the whole run normally.
     /// </remarks>
     public void RunTask(Func<Task> action)
     {
@@ -264,35 +315,44 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Waits forever, until the script is stopped. Use it at the end of an event-driven script
-    /// so the run stays alive while its handlers do the work.
+    /// Waits until the script is stopped.
     /// </summary>
-    /// <exception cref="OperationCanceledException">The script was stopped.</exception>
+    /// <remarks>
+    /// Use it at the end of an event-driven script so the run stays alive while its handlers do
+    /// the work.
+    /// </remarks>
+    /// <returns>A task that never completes successfully and is canceled when the script stops.</returns>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped.</exception>
     public Task Wait() => Task.Delay(Timeout.Infinite, Ct);
 
     /// <summary>
-    /// Asynchronously waits for the given number of milliseconds. Same as
-    /// <see cref="Delay(int)"/>.
+    /// Asynchronously waits for the given number of milliseconds.
     /// </summary>
-    /// <exception cref="OperationCanceledException">The script was stopped while waiting.</exception>
+    /// <remarks>Same as <see cref="Delay(int)"/>.</remarks>
+    /// <param name="milliseconds">The time to wait, in milliseconds.</param>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while waiting.</exception>
     public Task DelayAsync(int milliseconds) => Task.Delay(milliseconds, Ct);
 
     /// <summary>
-    /// A random integer in the half-open range <c>[min, max)</c>.
+    /// Gets a random integer in the half-open range <c>[min, max)</c>.
     /// </summary>
-    /// <param name="min">Inclusive lower bound.</param>
-    /// <param name="max">Exclusive upper bound.</param>
+    /// <param name="min">The inclusive lower bound.</param>
+    /// <param name="max">The exclusive upper bound.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="min"/> is greater than <paramref name="max"/>.</exception>
     public int Rand(int min, int max) => Random.Shared.Next(min, max);
 
-    /// <summary>A random integer from 0 up to but not including <paramref name="max"/>.</summary>
+    /// <summary>Gets a random integer from 0 up to but not including <paramref name="max"/>.</summary>
+    /// <param name="max">The exclusive upper bound.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="max"/> is negative.</exception>
     public int Rand(int max) => Random.Shared.Next(max);
 
-    /// <summary>A random double in the half-open range <c>[0, 1)</c>.</summary>
+    /// <summary>Gets a random double in the half-open range <c>[0, 1)</c>.</summary>
     public double RandDouble() => Random.Shared.NextDouble();
 
     /// <summary>
-    /// A random element of the sequence.
+    /// Gets a random element of the sequence.
     /// </summary>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="items">
     /// The candidates. A sequence that is not already a list is enumerated once into one.
     /// </param>

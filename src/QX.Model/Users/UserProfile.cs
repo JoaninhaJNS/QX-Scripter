@@ -2,6 +2,15 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
+/// <summary>Represents a group listed on a user's profile.</summary>
+/// <param name="Id">The group identifier.</param>
+/// <param name="Name">The group name.</param>
+/// <param name="BadgeCode">The group's badge code.</param>
+/// <param name="PrimaryColor">The group's primary color as sent by the hotel.</param>
+/// <param name="SecondaryColor">The group's secondary color as sent by the hotel.</param>
+/// <param name="IsFavourite">Whether this is the user's favorite group.</param>
+/// <param name="OwnerId">The identifier of the group's owner.</param>
+/// <param name="HasForum">Whether the group has a forum.</param>
 public sealed record ProfileGroup(
     Id Id,
     string Name,
@@ -12,6 +21,9 @@ public sealed record ProfileGroup(
     Id OwnerId,
     bool HasForum) : IParserComposer<ProfileGroup>
 {
+    /// <summary>Reads a profile group from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
     public static ProfileGroup Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -26,6 +38,10 @@ public sealed record ProfileGroup(
             p.ReadInt(),
             p.ReadBool());
 
+    /// <summary>Writes the profile group to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when an identifier does not fit in 32 bits or a string is too long.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -56,52 +72,89 @@ public sealed record ProfileGroup(
     }
 }
 
+/// <summary>Represents a badge rarity tier and its count on a user's profile.</summary>
+/// <param name="RarityId">The rarity tier identifier.</param>
+/// <param name="Count">The count the hotel reports for the tier.</param>
 public readonly record struct BadgeRarity(byte RarityId, int Count);
 
+/// <summary>Represents a user's extended profile.</summary>
 public sealed class UserProfile : IParserComposer<UserProfile>
 {
     private IReadOnlyList<ProfileGroup> _groups = Array.AsReadOnly(Array.Empty<ProfileGroup>());
     private IReadOnlyList<BadgeRarity> _badge_rarities = Array.AsReadOnly(Array.Empty<BadgeRarity>());
 
+    /// <summary>Gets or sets the user identifier.</summary>
     public Id Id { get; set; }
+    /// <summary>Gets or sets the user's name.</summary>
     public string Name { get; set; } = string.Empty;
+    /// <summary>Gets or sets the user's figure string.</summary>
     public string Figure { get; set; } = string.Empty;
+    /// <summary>Gets or sets the user's motto.</summary>
     public string Motto { get; set; } = string.Empty;
+    /// <summary>Gets or sets the account creation date as the hotel formats it.</summary>
     public string Created { get; set; } = string.Empty;
+    /// <summary>Gets or sets the user's achievement score.</summary>
     public int AchievementScore { get; set; }
+    /// <summary>Gets or sets the number of friends the user has.</summary>
     public int FriendCount { get; set; }
+    /// <summary>Gets or sets whether the user is a friend of the local user.</summary>
     public bool IsFriend { get; set; }
+    /// <summary>Gets or sets whether the local user has sent the user a friend request.</summary>
     public bool IsFriendRequestSent { get; set; }
+    /// <summary>Gets or sets the online status byte, where 0 means offline.</summary>
+    /// <remarks>It is sent as one byte, so <see cref="Compose"/> requires a value from 0 to 255.</remarks>
     public int OnlineStatus { get; set; }
 
+    /// <summary>Gets or sets the groups on the profile; the list is copied on set.</summary>
+    /// <exception cref="ArgumentNullException">Thrown when set to <see langword="null"/> or a list with a <see langword="null"/> entry.</exception>
     public IReadOnlyList<ProfileGroup> Groups
     {
         get => _groups;
         set => _groups = PeopleWire.FreezeReferences(value, nameof(Groups));
     }
 
+    /// <summary>Gets or sets the seconds since the user was last online.</summary>
     public int LastAccessSeconds { get; set; }
+    /// <summary>Gets or sets whether the client should open the profile window for this response.</summary>
+    /// <remarks>This echoes the flag of the profile request.</remarks>
     public bool OpenProfileWindow { get; set; }
+    /// <summary>Gets or sets whether the profile is hidden.</summary>
     public bool IsHidden { get; set; }
+    /// <summary>Gets or sets the user's level as sent by the hotel.</summary>
     public int Level { get; set; }
+    /// <summary>Gets or sets the user's subscription level as sent by the hotel.</summary>
     public int SubscriptionLevel { get; set; }
+    /// <summary>Gets or sets the user's star gem count as sent by the hotel.</summary>
     public int StarGems { get; set; }
+    /// <summary>Gets or sets whether the user accepts friend requests.</summary>
     public bool AllowFriendRequests { get; set; }
+    /// <summary>Gets or sets whether the hotel reports pending friend requests for the user.</summary>
     public bool HasFriendRequestsPending { get; set; }
+    /// <summary>Gets or sets the total number of badges the user owns.</summary>
     public int TotalBadges { get; set; }
+    /// <summary>Gets or sets the user's achievement level as sent by the hotel.</summary>
     public int AchievementLevel { get; set; }
 
+    /// <summary>Gets or sets the badge rarity tiers on the profile; the list is copied on set.</summary>
+    /// <exception cref="ArgumentNullException">Thrown when set to <see langword="null"/>.</exception>
     public IReadOnlyList<BadgeRarity> BadgeRarities
     {
         get => _badge_rarities;
         set => _badge_rarities = PeopleWire.FreezeValues(value, nameof(BadgeRarities));
     }
 
+    /// <summary>Gets or sets the user's rank by total badges as sent by the hotel.</summary>
     public int TotalBadgesRank { get; set; }
 
+    /// <summary>Gets whether <see cref="OnlineStatus"/> is above 0.</summary>
     public bool IsOnline => OnlineStatus > 0;
+    /// <summary>Gets the time since the user was last online, from <see cref="LastAccessSeconds"/>.</summary>
     public TimeSpan LastAccess => TimeSpan.FromSeconds(LastAccessSeconds);
 
+    /// <summary>Reads a user profile from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when a count is invalid or bytes remain after the last field.</exception>
     public static UserProfile Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -158,6 +211,13 @@ public sealed class UserProfile : IParserComposer<UserProfile>
             AchievementScore = p.ReadInt()
         };
 
+    /// <summary>Writes the user profile to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when an identifier does not fit in 32 bits, a string is too long or
+    /// <see cref="OnlineStatus"/> is outside 0 to 255.
+    /// </exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

@@ -14,22 +14,36 @@ using Qx.Protocol;
 
 namespace Qx.Game.Rules;
 
-/// <summary>What clicking somebody in the room does.</summary>
+/// <summary>Specifies what clicking another user in the room does.</summary>
 public enum ClickAction
 {
-    /// <summary>Nothing; a click is just a click.</summary>
+    /// <summary>No action; the click is sent as an ordinary turn.</summary>
     None,
 
+    /// <summary>A room mute for <see cref="SessionRules.ClickMuteMinutes"/> minutes.</summary>
     Mute,
+    /// <summary>A kick from the room.</summary>
     Kick,
+    /// <summary>A room ban for <see cref="SessionRules.ClickBanLength"/>.</summary>
     Ban,
 
-    /// <summary>Ban and unban at once, which puts them out with no kick notice.</summary>
+    /// <summary>A one hour ban followed at once by its unban, which removes the user without a kick notice.</summary>
     Bounce
 }
 
+/// <summary>
+/// Provides the client-side session rules, such as anti-idle, chat muting and click actions,
+/// applied by intercepting packets.
+/// </summary>
+/// <remarks>
+/// Settings are loaded from a JSON file when the instance is created and written back by
+/// <see cref="Save"/>. Remembered room passwords are kept in <c>passwords.json</c> in the same
+/// directory. Every rule is bound once by <see cref="Bind()"/> and checked per packet, so changing a
+/// switch takes effect immediately.
+/// </remarks>
 public sealed partial class SessionRules : IDisposable
 {
+    /// <summary>The default anti-idle interval in seconds.</summary>
     public const int DefaultAntiIdleSeconds = 260;
 
     private sealed record Document
@@ -108,7 +122,7 @@ public sealed partial class SessionRules : IDisposable
     private DateTimeOffset _last_respect;
 
     /// <summary>
-    /// The mirrored session, for the rules that need to know more than the packet says.
+    /// Gets the mirrored game state, for the rules that need to know more than the packet says.
     /// </summary>
     /// <remarks>
     /// Chat carries a room index rather than a name, and a doorbell carries a name rather than
@@ -116,6 +130,32 @@ public sealed partial class SessionRules : IDisposable
     /// </remarks>
     public GameState Game { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SessionRules"/> class and loads its saved
+    /// settings and room passwords.
+    /// </summary>
+    /// <remarks>
+    /// A missing or unreadable settings file leaves every rule at its default. The rules are not
+    /// active until <see cref="Bind()"/> is called.
+    /// </remarks>
+    /// <param name="interceptor">The interceptor whose packets the rules inspect and rewrite.</param>
+    /// <param name="game">The mirrored game state the rules consult.</param>
+    /// <param name="application">The application runtime used for trade and room moderation commands.</param>
+    /// <param name="path">
+    /// The path of the JSON settings file. Remembered passwords are stored in
+    /// <c>passwords.json</c> in the same directory.
+    /// </param>
+    /// <param name="shift_pressed">
+    /// A callback that reports whether the shift key is held, or <see langword="null"/> when it
+    /// cannot be read, in which case the shift-click rules never fire.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="interceptor"/>, <paramref name="game"/>,
+    /// <paramref name="application"/> or <paramref name="path"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="path"/> is empty or consists only of white space.
+    /// </exception>
     public SessionRules(
         IInterceptor interceptor,
         GameState game,
@@ -135,8 +175,25 @@ public sealed partial class SessionRules : IDisposable
         RequestFriends();
     }
 
+    /// <summary>
+    /// Gets or sets whether an avatar expression is sent every <see cref="AntiIdleSeconds"/>
+    /// seconds to keep the session from going idle.
+    /// </summary>
+    /// <remarks>
+    /// The hotel decides you have gone away after a quiet stretch and, later, disconnects you. An
+    /// expression counts as being at the keyboard without moving the avatar, saying anything or
+    /// touching the room. The timer only runs while the rules are bound.
+    /// </remarks>
     public bool AntiIdle { get; set; }
+    /// <summary>Gets or sets whether every trade that opens is closed at once and hidden from the client.</summary>
     public bool BlockTrades { get; set; }
+    /// <summary>
+    /// Gets or sets whether users on the friend list who ring the doorbell are let in automatically.
+    /// </summary>
+    /// <remarks>
+    /// Friends are matched by name, ignoring case. Anyone else still rings and waits. Turning it on
+    /// starts loading the friend list if it is not loaded yet.
+    /// </remarks>
     public bool LetFriendsIn
     {
         get => _let_friends_in;
@@ -146,45 +203,70 @@ public sealed partial class SessionRules : IDisposable
             RequestFriends();
         }
     }
+    /// <summary>Gets or sets whether the local user's outgoing walk requests are blocked.</summary>
+    /// <remarks>
+    /// With <see cref="TurnTowardsClickedTile"/> on, the blocked walk is replaced by a turn
+    /// towards the clicked tile.
+    /// </remarks>
     public bool NoWalk { get; set; }
+    /// <summary>Gets or sets whether the local user's outgoing turn requests are blocked.</summary>
+    /// <remarks>
+    /// Clicking another user is a turn on the wire, so it is blocked too unless
+    /// <see cref="TurnOnReselect"/> lets a second click on the same user through.
+    /// </remarks>
     public bool NoTurn { get; set; }
+    /// <summary>
+    /// Gets or sets whether outgoing talk messages are rewritten as shouts, keeping the text and bubble style.
+    /// </summary>
     public bool AlwaysShout { get; set; }
+    /// <summary>Gets or sets whether the outgoing typing indicator is blocked.</summary>
     public bool NoTyping { get; set; }
+    /// <summary>Gets or sets whether chat from bots is hidden.</summary>
     public bool MuteBots { get; set; }
+    /// <summary>Gets or sets whether chat from pets is hidden.</summary>
     public bool MutePets { get; set; }
+    /// <summary>
+    /// Gets or sets whether chat from a room index with no avatar, which is how wired speaks, is hidden.
+    /// </summary>
     public bool MuteWired { get; set; }
+    /// <summary>Gets or sets whether the local user's outgoing floor and wall item use requests are blocked.</summary>
+    /// <remarks>A shift-click answered by one of the shift-click rules takes precedence.</remarks>
     public bool PreventFurniUse { get; set; }
 
-    /// <summary>Nothing anyone says reaches the screen, whoever they are.</summary>
+    /// <summary>Gets or sets whether all incoming talk, shout and whisper chat is hidden.</summary>
     public bool MuteAll { get; set; }
 
-    /// <summary>The bubbles that say who respected whom, and who scratched which pet.</summary>
+    /// <summary>
+    /// Gets or sets whether the notifications for user respects and pet respects are hidden.
+    /// </summary>
+    /// <remarks>Takes precedence over <see cref="ShowRespectCount"/>.</remarks>
     public bool MuteRespects { get; set; }
 
-    /// <summary>The advertisement a room shows on entry.</summary>
+    /// <summary>Gets or sets whether the advertisement a room shows on entry is blocked.</summary>
     public bool BlockRoomAds { get; set; }
 
-    /// <summary>The club gift offer that reappears every time the hotel feels like it.</summary>
+    /// <summary>Gets or sets whether the club gift notification is blocked.</summary>
     public bool BlockClubGifts { get; set; }
 
-    /// <summary>Every hotel notice, including the ones with a dialog attached.</summary>
+    /// <summary>Gets or sets whether hotel notification dialogs are blocked.</summary>
     public bool BlockNotifications { get; set; }
 
-    /// <summary>Anything handed to you goes straight back on the floor.</summary>
+    /// <summary>Gets or sets whether any hand item the local user receives is dropped at once.</summary>
+    /// <remarks>Takes precedence over <see cref="ReturnHandItems"/>.</remarks>
     public bool DropHandItems { get; set; }
 
-    /// <summary>Invitations to other rooms never reach the screen.</summary>
+    /// <summary>Gets or sets whether invitations to other rooms are blocked.</summary>
     public bool BlockRoomInvites { get; set; }
 
-    /// <summary>Friend requests never reach the screen.</summary>
+    /// <summary>Gets or sets whether incoming friend requests are blocked.</summary>
     public bool BlockFriendRequests { get; set; }
 
     /// <summary>
-    /// Every friend request is accepted the moment it arrives.
+    /// Gets or sets whether every incoming friend request is accepted as soon as it arrives.
     /// </summary>
     /// <remarks>
-    /// Ignored while requests are being blocked: accepting something you refused to look at is a
-    /// contradiction, and the two switches say so rather than fighting.
+    /// Ignored while <see cref="BlockFriendRequests"/> is on: accepting something you refused to
+    /// look at is a contradiction, and the two switches say so rather than fighting.
     /// </remarks>
     public bool AutoAcceptFriendRequests { get; set; }
 
@@ -193,24 +275,36 @@ public sealed partial class SessionRules : IDisposable
 
 
     /// <summary>
-    /// Lets you idle, but not be put out of the room for it.
+    /// Gets or sets whether the local user is woken with an avatar expression as soon as the
+    /// hotel marks the avatar as sleeping.
     /// </summary>
     /// <remarks>
     /// The opposite trade from anti-idle: your avatar is allowed to fall asleep, and only the
-    /// moment the hotel would act on it is answered. Cheaper on the wire than a gesture every
-    /// minute, and it leaves you looking idle to everybody else, which is often the point.
+    /// moment the hotel acts on it is answered. It sends less than <see cref="AntiIdle"/> and
+    /// leaves you looking idle to everybody else. Has no effect while <see cref="AntiIdle"/> is on.
     /// </remarks>
     public bool AntiIdleOut { get; set; }
 
 
-    /// <summary>Turning is allowed again when you click the same person twice.</summary>
+    /// <summary>
+    /// Gets or sets whether a second consecutive click on the same user lets the turn through
+    /// while <see cref="NoTurn"/> is on.
+    /// </summary>
     public bool TurnOnReselect { get; set; }
 
-    /// <summary>A blocked walk still turns you to face the tile you clicked.</summary>
+    /// <summary>
+    /// Gets or sets whether a walk blocked by <see cref="NoWalk"/> still turns the avatar to face
+    /// the clicked tile.
+    /// </summary>
     public bool TurnTowardsClickedTile { get; set; }
 
 
-    /// <summary>What clicking somebody in the room does, if anything.</summary>
+    /// <summary>Gets or sets what clicking another user in the room does.</summary>
+    /// <remarks>
+    /// The action is sent through room moderation, and the click itself is blocked when the
+    /// action was sent. Clicks on yourself and on users spared by
+    /// <see cref="ClickExcludesFriends"/> are left alone.
+    /// </remarks>
     public ClickAction ClickTo
     {
         get => _click_to;
@@ -221,13 +315,21 @@ public sealed partial class SessionRules : IDisposable
         }
     }
 
-    /// <summary>How long a click-to mute lasts, in minutes.</summary>
+    /// <summary>Gets or sets how long a click mute lasts, in minutes.</summary>
+    /// <remarks>
+    /// Defaults to 5. A saved value outside 1 to 1440 is replaced with the default when the
+    /// settings are loaded.
+    /// </remarks>
     public int ClickMuteMinutes { get; set; } = 5;
 
-    /// <summary>How long a click-to ban lasts.</summary>
+    /// <summary>Gets or sets how long a click ban lasts.</summary>
     public BanLength ClickBanLength { get; set; } = BanLength.Hour;
 
-    /// <summary>Friends are never the target of a click-to action.</summary>
+    /// <summary>Gets or sets whether friends are never the target of a click action.</summary>
+    /// <remarks>
+    /// Defaults to <see langword="true"/>. While the friend list has not loaded, every user is
+    /// spared and the list is requested.
+    /// </remarks>
     public bool ClickExcludesFriends
     {
         get => _click_excludes_friends;
@@ -239,49 +341,79 @@ public sealed partial class SessionRules : IDisposable
     }
 
 
-    /// <summary>Room passwords are remembered and offered again without being retyped.</summary>
+    /// <summary>
+    /// Gets or sets whether room passwords are remembered and sent again without being retyped.
+    /// </summary>
+    /// <remarks>
+    /// A password is saved per hotel and room when it is typed, filled in when the room is opened
+    /// without one, and forgotten when the hotel rejects it as wrong.
+    /// </remarks>
     public bool RememberPasswords { get; set; }
 
-    /// <summary>Every tile is reported at the same height, so nothing looks raised.</summary>
+    /// <summary>
+    /// Gets or sets whether every floor tile is reported to the client at the same height.
+    /// </summary>
+    /// <remarks>
+    /// Only what this client is told changes; the room itself and what other users see are untouched.
+    /// </remarks>
     public bool FlattenFloor { get; set; }
 
-    /// <summary>Nobody is drawn in the room at all.</summary>
+    /// <summary>
+    /// Gets or sets whether incoming room avatar lists are emptied, so the client draws no avatars.
+    /// </summary>
     public bool HideAvatars { get; set; }
 
 
-    /// <summary>A pet's own commands, which are chat the pet did not choose to say.</summary>
+    /// <summary>
+    /// Gets or sets whether pet chat that echoes a command, which starts with the pet's name, is hidden.
+    /// </summary>
     public bool MutePetCommands { get; set; }
 
-    /// <summary>Adds the running total to that line.</summary>
+    /// <summary>
+    /// Gets or sets whether a local line naming who respected whom, with the running total, is
+    /// shown when a respect arrives.
+    /// </summary>
+    /// <remarks>The line is visible only to the local user. Has no effect while <see cref="MuteRespects"/> is on.</remarks>
     public bool ShowRespectCount { get; set; }
 
 
-    /// <summary>Holding shift and clicking furni says what it is instead of using it.</summary>
+    /// <summary>
+    /// Gets or sets whether a shift-click on furni shows its name, identifier and id instead of using it.
+    /// </summary>
     public bool ShiftClickShowsInfo { get; set; }
 
-    /// <summary>Holding shift and clicking furni takes it off the screen.</summary>
+    /// <summary>Gets or sets whether a shift-click on furni hides it locally instead of using it.</summary>
+    /// <remarks>Takes precedence over the other shift-click rules.</remarks>
     public bool ShiftClickHides { get; set; }
 
-    /// <summary>Holding shift and clicking a teleport says which one it is paired with.</summary>
+    /// <summary>
+    /// Gets or sets whether a shift-click on a teleport shows the position of the teleport it is paired with.
+    /// </summary>
     public bool ShiftClickFindsLink { get; set; }
 
 
-    /// <summary>Anything handed to you goes back to whoever gave it.</summary>
+    /// <summary>Gets or sets whether any hand item the local user receives is passed back to the giver.</summary>
     public bool ReturnHandItems { get; set; }
 
     /// <summary>
-    /// Turns you back to where you were facing after somebody hands you something.
+    /// Gets or sets whether the avatar turns back to its previous direction after being handed an item.
     /// </summary>
     /// <remarks>
     /// Being handed an item turns you towards whoever handed it, which is a nuisance while you are
-    /// standing somewhere deliberately. The direction is read before the turn arrives and sent
-    /// straight back, so the avatar swings and returns rather than staying where it was put.
+    /// standing somewhere deliberately. The direction is read before the turn arrives and a turn
+    /// back is sent 400 milliseconds later, so the avatar swings and returns rather than staying
+    /// where it was put.
     /// </remarks>
     public bool KeepDirection { get; set; }
 
     /// <summary>
-    /// How often the anti-idle gesture goes out.
+    /// Gets or sets the interval between anti-idle expressions, in seconds.
     /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="DefaultAntiIdleSeconds"/>. A saved value outside 15 to 900 is
+    /// replaced with the default when the settings are loaded. Changing it while the rules are
+    /// bound restarts the timer.
+    /// </remarks>
     public int AntiIdleSeconds
     {
         get => _anti_idle_seconds;
@@ -295,7 +427,11 @@ public sealed partial class SessionRules : IDisposable
         }
     }
 
-    /// <summary>How many rules are switched on, for the line that says whether anything is happening.</summary>
+    /// <summary>Gets the number of rules that are switched on.</summary>
+    /// <remarks>
+    /// <see cref="ClickTo"/> counts when it is not <see cref="ClickAction.None"/>.
+    /// <see cref="TurnOnReselect"/> and <see cref="ClickExcludesFriends"/> are not counted.
+    /// </remarks>
     public int Active =>
         (AntiIdle ? 1 : 0) + (BlockTrades ? 1 : 0) + (LetFriendsIn ? 1 : 0) +
         (NoWalk ? 1 : 0) + (NoTurn ? 1 : 0) + (AlwaysShout ? 1 : 0) + (NoTyping ? 1 : 0) +
@@ -311,6 +447,10 @@ public sealed partial class SessionRules : IDisposable
         (ShiftClickShowsInfo ? 1 : 0) + (ShiftClickHides ? 1 : 0) + (ShiftClickFindsLink ? 1 : 0) +
         (ReturnHandItems ? 1 : 0) + (KeepDirection ? 1 : 0);
 
+    /// <summary>
+    /// Gets the display name of the connected client, or <c>"not connected"</c> when there is no session.
+    /// </summary>
+    /// <exception cref="UnsupportedClientException">Thrown when the session uses a client other than Flash.</exception>
     public string ClientName
     {
         get
@@ -326,12 +466,13 @@ public sealed partial class SessionRules : IDisposable
     }
 
     /// <summary>
-    /// Binds every rule once, for the whole run.
+    /// Binds every rule to the interceptor and starts the anti-idle timer.
     /// </summary>
     /// <remarks>
-    /// Bound once and consulted per packet rather than bound and unbound as switches move: the
-    /// interceptors are keyed by name and rebinding them on every toggle would race the read loop.
-    /// A rule that is off costs one boolean read.
+    /// Any existing bindings are removed first. Rules are bound once and consulted per packet
+    /// rather than bound and unbound as switches move: the interceptors are keyed by name and
+    /// rebinding them on every toggle would race the read loop. A rule that is off costs one
+    /// boolean read. A rule whose message the current client does not carry is skipped.
     /// </remarks>
     public void Bind()
     {
@@ -790,7 +931,7 @@ public sealed partial class SessionRules : IDisposable
     /// </summary>
     /// <remarks>
     /// A short wait rather than an immediate answer: the turn arrives a moment after the item does,
-    /// and a request sent before it would simply be overwritten by it. Long enough to land second,
+    /// and a request sent before it would be overwritten by it. Long enough to land second,
     /// short enough that the avatar looks like it glanced and went back.
     /// </remarks>
     private void TurnBackTo((int X, int Y) tile) => _ = TurnBackToAsync(tile);
@@ -1144,7 +1285,7 @@ public sealed partial class SessionRules : IDisposable
     /// </summary>
     /// <remarks>
     /// The packet says who is speaking only by room index, so what is speaking has to be looked up
-    /// in the room. Wired has no avatar at all — it speaks through the room itself, which is the
+    /// in the room. Wired has no avatar at all. It speaks through the room itself, which is the
     /// index the room never handed out.
     /// </remarks>
     private void MuteChat(MessageContract<AvatarChat> contract) =>
@@ -1156,7 +1297,7 @@ public sealed partial class SessionRules : IDisposable
                 return;
             }
 
-            if (!MuteBots && !MutePets && !MuteWired)
+            if (!MuteBots && !MutePets && !MuteWired && !MutePetCommands)
                 return;
 
             Avatar? speaker = Game?.Room.AvatarByIndex(chat.Index);
@@ -1214,6 +1355,7 @@ public sealed partial class SessionRules : IDisposable
             TimeSpan.FromSeconds(AntiIdleSeconds));
     }
 
+    /// <summary>Removes every rule binding and stops the anti-idle timer.</summary>
     public void Unbind()
     {
         _bound = false;
@@ -1224,6 +1366,7 @@ public sealed partial class SessionRules : IDisposable
         _bindings.Clear();
     }
 
+    /// <summary>Unbinds every rule and stops the anti-idle timer without saving the settings.</summary>
     public void Dispose() => Unbind();
 
     private void Out(string name, Action<Intercept> handler) => Bind(Direction.Out, name, handler);
@@ -1359,6 +1502,11 @@ public sealed partial class SessionRules : IDisposable
         }
     }
 
+    /// <summary>Writes the current settings to the settings file as JSON.</summary>
+    /// <remarks>
+    /// The directory is created when missing, and a failed write is ignored. Remembered passwords
+    /// are saved separately as they change.
+    /// </remarks>
     public void Save()
     {
         try

@@ -2,6 +2,22 @@ using Qx.Messages;
 
 namespace Qx.Model.Forums;
 
+/// <summary>
+/// Represents the forum's permission levels and the viewer's access to a group forum.
+/// </summary>
+/// <remarks>
+/// Levels run from 0, the least restrictive, to 3. An error string is empty when the viewer has the
+/// matching right; otherwise it holds the reason the server gives for denying it.
+/// </remarks>
+/// <param name="ReadLevel">The permission level required to read the forum.</param>
+/// <param name="PostMessageLevel">The permission level required to reply to threads.</param>
+/// <param name="PostThreadLevel">The permission level required to start threads.</param>
+/// <param name="ModerateLevel">The permission level required to moderate the forum.</param>
+/// <param name="ReadError">The reason the viewer may not read, or an empty string when allowed.</param>
+/// <param name="PostMessageError">The reason the viewer may not reply, or an empty string when allowed.</param>
+/// <param name="PostThreadError">The reason the viewer may not start threads, or an empty string when allowed.</param>
+/// <param name="ModerateError">The reason the viewer may not moderate, or an empty string when allowed.</param>
+/// <param name="ReportError">The reason the viewer may not report, or an empty string when allowed.</param>
 public sealed record ForumPermissions(
     int ReadLevel,
     int PostMessageLevel,
@@ -22,12 +38,14 @@ public sealed record ForumPermissions(
         throw new ArgumentNullException(nameof(ModerateError));
     private string report_error = ReportError ?? throw new ArgumentNullException(nameof(ReportError));
 
+    /// <summary>Gets the reason the viewer may not read, or an empty string when allowed.</summary>
     public string ReadError
     {
         get => read_error;
         init => read_error = value ?? throw new ArgumentNullException(nameof(ReadError));
     }
 
+    /// <summary>Gets the reason the viewer may not reply, or an empty string when allowed.</summary>
     public string PostMessageError
     {
         get => post_message_error;
@@ -35,6 +53,7 @@ public sealed record ForumPermissions(
             throw new ArgumentNullException(nameof(PostMessageError));
     }
 
+    /// <summary>Gets the reason the viewer may not start threads, or an empty string when allowed.</summary>
     public string PostThreadError
     {
         get => post_thread_error;
@@ -42,24 +61,33 @@ public sealed record ForumPermissions(
             throw new ArgumentNullException(nameof(PostThreadError));
     }
 
+    /// <summary>Gets the reason the viewer may not moderate, or an empty string when allowed.</summary>
     public string ModerateError
     {
         get => moderate_error;
         init => moderate_error = value ?? throw new ArgumentNullException(nameof(ModerateError));
     }
 
+    /// <summary>Gets the reason the viewer may not report, or an empty string when allowed.</summary>
     public string ReportError
     {
         get => report_error;
         init => report_error = value ?? throw new ArgumentNullException(nameof(ReportError));
     }
 
+    /// <summary>Gets whether the viewer may read the forum, which is when <see cref="ReadError"/> is empty.</summary>
     public bool CanRead => ReadError.Length == 0;
+    /// <summary>Gets whether the viewer may reply to threads, which is when <see cref="PostMessageError"/> is empty.</summary>
     public bool CanPostMessage => PostMessageError.Length == 0;
+    /// <summary>Gets whether the viewer may start threads, which is when <see cref="PostThreadError"/> is empty.</summary>
     public bool CanPostThread => PostThreadError.Length == 0;
+    /// <summary>Gets whether the viewer may moderate the forum, which is when <see cref="ModerateError"/> is empty.</summary>
     public bool CanModerate => ModerateError.Length == 0;
+    /// <summary>Gets whether the viewer may report content, which is always <see langword="true"/> regardless of <see cref="ReportError"/>.</summary>
     public bool CanReport => true;
 
+    /// <summary>Parses forum permissions from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ForumPermissions Parse(in PacketReader p)
     {
         ForumStringBudget budget = ForumProtocol.NewStringBudget();
@@ -113,6 +141,8 @@ public sealed record ForumPermissions(
             report_error);
     }
 
+    /// <summary>Composes the forum permissions into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -150,6 +180,13 @@ public sealed record ForumPermissions(
     }
 }
 
+/// <summary>
+/// Represents the full details of a group forum, its summary together with the viewer's permissions.
+/// </summary>
+/// <param name="Summary">The forum summary.</param>
+/// <param name="Permissions">The forum's permission levels and the viewer's access.</param>
+/// <param name="CanChangeSettings">Whether the viewer may change the forum settings.</param>
+/// <param name="IsStaff">Whether the viewer is hotel staff.</param>
 public sealed record ForumDetails(
     ForumSummary Summary,
     ForumPermissions Permissions,
@@ -160,27 +197,39 @@ public sealed record ForumDetails(
     private ForumPermissions permissions = Permissions ??
         throw new ArgumentNullException(nameof(Permissions));
 
+    /// <summary>Gets the forum summary.</summary>
     public ForumSummary Summary
     {
         get => summary;
         init => summary = value ?? throw new ArgumentNullException(nameof(Summary));
     }
 
+    /// <summary>Gets the forum's permission levels and the viewer's access.</summary>
     public ForumPermissions Permissions
     {
         get => permissions;
         init => permissions = value ?? throw new ArgumentNullException(nameof(Permissions));
     }
 
+    /// <summary>Gets the id of the group that owns the forum.</summary>
     public Id GroupId => Summary.GroupId;
+    /// <summary>Gets the forum name.</summary>
     public string Name => Summary.Name;
+    /// <summary>Gets the forum description.</summary>
     public string Description => Summary.Description;
+    /// <summary>Gets the forum icon as sent by the server.</summary>
     public string Icon => Summary.Icon;
+    /// <summary>Gets the number of threads in the forum.</summary>
     public int TotalThreads => Summary.TotalThreads;
+    /// <summary>Gets the number of messages in the forum.</summary>
     public int TotalMessages => Summary.TotalMessages;
+    /// <summary>Gets the number of messages the viewer has not read.</summary>
     public int UnreadMessages => Summary.UnreadMessages;
+    /// <summary>Gets the last read message id, see <see cref="ForumSummary.LastReadMessageId"/>.</summary>
     public int LastReadMessageId => Summary.LastReadMessageId;
 
+    /// <summary>Parses forum details from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ForumDetails Parse(in PacketReader p)
     {
         ForumStringBudget budget = ForumProtocol.NewStringBudget();
@@ -212,6 +261,8 @@ public sealed record ForumDetails(
         return new ForumDetails(summary, permissions, p.ReadBool(), p.ReadBool());
     }
 
+    /// <summary>Composes the forum details into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

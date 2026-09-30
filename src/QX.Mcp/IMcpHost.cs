@@ -356,7 +356,7 @@ public interface IMcpHost
     string SearchMembers(string query, string kind, int limit);
     string SearchMembers(string query, string kind, int limit, int offset) =>
         SearchMembers(query, kind, limit);
-    string GetScriptingGuide();
+    string GetScriptingGuide(string topic);
     string CompileCheck(string code);
 
     string ListTabs() => AsyncOnly(nameof(ListTabsAsync));

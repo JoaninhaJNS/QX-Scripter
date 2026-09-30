@@ -46,6 +46,21 @@ internal sealed record SubscriptionStateUpdate(
     long PublicationEpoch,
     bool PublishLegacyReset);
 
+/// <summary>
+/// Manages the subscription state of the current session.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Tracks the subscription info per product, the club kickback info and the Builders Club furni
+/// count, membership status and last placement warning. The Builders Club membership status and
+/// placement warning are only received on the Flash client.
+/// </para>
+/// <para>
+/// The state is cleared when the hotel connection closes and when a new hotel session connects.
+/// Events are raised after the state is updated and are skipped once the session they belong to has
+/// ended. All members are safe to call from any thread.
+/// </para>
+/// </remarks>
 public sealed class SubscriptionManager : GameStateManager
 {
     private const int user_info_limit = 500;
@@ -62,6 +77,11 @@ public sealed class SubscriptionManager : GameStateManager
     private bool delivering;
     private int delivery_thread_id;
 
+    /// <summary>Gets the last subscription info received for each product, keyed by product name.</summary>
+    /// <remarks>
+    /// The keys are compared without regard to case. At most 500 products are kept; when a new product
+    /// arrives at the limit, the least recently updated one is dropped. The dictionary is a copy.
+    /// </remarks>
     public IReadOnlyDictionary<string, ScrSendUserInfo> UserInfo
     {
         get
@@ -75,25 +95,42 @@ public sealed class SubscriptionManager : GameStateManager
         }
     }
 
+    /// <summary>Gets the last club kickback info the server sent, or <see langword="null"/> if none was received.</summary>
     public ScrSendKickbackInfo? KickbackInfo => State.KickbackInfo;
+    /// <summary>Gets the last Builders Club furni count the server sent, or <see langword="null"/> if none was received.</summary>
     public BuildersClubFurniCount? BuildersClubFurniCount =>
         State.BuildersClubFurniCount;
+    /// <summary>Gets the last Builders Club membership status the server sent, or <see langword="null"/> if none was received.</summary>
+    /// <remarks>Only received on the Flash client.</remarks>
     public BuildersClubMembershipStatus? BuildersClubStatus =>
         State.BuildersClubStatus;
+    /// <summary>Gets the last Builders Club placement warning the server sent, or <see langword="null"/> if none was received.</summary>
+    /// <remarks>Only received on the Flash client.</remarks>
     public BuildersClubPlacementWarning? LastPlacementWarning =>
         State.LastPlacementWarning;
 
     internal SubscriptionState State => Volatile.Read(ref state);
 
+    /// <summary>Occurs when the server sends subscription info for a product, with the received info.</summary>
     public event Action<ScrSendUserInfo>? UserInfoChanged;
+    /// <summary>Occurs when the server sends the club kickback info, with the received info.</summary>
     public event Action<ScrSendKickbackInfo>? KickbackInfoChanged;
+    /// <summary>Occurs when the server sends the Builders Club furni count, with the received count.</summary>
     public event Action<BuildersClubFurniCount>? BuildersClubFurniCountChanged;
+    /// <summary>Occurs when the server sends the Builders Club membership status, with the received status.</summary>
     public event Action<BuildersClubMembershipStatus>? BuildersClubStatusChanged;
+    /// <summary>Occurs when the server sends a Builders Club placement warning, with the received warning.</summary>
     public event Action<BuildersClubPlacementWarning>? PlacementWarningReceived;
+    /// <summary>Occurs after the subscription state is cleared when the hotel connection closes.</summary>
+    /// <remarks>Not raised when the state is cleared for a newly connected session.</remarks>
     public event Action? ResetCompleted;
     internal event Action<SubscriptionStateUpdate>? StateCommitted;
     internal event Action<SubscriptionStateUpdate>? StateChanged;
 
+    /// <summary>Gets the last subscription info received for a product.</summary>
+    /// <param name="product_name">The product name, compared without regard to case.</param>
+    /// <returns>The subscription info, or <see langword="null"/> if none was received for the product.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="product_name"/> is <see langword="null"/>.</exception>
     public ScrSendUserInfo? FindUserInfo(string product_name)
     {
         ArgumentNullException.ThrowIfNull(product_name);
@@ -102,6 +139,7 @@ public sealed class SubscriptionManager : GameStateManager
             : null;
     }
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         CommitReset(CurrentSession, false);
@@ -122,14 +160,22 @@ public sealed class SubscriptionManager : GameStateManager
             ApplyBuildersClubPlacementWarning);
     }
 
+    /// <summary>Requests the subscription info for a product from the server.</summary>
+    /// <param name="product_name">The product name.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="product_name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the subscription operations are not bound yet.</exception>
     public void RequestUserInfo(string product_name)
     {
         ArgumentNullException.ThrowIfNull(product_name);
         Operations().RequestUserInfo(product_name);
     }
 
+    /// <summary>Requests the club kickback info from the server.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when the subscription operations are not bound yet.</exception>
     public void RequestKickbackInfo() => Operations().RequestKickbackInfo();
 
+    /// <summary>Requests the Builders Club furni count from the server.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when the subscription operations are not bound yet.</exception>
     public void RequestBuildersClubFurniCount() =>
         Operations().RequestBuildersClubFurniCount();
 
@@ -153,6 +199,7 @@ public sealed class SubscriptionManager : GameStateManager
         }
     }
 
+    /// <inheritdoc/>
     protected override void Reset() => CommitReset(CurrentSession, true);
 
     private void BindSession(Session session) => CommitReset(session, false);

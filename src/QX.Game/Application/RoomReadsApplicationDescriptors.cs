@@ -26,7 +26,8 @@ internal static class RoomReadsApplicationDescriptors
         "Loads an immutable statistics snapshot for one pet in the active hotel session.",
         MessageKeys.Room.Occupants.Pet.InfoRequest,
         MessageKeys.Room.Occupants.Pet.Info,
-        "pet_id");
+        "pet_id",
+        "Positive pet identifier.");
 
     public static ApplicationDescriptor StickyGet { get; } = Read<StickyReadRequest, StickyReadResult>(
         ApplicationMemberIds.RoomStickyGet,
@@ -34,7 +35,8 @@ internal static class RoomReadsApplicationDescriptors
         "Loads the immutable color and text of one sticky note in the active hotel session.",
         MessageKeys.Room.WallItem.StickyDataRequest,
         MessageKeys.Room.WallItem.StickyData,
-        "item_id");
+        "item_id",
+        "Positive sticky note item identifier.");
 
     public static ApplicationDescriptor RoomAdInfoGet { get; } = new(
         ApplicationMemberIds.CatalogRoomAdInfoGet,
@@ -74,7 +76,8 @@ internal static class RoomReadsApplicationDescriptors
         string description,
         MessageKey request_key,
         MessageKey snapshot_key,
-        string id_name = "room_id") => new(
+        string id_name = "room_id",
+        string id_description = "Positive room identifier.") => new(
             id,
             title,
             description,
@@ -88,7 +91,7 @@ internal static class RoomReadsApplicationDescriptors
                     typeof(Id),
                     true,
                     null,
-                    "Positive room identifier.",
+                    id_description,
                     new(Pattern: "^[1-9][0-9]*$")),
                 new(
                     "timeout_milliseconds",

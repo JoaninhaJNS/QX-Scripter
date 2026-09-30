@@ -19,24 +19,37 @@ namespace Qx.Scripting;
 /// </para>
 /// <para>
 /// These events fire for every matching packet on the connection, including marketplace traffic
-/// the game client itself caused — not only replies to requests the script issued.
+/// the game client itself caused, not only replies to requests the script issued.
 /// </para>
 /// </content>
 public partial class ScriptGlobals
 {
+    /// <summary>
+    /// Registers a handler that runs whenever the cached marketplace state changes.
+    /// </summary>
+    /// <remarks>
+    /// Every kind of change triggers it, including a reset. The handler receives a fresh
+    /// <see cref="MarketplaceState"/> read, so it sees the first page of up to 100 cached entries.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the current marketplace state.</param>
+    /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnMarketplaceStateChanged(Action<MarketplaceStateView> handler) =>
         Track(Application.Subscribe<MarketplaceChanged>(
             ApplicationMemberIds.MarketplaceChanged,
             Guarded<MarketplaceChanged>(_ => handler(MarketplaceState))));
 
     /// <summary>
-    /// Raised when the server sends the marketplace configuration: whether the marketplace is
-    /// enabled, commission and selling fee, token batch pricing, the allowed price range, offer
-    /// lifetime in hours and the averaging period.
+    /// Registers a handler that runs when the server sends the marketplace configuration.
     /// </summary>
-    /// <param name="handler">Receives the configuration.</param>
+    /// <remarks>
+    /// The configuration covers whether the marketplace is enabled, the commission and selling
+    /// fee, token batch pricing, the allowed price range, the offer lifetime in hours and the
+    /// averaging period.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the configuration.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnMarketplaceConfigurationChanged(
         Action<MarketplaceConfiguration> handler) =>
         Track(Application.Subscribe<MarketplaceConfigurationChanged>(
@@ -44,12 +57,15 @@ public partial class ScriptGlobals
             Guarded<MarketplaceConfigurationChanged>(change => handler(change.Configuration))));
 
     /// <summary>
-    /// Raised when the server answers whether the local user may currently post marketplace
-    /// offers, carrying the result code and, on Flash, the remaining token count.
+    /// Registers a handler that runs when the server answers whether the local user may currently
+    /// post marketplace offers.
     /// </summary>
-    /// <param name="handler">Receives the eligibility answer.</param>
+    /// <remarks>
+    /// The answer carries the result code and, on Flash, the remaining token count.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the eligibility answer.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnMarketplaceEligibilityChanged(
         Action<MarketplaceCanMakeOfferResult> handler) =>
         Track(Application.Subscribe<MarketplaceEligibilityChanged>(
@@ -57,48 +73,59 @@ public partial class ScriptGlobals
             Guarded<MarketplaceEligibilityChanged>(change => handler(change.Eligibility))));
 
     /// <summary>
-    /// Raised when a marketplace search returns its offers. Offers sharing an id are collapsed
-    /// before the handler sees them.
+    /// Registers a handler that runs when a marketplace search returns its offers.
     /// </summary>
-    /// <param name="handler">Receives the offer page.</param>
+    /// <remarks>
+    /// Offers sharing an id are collapsed before the handler sees them. The page holds the first
+    /// 100 offers of the result; the rest can be read with
+    /// <see cref="GetMarketplaceStatePage(int, int)"/>.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the offer page.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnMarketplaceSearchResults(Action<MarketplaceOfferPage> handler) =>
         Track(Application.Subscribe<MarketplaceSearchReceived>(
             ApplicationMemberIds.MarketplaceSearchReceived,
             Guarded<MarketplaceSearchReceived>(result => handler(result.Result))));
 
     /// <summary>
-    /// Raised when the local user's own marketplace offers arrive, together with the credits
-    /// waiting to be redeemed.
+    /// Registers a handler that runs when the local user's own marketplace offers arrive.
     /// </summary>
-    /// <param name="handler">Receives the own-offer list.</param>
+    /// <remarks>
+    /// The page carries the credits waiting to be redeemed and the first 100 own offers.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the own offer page.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnOwnMarketplaceOffers(Action<MarketplaceOwnOfferPage> handler) =>
         Track(Application.Subscribe<MarketplaceOwnOffersReceived>(
             ApplicationMemberIds.MarketplaceOwnOffersReceived,
             Guarded<MarketplaceOwnOffersReceived>(result => handler(result.Result))));
 
     /// <summary>
-    /// Raised when price statistics for one furni kind arrive: average sale price, current offer
-    /// count and the daily sale history. The message carries its own furni category and type id.
+    /// Registers a handler that runs when price statistics for one furni kind arrive.
     /// </summary>
-    /// <param name="handler">Receives the statistics.</param>
+    /// <remarks>
+    /// The statistics hold the average sale price, the current offer count and the daily sale
+    /// history. The message carries its own furni category and type id.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the statistics.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnMarketplaceItemStats(Action<MarketplaceItemStatsSnapshot> handler) =>
         Track(Application.Subscribe<MarketplaceItemStatsReceived>(
             ApplicationMemberIds.MarketplaceItemStatsReceived,
             Guarded<MarketplaceItemStatsReceived>(result => handler(result.Result))));
 
     /// <summary>
-    /// Raised when the server resolves an attempt to post an offer. The message carries only a
-    /// result code; it does not identify which offer it answers.
+    /// Registers a handler that runs when the server resolves an attempt to post an offer.
     /// </summary>
-    /// <param name="handler">Receives the result.</param>
+    /// <remarks>
+    /// The message carries only a result code; it does not identify which offer it answers.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the result.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnMarketplaceOfferResult(
         Action<MarketplaceMakeOfferResult> handler) =>
         Track(Application.Subscribe<MarketplaceMakeOfferResultReceived>(
@@ -106,19 +133,30 @@ public partial class ScriptGlobals
             Guarded<MarketplaceMakeOfferResultReceived>(result => handler(result.Result))));
 
     /// <summary>
-    /// Raised when the server resolves an attempt to buy an offer, carrying the result code, the
-    /// offer id that was requested and — when the offer was re-listed at a different price — the
-    /// replacement offer id and price.
+    /// Registers a handler that runs when the server resolves an attempt to buy an offer.
     /// </summary>
-    /// <param name="handler">Receives the result.</param>
+    /// <remarks>
+    /// The result carries the result code, the offer id that was requested and, when the offer
+    /// was listed again at a different price, the replacement offer id and price.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the result.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnMarketplacePurchaseResult(
         Action<MarketplaceBuyResult> handler) =>
         Track(Application.Subscribe<MarketplaceBuyResultReceived>(
             ApplicationMemberIds.MarketplaceOfferBuyResult,
             Guarded<MarketplaceBuyResultReceived>(result => handler(result.Result))));
 
+    /// <summary>
+    /// Registers a handler that runs when the server resolves an attempt to cancel one offer.
+    /// </summary>
+    /// <remarks>
+    /// The result carries the offer id and whether the cancellation succeeded.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the result.</param>
+    /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnMarketplaceOfferCancelResult(
     Action<MarketplaceCancelOfferResult> handler) =>
     Track(Application.Subscribe<MarketplaceCancelResultReceived>(
@@ -126,22 +164,33 @@ public partial class ScriptGlobals
         Guarded<MarketplaceCancelResultReceived>(result => handler(result.Result))));
 
     /// <summary>
-    /// Raised when the server resolves an attempt to cancel every open offer at once, carrying
-    /// the ids that were cancelled.
+    /// Registers a handler that runs when the server resolves an attempt to cancel every open
+    /// offer at once.
     /// </summary>
-    /// <param name="handler">Receives the result.</param>
-    /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
     /// <remarks>
-    /// On Flash this message only exists in the modern marketplace layout; a legacy Flash build
-    /// cannot produce it.
+    /// The result carries the ids that were canceled and whether the request succeeded. On Flash
+    /// this message only exists in the modern marketplace layout; a legacy Flash build cannot
+    /// produce it.
     /// </remarks>
+    /// <param name="handler">The handler to call with the result.</param>
+    /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnMarketplaceAllOffersCancelResult(
         Action<MarketplaceCancelAllOffersSnapshot> handler) =>
         Track(Application.Subscribe<MarketplaceCancelAllResultReceived>(
             ApplicationMemberIds.MarketplaceOffersCancelAllResult,
             Guarded<MarketplaceCancelAllResultReceived>(result => handler(result.Result))));
 
+    /// <summary>
+    /// Registers a handler that runs when the server resolves an attempt to clear the own offer
+    /// history.
+    /// </summary>
+    /// <remarks>
+    /// The result carries only whether the history was cleared.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the result.</param>
+    /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnMarketplaceHistoryClearResult(
     Action<MarketplaceClearOwnHistoryResult> handler) =>
     Track(Application.Subscribe<MarketplaceHistoryClearResultReceived>(
@@ -149,13 +198,16 @@ public partial class ScriptGlobals
         Guarded<MarketplaceHistoryClearResultReceived>(result => handler(result.Result))));
 
     /// <summary>
-    /// Raised after the cached marketplace state was emptied for a new session, which happens on
-    /// reconnect. Everything the marketplace state exposes is back to its empty value by the time
-    /// the handler runs.
+    /// Registers a handler that runs after the cached marketplace state was emptied for a new
+    /// session.
     /// </summary>
-    /// <param name="handler">Invoked with no arguments.</param>
+    /// <remarks>
+    /// A reset happens on reconnect. Everything the marketplace state exposes is back to its empty
+    /// value by the time the handler runs.
+    /// </remarks>
+    /// <param name="handler">The handler to call, with no arguments.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnMarketplaceReset(Action handler) =>
         Track(Application.Subscribe<MarketplaceChanged>(
             ApplicationMemberIds.MarketplaceChanged,

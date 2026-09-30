@@ -2,6 +2,24 @@ using Qx.Messages;
 
 namespace Qx.Model.Forums;
 
+/// <summary>Represents a thread in a group forum.</summary>
+/// <param name="ThreadId">The thread id.</param>
+/// <param name="AuthorId">The user id of the thread's author.</param>
+/// <param name="AuthorName">The name of the thread's author.</param>
+/// <param name="Header">The thread subject.</param>
+/// <param name="IsSticky">Whether the thread is pinned to the top of the thread list.</param>
+/// <param name="IsLocked">Whether the thread rejects further replies.</param>
+/// <param name="CreationSecondsAgo">The number of seconds since the thread was created, at the time it was sent.</param>
+/// <param name="MessageCount">The number of messages in the thread.</param>
+/// <param name="UnreadMessageCount">The number of messages the viewer has not read.</param>
+/// <param name="LastMessageId">The id of the latest message.</param>
+/// <param name="LastMessageAuthorId">The user id of the latest message's author.</param>
+/// <param name="LastMessageAuthorName">The name of the latest message's author.</param>
+/// <param name="LastMessageSecondsAgo">The number of seconds since the latest message was posted, at the time the thread was sent.</param>
+/// <param name="State">The moderation state: 0 default, 1 restored, 10 hidden by a forum admin, 20 hidden by staff.</param>
+/// <param name="AdminId">The user id of the moderator who last changed the state.</param>
+/// <param name="AdminName">The name of the moderator who last changed the state.</param>
+/// <param name="AdminOperationSecondsAgo">The number of seconds since the state was last changed, at the time the thread was sent.</param>
 public sealed record ForumThread(
     Id ThreadId,
     Id AuthorId,
@@ -27,18 +45,21 @@ public sealed record ForumThread(
         throw new ArgumentNullException(nameof(LastMessageAuthorName));
     private string admin_name = AdminName ?? throw new ArgumentNullException(nameof(AdminName));
 
+    /// <summary>Gets the name of the thread's author.</summary>
     public string AuthorName
     {
         get => author_name;
         init => author_name = value ?? throw new ArgumentNullException(nameof(AuthorName));
     }
 
+    /// <summary>Gets the thread subject.</summary>
     public string Header
     {
         get => header;
         init => header = value ?? throw new ArgumentNullException(nameof(Header));
     }
 
+    /// <summary>Gets the name of the latest message's author.</summary>
     public string LastMessageAuthorName
     {
         get => last_message_author_name;
@@ -46,16 +67,22 @@ public sealed record ForumThread(
             throw new ArgumentNullException(nameof(LastMessageAuthorName));
     }
 
+    /// <summary>Gets the name of the moderator who last changed the state.</summary>
     public string AdminName
     {
         get => admin_name;
         init => admin_name = value ?? throw new ArgumentNullException(nameof(AdminName));
     }
 
+    /// <summary>Gets the zero based index of the last read message, or -1 when the viewer has read none.</summary>
     public int LastReadMessageIndex => MessageCount - UnreadMessageCount - 1;
+    /// <summary>Gets whether the thread is hidden, which is when <see cref="State"/> is 10 or 20.</summary>
     public bool IsHidden => State is 10 or 20;
+    /// <summary>Gets whether the thread is hidden by staff, which is when <see cref="State"/> is 20.</summary>
     public bool IsHiddenByStaff => State == 20;
 
+    /// <summary>Parses a forum thread from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ForumThread Parse(in PacketReader p)
     {
         ForumStringBudget budget = ForumProtocol.NewStringBudget();
@@ -140,6 +167,8 @@ public sealed record ForumThread(
             admin_operation_seconds_ago);
     }
 
+    /// <summary>Composes the forum thread into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

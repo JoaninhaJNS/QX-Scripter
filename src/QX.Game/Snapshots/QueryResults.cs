@@ -1,7 +1,19 @@
 namespace Qx.Game.Snapshots;
 
+/// <summary>Provides factories for the <see cref="QueryEnvelope{T}"/> that every read query returns.</summary>
 public static class QueryResults
 {
+    /// <summary>Creates a successful envelope around a payload.</summary>
+    /// <typeparam name="T">The payload type.</typeparam>
+    /// <param name="query">The query name.</param>
+    /// <param name="data">The payload.</param>
+    /// <param name="ready">Whether the subsystem is connected and usable.</param>
+    /// <param name="loaded">Whether every part of the answer has arrived.</param>
+    /// <param name="stale">Whether the payload was retained from an ended session.</param>
+    /// <param name="truncated">Whether items were dropped to stay under a cap.</param>
+    /// <param name="pending">The names of the pieces that have not arrived yet, or <see langword="null"/> for none.</param>
+    /// <param name="capturedAtUtc">The time the state was read, or <see langword="null"/> for the current UTC time.</param>
+    /// <returns>The envelope, with no error.</returns>
     public static QueryEnvelope<T> Success<T>(
         string query,
         T data,
@@ -17,6 +29,15 @@ public static class QueryResults
             data,
             null);
 
+    /// <summary>Creates a failed envelope that describes an exception.</summary>
+    /// <remarks>Every metadata flag is <see langword="false"/> and the payload is <see langword="default"/>.</remarks>
+    /// <typeparam name="T">The payload type.</typeparam>
+    /// <param name="query">The query name.</param>
+    /// <param name="error">The exception that failed the query.</param>
+    /// <param name="cancellationToken">The token of the query, used to tell a cancellation from a timeout.</param>
+    /// <param name="capturedAtUtc">The time of the failure, or <see langword="null"/> for the current UTC time.</param>
+    /// <returns>The envelope, with the error described by <see cref="Describe"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="error"/> is <see langword="null"/>.</exception>
     public static QueryEnvelope<T> Failure<T>(
         string query,
         Exception error,
@@ -28,6 +49,14 @@ public static class QueryResults
             default,
             Describe(error, cancellationToken));
 
+    /// <summary>Creates the load state that accompanies a snapshot.</summary>
+    /// <param name="ready">Whether the subsystem is connected and usable.</param>
+    /// <param name="loaded">Whether every part of the answer has arrived.</param>
+    /// <param name="stale">Whether the payload was retained from an ended session.</param>
+    /// <param name="truncated">Whether items were dropped to stay under a cap.</param>
+    /// <param name="pending">The names of the pieces that have not arrived yet, or <see langword="null"/> for none.</param>
+    /// <param name="capturedAtUtc">The time the state was read, or <see langword="null"/> for the current UTC time.</param>
+    /// <returns>The metadata, with a copy of <paramref name="pending"/>.</returns>
     public static QueryMetadataSnapshot Metadata(
         bool ready,
         bool loaded,
@@ -43,6 +72,16 @@ public static class QueryResults
             capturedAtUtc ?? DateTimeOffset.UtcNow,
             pending?.ToArray() ?? []);
 
+    /// <summary>Classifies an exception into a stable error code with its request details.</summary>
+    /// <remarks>
+    /// An <see cref="AggregateException"/> is unwrapped to its base exception first. A cancellation counts
+    /// as <c>cancelled</c> only when <paramref name="cancellationToken"/> was canceled; otherwise it counts
+    /// as <c>timeout</c>.
+    /// </remarks>
+    /// <param name="error">The exception to describe.</param>
+    /// <param name="cancellationToken">The token of the query, used to tell a cancellation from a timeout.</param>
+    /// <returns>The error description.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="error"/> is <see langword="null"/>.</exception>
     public static QueryErrorSnapshot Describe(Exception error, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(error);

@@ -2,23 +2,40 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Specifies the role of a user in a group.</summary>
 public enum GuildMemberType
 {
+    /// <summary>The owner of the group.</summary>
     Owner = 0,
+    /// <summary>An administrator of the group.</summary>
     Administrator = 1,
+    /// <summary>A regular member of the group.</summary>
     Member = 2,
+    /// <summary>A user whose request to join is pending.</summary>
     Pending = 3,
+    /// <summary>A user blocked from the group.</summary>
     Blocked = 4
 }
 
+/// <summary>Specifies the category of members a group member list shows.</summary>
 public enum GuildMemberSearchType
 {
+    /// <summary>All members.</summary>
     All = 0,
+    /// <summary>The administrators.</summary>
     Administrators = 1,
+    /// <summary>The users whose requests to join are pending.</summary>
     Pending = 2,
+    /// <summary>The blocked users.</summary>
     Blocked = 3
 }
 
+/// <summary>Represents a user in a group member list.</summary>
+/// <param name="Type">The role of the user in the group.</param>
+/// <param name="Id">The identifier of the user.</param>
+/// <param name="Name">The name of the user.</param>
+/// <param name="Figure">The figure string of the user.</param>
+/// <param name="MemberSince">The date the user joined the group, as the text sent by the hotel.</param>
 public sealed record GuildMember(
     GuildMemberType Type,
     Id Id,
@@ -28,15 +45,22 @@ public sealed record GuildMember(
 {
     internal const int FlashMinimumSize = sizeof(int) * 2 + sizeof(ushort) * 3;
 
+    /// <summary>Gets whether the user owns the group.</summary>
     public bool IsOwner => Type is GuildMemberType.Owner;
+    /// <summary>Gets whether the user is an administrator of the group.</summary>
     public bool IsAdministrator => Type is GuildMemberType.Administrator;
+    /// <summary>Gets whether the user is the owner, an administrator or a regular member.</summary>
     public bool IsMember => Type is
         GuildMemberType.Owner or
         GuildMemberType.Administrator or
         GuildMemberType.Member;
+    /// <summary>Gets whether the user's request to join is pending.</summary>
     public bool IsPending => Type is GuildMemberType.Pending;
+    /// <summary>Gets whether the user is blocked from the group.</summary>
     public bool IsBlocked => Type is GuildMemberType.Blocked;
 
+    /// <summary>Parses a group member from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GuildMember Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -48,6 +72,8 @@ public sealed record GuildMember(
             p.ReadString(),
             p.ReadString());
 
+    /// <summary>Composes the group member into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -71,11 +97,24 @@ public sealed record GuildMember(
     }
 }
 
+/// <summary>Represents the <c>GuildMembers</c> message, received with one page of a group's members.</summary>
 public sealed record GuildMembers : IParserComposer<GuildMembers>
 {
     private IReadOnlyList<GuildMember> _entries =
         Array.AsReadOnly(Array.Empty<GuildMember>());
 
+    /// <summary>Initializes a new instance of the <see cref="GuildMembers"/> record.</summary>
+    /// <param name="GroupId">The identifier of the group.</param>
+    /// <param name="GroupName">The name of the group.</param>
+    /// <param name="BaseRoomId">The identifier of the group's home room.</param>
+    /// <param name="BadgeCode">The group's badge code.</param>
+    /// <param name="TotalEntries">The number of members matching the filter and category.</param>
+    /// <param name="Entries">The members in the page, copied into a read only list.</param>
+    /// <param name="IsAllowedToManage">Whether the local user may manage the group's members.</param>
+    /// <param name="PageSize">The number of members per page chosen by the hotel.</param>
+    /// <param name="PageIndex">The zero based index of the page.</param>
+    /// <param name="SearchType">The member category echoed by the hotel.</param>
+    /// <param name="UserNameFilter">The user name filter echoed by the hotel.</param>
     public GuildMembers(
         Id GroupId,
         string GroupName,
@@ -102,24 +141,47 @@ public sealed record GuildMembers : IParserComposer<GuildMembers>
         this.UserNameFilter = UserNameFilter;
     }
 
+    /// <summary>Gets the identifier of the group.</summary>
     public Id GroupId { get; init; }
+    /// <summary>Gets the name of the group.</summary>
     public string GroupName { get; init; }
+    /// <summary>Gets the identifier of the group's home room.</summary>
     public Id BaseRoomId { get; init; }
+    /// <summary>Gets the group's badge code.</summary>
     public string BadgeCode { get; init; }
+    /// <summary>Gets the number of members matching the filter and category.</summary>
     public int TotalEntries { get; init; }
 
+    /// <summary>Gets the members in the page, as a read only copy.</summary>
     public IReadOnlyList<GuildMember> Entries
     {
         get => _entries;
         init => _entries = PeopleWire.FreezeReferences(value, nameof(Entries));
     }
 
+    /// <summary>Gets whether the local user may manage the group's members.</summary>
     public bool IsAllowedToManage { get; init; }
+    /// <summary>Gets the number of members per page chosen by the hotel.</summary>
     public int PageSize { get; init; }
+    /// <summary>Gets the zero based index of the page.</summary>
     public int PageIndex { get; init; }
+    /// <summary>Gets the member category echoed by the hotel.</summary>
     public GuildMemberSearchType? SearchType { get; init; }
+    /// <summary>Gets the user name filter echoed by the hotel.</summary>
     public string UserNameFilter { get; init; }
 
+    /// <summary>Deconstructs the message into its parts.</summary>
+    /// <param name="GroupId">The identifier of the group.</param>
+    /// <param name="GroupName">The name of the group.</param>
+    /// <param name="BaseRoomId">The identifier of the group's home room.</param>
+    /// <param name="BadgeCode">The group's badge code.</param>
+    /// <param name="TotalEntries">The number of members matching the filter and category.</param>
+    /// <param name="Entries">The members in the page.</param>
+    /// <param name="IsAllowedToManage">Whether the local user may manage the group's members.</param>
+    /// <param name="PageSize">The number of members per page.</param>
+    /// <param name="PageIndex">The zero based index of the page.</param>
+    /// <param name="SearchType">The member category.</param>
+    /// <param name="UserNameFilter">The user name filter.</param>
     public void Deconstruct(
         out Id GroupId,
         out string GroupName,
@@ -146,15 +208,22 @@ public sealed record GuildMembers : IParserComposer<GuildMembers>
         UserNameFilter = this.UserNameFilter;
     }
 
+    /// <summary>
+    /// Gets the number of pages, at least 1, computed from <see cref="TotalEntries"/> and <see cref="PageSize"/>.
+    /// </summary>
     public int TotalPages => PageSize <= 0
         ? 1
         : (int)Math.Max(
             1L,
             ((long)Math.Max(0, TotalEntries) + PageSize - 1) / PageSize);
 
+    /// <summary>Gets whether a page comes before this one.</summary>
     public bool HasPreviousPage => PageIndex > 0;
+    /// <summary>Gets whether a page comes after this one.</summary>
     public bool HasNextPage => PageIndex + 1 < TotalPages;
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GuildMembers Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -191,6 +260,11 @@ public sealed record GuildMembers : IParserComposer<GuildMembers>
         return entries;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when <see cref="SearchType"/> is <see langword="null"/> or not a defined value.
+    /// </exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

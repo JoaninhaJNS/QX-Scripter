@@ -2,9 +2,14 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Outgoing;
 
+/// <summary>Requests the page tree of a catalog.</summary>
+/// <remarks>Sent as the Flash <c>GetCatalogIndex</c> message.</remarks>
+/// <param name="CatalogType">The catalog to load, <c>NORMAL</c> or <c>BUILDERS_CLUB</c>.</param>
 public sealed record CatalogIndexRequest(string CatalogType)
     : IParserComposer<CatalogIndexRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CatalogIndexRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -17,6 +22,8 @@ public sealed record CatalogIndexRequest(string CatalogType)
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -30,11 +37,18 @@ public sealed record CatalogIndexRequest(string CatalogType)
     }
 }
 
+/// <summary>Requests the contents of a catalog page.</summary>
+/// <remarks>Sent as the Flash <c>GetCatalogPage</c> message.</remarks>
+/// <param name="PageId">The id of the catalog page.</param>
+/// <param name="OfferId">The offer to select on the page, or -1 for none.</param>
+/// <param name="CatalogType">The catalog the page belongs to, <c>NORMAL</c> or <c>BUILDERS_CLUB</c>.</param>
 public sealed record CatalogPageRequest(
     int PageId,
     int OfferId,
     string CatalogType) : IParserComposer<CatalogPageRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CatalogPageRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -47,6 +61,8 @@ public sealed record CatalogPageRequest(
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

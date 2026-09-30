@@ -8,6 +8,20 @@ using System.Runtime.ExceptionServices;
 
 namespace Qx.Game;
 
+/// <summary>
+/// Provides the base for managers that mirror hotel state from intercepted messages.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A derived manager registers its message handlers in <see cref="OnAttach"/> and clears its state in
+/// <see cref="Reset"/>. Handlers run on the thread that delivers the intercepted message and stay
+/// registered across reconnects until the manager is disposed.
+/// </para>
+/// <para>
+/// While the hotel connection is closing, handlers are skipped and sends throw
+/// <see cref="InvalidOperationException"/>. Both resume once the reset has finished.
+/// </para>
+/// </remarks>
 public abstract class GameStateManager : IDisposable
 {
     private delegate void PacketComposer(in PacketWriter writer);
@@ -23,8 +37,24 @@ public abstract class GameStateManager : IDisposable
     private bool _attached;
     private bool _disposed;
 
+    /// <summary>
+    /// Gets the interceptor the manager is attached to.
+    /// </summary>
+    /// <remarks>
+    /// Set by <see cref="Attach"/>, and <see langword="null"/> before the first attach.
+    /// </remarks>
     protected IInterceptor Interceptor { get; private set; } = null!;
 
+    /// <summary>
+    /// Attaches the manager to an interceptor and registers its message handlers.
+    /// </summary>
+    /// <remarks>
+    /// Calls <see cref="OnAttach"/>. If it throws, the attachment is rolled back and the exception is rethrown.
+    /// </remarks>
+    /// <param name="interceptor">The interceptor to attach to.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="interceptor"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the manager has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is already attached or its previous attachment is still detaching.</exception>
     public void Attach(IInterceptor interceptor)
     {
         ArgumentNullException.ThrowIfNull(interceptor);
@@ -61,6 +91,11 @@ public abstract class GameStateManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Registers a handler that runs when a hotel session connects.
+    /// </summary>
+    /// <param name="handler">The handler to run with the new session.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnConnected(Action<Session> handler)
     {
         IInterceptor interceptor = Interceptor;
@@ -73,19 +108,66 @@ public abstract class GameStateManager : IDisposable
         });
     }
 
+    /// <summary>
+    /// Registers a handler for an incoming message, identified by name, from any client.
+    /// </summary>
+    /// <remarks>
+    /// A message that leaves unread bytes after parsing throws <see cref="InvalidOperationException"/>
+    /// instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="name">The name of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(string name, Action<T> handler) where T : IParserComposer<T>
         => OnIncoming<T>(
             ClientType.None,
             name,
             (message, _) => handler(message));
 
+    /// <summary>
+    /// Registers a handler for an incoming message, identified by key, from any client.
+    /// </summary>
+    /// <remarks>
+    /// A message that leaves unread bytes after parsing throws <see cref="InvalidOperationException"/>
+    /// instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="key">The key of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(MessageKey key, Action<T> handler) where T : IParserComposer<T>
         => OnIncoming<T>(key, (message, _) => handler(message));
 
+    /// <summary>
+    /// Registers a handler for an incoming message, parsed through its contract, from any client.
+    /// </summary>
+    /// <remarks>
+    /// A message that leaves unread bytes after parsing throws <see cref="InvalidOperationException"/>
+    /// instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="contract">The contract of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="contract"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(MessageContract<T> contract, Action<T> handler)
         where T : IParserComposer<T> =>
         OnIncoming(contract, (message, _) => handler(message));
 
+    /// <summary>
+    /// Registers a handler for an incoming message, parsed through its contract, that also receives the state generation.
+    /// </summary>
+    /// <remarks>
+    /// The second handler argument is the <see cref="CurrentStateGeneration"/> at the time the message
+    /// arrived, for use with <see cref="ApplyIfCurrent"/>. A message that leaves unread bytes after
+    /// parsing throws <see cref="InvalidOperationException"/> instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="contract">The contract of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message and the state generation.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="contract"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(MessageContract<T> contract, Action<T, long> handler)
         where T : IParserComposer<T>
     {
@@ -103,12 +185,43 @@ public abstract class GameStateManager : IDisposable
                         contract.Parse))));
     }
 
+    /// <summary>
+    /// Registers a handler for an incoming message, parsed through its contract, from one client type only.
+    /// </summary>
+    /// <remarks>
+    /// The interception is active only while the connected session uses <paramref name="client"/>. A
+    /// message that leaves unread bytes after parsing throws <see cref="InvalidOperationException"/>
+    /// instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="client">The client type the handler applies to.</param>
+    /// <param name="contract">The contract of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="contract"/> is <see langword="null"/>.</exception>
+    /// <exception cref="UnsupportedClientException">Thrown when <paramref name="contract"/> does not support <paramref name="client"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(
         ClientType client,
         MessageContract<T> contract,
         Action<T> handler) where T : IParserComposer<T> =>
         OnIncoming(client, contract, (message, _) => handler(message));
 
+    /// <summary>
+    /// Registers a handler for an incoming message, parsed through its contract, from one client type only, that also receives the state generation.
+    /// </summary>
+    /// <remarks>
+    /// The interception is active only while the connected session uses <paramref name="client"/>. The
+    /// second handler argument is the <see cref="CurrentStateGeneration"/> at the time the message
+    /// arrived. A message that leaves unread bytes after parsing throws
+    /// <see cref="InvalidOperationException"/> instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="client">The client type the handler applies to.</param>
+    /// <param name="contract">The contract of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message and the state generation.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="contract"/> is <see langword="null"/>.</exception>
+    /// <exception cref="UnsupportedClientException">Thrown when <paramref name="contract"/> does not support <paramref name="client"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(
         ClientType client,
         MessageContract<T> contract,
@@ -139,6 +252,18 @@ public abstract class GameStateManager : IDisposable
         });
     }
 
+    /// <summary>
+    /// Registers a handler for an incoming message, identified by key, that also receives the state generation.
+    /// </summary>
+    /// <remarks>
+    /// The second handler argument is the <see cref="CurrentStateGeneration"/> at the time the message
+    /// arrived. A message that leaves unread bytes after parsing throws
+    /// <see cref="InvalidOperationException"/> instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="key">The key of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message and the state generation.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(MessageKey key, Action<T, long> handler) where T : IParserComposer<T>
     {
         IInterceptor interceptor = Interceptor;
@@ -153,12 +278,39 @@ public abstract class GameStateManager : IDisposable
                         handler))));
     }
 
+    /// <summary>
+    /// Registers a handler for an incoming message, identified by key, from one client type only.
+    /// </summary>
+    /// <remarks>
+    /// The interception is active only while the connected session uses <paramref name="client"/>. A
+    /// message that leaves unread bytes after parsing throws <see cref="InvalidOperationException"/>
+    /// instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="client">The client type the handler applies to.</param>
+    /// <param name="key">The key of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(
         ClientType client,
         MessageKey key,
         Action<T> handler) where T : IParserComposer<T> =>
         OnIncoming<T>(client, key, (message, _) => handler(message));
 
+    /// <summary>
+    /// Registers a handler for an incoming message, identified by key, from one client type only, that also receives the state generation.
+    /// </summary>
+    /// <remarks>
+    /// The interception is active only while the connected session uses <paramref name="client"/>. The
+    /// second handler argument is the <see cref="CurrentStateGeneration"/> at the time the message
+    /// arrived. A message that leaves unread bytes after parsing throws
+    /// <see cref="InvalidOperationException"/> instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="client">The client type the handler applies to.</param>
+    /// <param name="key">The key of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message and the state generation.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(
         ClientType client,
         MessageKey key,
@@ -185,11 +337,37 @@ public abstract class GameStateManager : IDisposable
         });
     }
 
+    /// <summary>
+    /// Registers a handler for an incoming message, identified by name, that also receives the state generation.
+    /// </summary>
+    /// <remarks>
+    /// The second handler argument is the <see cref="CurrentStateGeneration"/> at the time the message
+    /// arrived. A message that leaves unread bytes after parsing throws
+    /// <see cref="InvalidOperationException"/> instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="name">The name of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message and the state generation.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(
         string name,
         Action<T, long> handler) where T : IParserComposer<T> =>
         OnIncoming<T>(ClientType.None, name, handler);
 
+    /// <summary>
+    /// Registers a handler for an incoming message, identified by name, from one client type.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ClientType.None"/> accepts the message from any client. Otherwise the interception is
+    /// active only while the connected session uses <paramref name="client"/>. A message that leaves
+    /// unread bytes after parsing throws <see cref="InvalidOperationException"/> instead of reaching
+    /// the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="client">The client type the handler applies to, or <see cref="ClientType.None"/> for any client.</param>
+    /// <param name="name">The name of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(
         ClientType client,
         string name,
@@ -199,6 +377,21 @@ public abstract class GameStateManager : IDisposable
             name,
             (message, _) => handler(message));
 
+    /// <summary>
+    /// Registers a handler for an incoming message, identified by name, from one client type, that also receives the state generation.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ClientType.None"/> accepts the message from any client. Otherwise the interception is
+    /// active only while the connected session uses <paramref name="client"/>. The second handler
+    /// argument is the <see cref="CurrentStateGeneration"/> at the time the message arrived. A message
+    /// that leaves unread bytes after parsing throws <see cref="InvalidOperationException"/> instead of
+    /// reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="client">The client type the handler applies to, or <see cref="ClientType.None"/> for any client.</param>
+    /// <param name="name">The name of the incoming message.</param>
+    /// <param name="handler">The handler to run with the parsed message and the state generation.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming<T>(
         ClientType client,
         string name,
@@ -231,6 +424,16 @@ public abstract class GameStateManager : IDisposable
         });
     }
 
+    /// <summary>
+    /// Registers a handler for an incoming message without a body, identified by name.
+    /// </summary>
+    /// <remarks>
+    /// A message that carries any bytes throws <see cref="InvalidOperationException"/> instead of
+    /// reaching the handler.
+    /// </remarks>
+    /// <param name="name">The name of the incoming message.</param>
+    /// <param name="handler">The handler to run when the message arrives.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnIncoming(string name, Action handler)
     {
         var identifier = new Identifier(ClientType.None, Direction.In, name);
@@ -246,6 +449,17 @@ public abstract class GameStateManager : IDisposable
             }));
     }
 
+    /// <summary>
+    /// Registers a handler for an outgoing message, identified by name.
+    /// </summary>
+    /// <remarks>
+    /// A message that leaves unread bytes after parsing throws <see cref="InvalidOperationException"/>
+    /// instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="name">The name of the outgoing message.</param>
+    /// <param name="handler">The handler to run with the parsed message.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnOutgoing<T>(string name, Action<T> handler) where T : IParserComposer<T>
     {
         var identifier = new Identifier(ClientType.None, Direction.Out, name);
@@ -261,6 +475,16 @@ public abstract class GameStateManager : IDisposable
                         (message, _) => handler(message)))));
     }
 
+    /// <summary>
+    /// Registers a handler for an outgoing message without a body, identified by name.
+    /// </summary>
+    /// <remarks>
+    /// A message that carries any bytes throws <see cref="InvalidOperationException"/> instead of
+    /// reaching the handler.
+    /// </remarks>
+    /// <param name="name">The name of the outgoing message.</param>
+    /// <param name="handler">The handler to run when the message is sent.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnOutgoing(string name, Action handler)
     {
         var identifier = new Identifier(ClientType.None, Direction.Out, name);
@@ -276,9 +500,29 @@ public abstract class GameStateManager : IDisposable
             }));
     }
 
+    /// <summary>
+    /// Sends an outgoing message built from values, identified by name.
+    /// </summary>
+    /// <remarks>
+    /// The values are written in order with the wire format of the current client.
+    /// </remarks>
+    /// <param name="name">The name of the outgoing message.</param>
+    /// <param name="values">The values to write to the message, in order.</param>
+    /// <exception cref="ObjectDisposedException">Thrown when the manager has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the manager is not attached, or the hotel connection is closing or not available.</exception>
     protected void Send(string name, params object[] values)
         => Send(default, name, values);
 
+    /// <summary>
+    /// Sends an outgoing message built from values, identified by key.
+    /// </summary>
+    /// <remarks>
+    /// The values are written in order with the wire format of the current client.
+    /// </remarks>
+    /// <param name="key">The key of the outgoing message.</param>
+    /// <param name="values">The values to write to the message, in order.</param>
+    /// <exception cref="ObjectDisposedException">Thrown when the manager has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the manager is not attached, or the hotel connection is closing or not available.</exception>
     protected void Send(MessageKey key, params object[] values)
         => Send(key, null, values);
 
@@ -314,27 +558,54 @@ public abstract class GameStateManager : IDisposable
     }
 
     /// <summary>
-    /// Writes a message the client will take for one the hotel sent.
+    /// Sends an incoming message, identified by name, to the client as if the hotel had sent it.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The counterpart to <see cref="SendMessage{T}(string,T)"/>, which speaks to the hotel. This one speaks to
-    /// the client, and is what makes it possible to take something off the screen that is still in
-    /// the room: the hotel is never told, so nothing is really removed and the state we mirror is
-    /// left alone.
+    /// The counterpart to <see cref="SendMessage{T}(string,T)"/>, which sends to the hotel. The hotel does
+    /// not receive the message and the mirrored state does not change, so it can remove something from
+    /// the client's view that is still in the room.
     /// </para>
     /// <para>
-    /// No verified-schema check here. That check exists because the hotel refuses a request it
-    /// cannot read; the client is on the other side of the same wire and reads what a hotel would
-    /// have sent, so the model's own composer is the whole contract.
+    /// The message is written by its own composer without a schema check.
     /// </para>
     /// </remarks>
+    /// <typeparam name="T">The type of the message.</typeparam>
+    /// <param name="name">The name of the incoming message.</param>
+    /// <param name="message">The message to send to the client.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the manager has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the manager is not attached, or the hotel connection is closing or not available.</exception>
     protected void SendToClient<T>(string name, T message) where T : IComposer
         => SendToClient(default, name, message);
 
+    /// <summary>
+    /// Sends an incoming message, identified by key, to the client as if the hotel had sent it.
+    /// </summary>
+    /// <remarks>
+    /// The hotel does not receive the message and the mirrored state does not change.
+    /// </remarks>
+    /// <typeparam name="T">The type of the message.</typeparam>
+    /// <param name="key">The key of the incoming message.</param>
+    /// <param name="message">The message to send to the client.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the manager has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the manager is not attached, or the hotel connection is closing or not available.</exception>
     protected void SendToClient<T>(MessageKey key, T message) where T : IComposer
         => SendToClient(key, null, message);
 
+    /// <summary>
+    /// Sends an incoming message through its contract to the client as if the hotel had sent it.
+    /// </summary>
+    /// <remarks>
+    /// The hotel does not receive the message and the mirrored state does not change.
+    /// </remarks>
+    /// <typeparam name="T">The type of the message.</typeparam>
+    /// <param name="contract">The contract of the incoming message.</param>
+    /// <param name="message">The message to send to the client.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="contract"/> or <paramref name="message"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the manager has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the manager is not attached, or the hotel connection is closing or not available.</exception>
     protected void SendToClient<T>(MessageContract<T> contract, T message)
         where T : IParserComposer<T>
     {
@@ -387,12 +658,39 @@ public abstract class GameStateManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Sends an outgoing message, identified by name, to the hotel.
+    /// </summary>
+    /// <typeparam name="T">The type of the message.</typeparam>
+    /// <param name="name">The name of the outgoing message.</param>
+    /// <param name="message">The message to send.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the manager has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the manager is not attached, or the hotel connection is closing or not available.</exception>
     protected void SendMessage<T>(string name, T message) where T : IComposer
         => SendMessage(default, name, message);
 
+    /// <summary>
+    /// Sends an outgoing message, identified by key, to the hotel.
+    /// </summary>
+    /// <typeparam name="T">The type of the message.</typeparam>
+    /// <param name="key">The key of the outgoing message.</param>
+    /// <param name="message">The message to send.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the manager has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the manager is not attached, or the hotel connection is closing or not available.</exception>
     protected void SendMessage<T>(MessageKey key, T message) where T : IComposer
         => SendMessage(key, null, message);
 
+    /// <summary>
+    /// Sends an outgoing message through its contract to the hotel.
+    /// </summary>
+    /// <typeparam name="T">The type of the message.</typeparam>
+    /// <param name="contract">The contract of the outgoing message.</param>
+    /// <param name="message">The message to send.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="contract"/> or <paramref name="message"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the manager has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the message is not known, the manager is not attached, or the hotel connection is closing or not available.</exception>
     protected void SendMessage<T>(MessageContract<T> contract, T message)
         where T : IParserComposer<T>
     {
@@ -409,6 +707,19 @@ public abstract class GameStateManager : IDisposable
             null);
     }
 
+    /// <summary>
+    /// Registers a handler for an outgoing message, parsed through its contract, that also receives the state generation.
+    /// </summary>
+    /// <remarks>
+    /// The second handler argument is the <see cref="CurrentStateGeneration"/> at the time the message
+    /// was sent. A message that leaves unread bytes after parsing throws
+    /// <see cref="InvalidOperationException"/> instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="contract">The contract of the outgoing message.</param>
+    /// <param name="handler">The handler to run with the parsed message and the state generation.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="contract"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnOutgoing<T>(MessageContract<T> contract, Action<T, long> handler)
         where T : IParserComposer<T>
     {
@@ -426,6 +737,19 @@ public abstract class GameStateManager : IDisposable
                         contract.Parse))));
     }
 
+    /// <summary>
+    /// Sends an outgoing message through its contract to the hotel if the given session is still current.
+    /// </summary>
+    /// <typeparam name="T">The type of the message.</typeparam>
+    /// <param name="contract">The contract of the outgoing message.</param>
+    /// <param name="message">The message to send.</param>
+    /// <param name="expected_session">The session the message is meant for.</param>
+    /// <param name="cancellation_token">The token to monitor for cancellation requests.</param>
+    /// <param name="dispatch_guard">An action that runs under the interceptor's send lock just before the message is written, and can throw to stop the send.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="contract"/>, <paramref name="message"/> or <paramref name="expected_session"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the manager has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the session is no longer current, the message is not known, the manager is not attached, or the hotel connection is closing.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellation_token"/> is canceled before the message is written.</exception>
     protected void SendMessage<T>(
         MessageContract<T> contract,
         T message,
@@ -448,6 +772,18 @@ public abstract class GameStateManager : IDisposable
             dispatch_guard);
     }
 
+    /// <summary>
+    /// Registers a handler for an outgoing message, parsed through its contract.
+    /// </summary>
+    /// <remarks>
+    /// A message that leaves unread bytes after parsing throws <see cref="InvalidOperationException"/>
+    /// instead of reaching the handler.
+    /// </remarks>
+    /// <typeparam name="T">The type the message is parsed as.</typeparam>
+    /// <param name="contract">The contract of the outgoing message.</param>
+    /// <param name="handler">The handler to run with the parsed message.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="contract"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected void OnOutgoing<T>(MessageContract<T> contract, Action<T> handler)
         where T : IParserComposer<T>
     {
@@ -555,6 +891,15 @@ public abstract class GameStateManager : IDisposable
 
     private static string RouteName(MessageKey key, string? name) => name ?? key.Value;
 
+    /// <summary>
+    /// Gets the client type of the current hotel session.
+    /// </summary>
+    /// <remarks>
+    /// Falls back to the active client of the interceptor's message manager when no session is connected, and to
+    /// <see cref="ClientType.Flash"/> when neither is known.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">Thrown when the manager has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the manager is not attached.</exception>
     protected ClientType CurrentClient
     {
         get
@@ -571,6 +916,13 @@ public abstract class GameStateManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Gets the current state generation of the manager.
+    /// </summary>
+    /// <remarks>
+    /// The value increases when the manager is attached, when the hotel connection closes, when an
+    /// attach is rolled back and when the manager is disposed.
+    /// </remarks>
     protected long CurrentStateGeneration
     {
         get
@@ -580,6 +932,9 @@ public abstract class GameStateManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Gets the current hotel session, or <see langword="null"/> when none is connected or the manager is not attached.
+    /// </summary>
     protected Session? CurrentSession
     {
         get
@@ -589,6 +944,17 @@ public abstract class GameStateManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Runs an action if the state generation and the hotel session are still current.
+    /// </summary>
+    /// <remarks>
+    /// The action runs under the manager's lifecycle lock, so no disconnect or dispose can start while it runs.
+    /// </remarks>
+    /// <param name="state_generation">The state generation the action belongs to.</param>
+    /// <param name="session">The session the action belongs to.</param>
+    /// <param name="action">The action to run.</param>
+    /// <returns><see langword="true"/> if the action ran; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="session"/> or <paramref name="action"/> is <see langword="null"/>.</exception>
     protected bool ApplyIfCurrent(
         long state_generation,
         Session session,
@@ -610,8 +976,22 @@ public abstract class GameStateManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Registers the manager's message handlers when it is attached to an interceptor.
+    /// </summary>
+    /// <remarks>
+    /// Called by <see cref="Attach"/> after <see cref="Interceptor"/> is set. If it throws, the attachment is rolled back.
+    /// </remarks>
     protected abstract void OnAttach();
 
+    /// <summary>
+    /// Clears the manager's state.
+    /// </summary>
+    /// <remarks>
+    /// Called when the hotel connection closes and, if message handlers were still running, again once
+    /// they have finished. Also called when the manager is disposed and when an attach is rolled back,
+    /// so it can run more than once. The base implementation does nothing.
+    /// </remarks>
     protected virtual void Reset()
     {
     }
@@ -655,6 +1035,13 @@ public abstract class GameStateManager : IDisposable
             throw new InvalidOperationException($"Message '{name}' contains {reader.Available} unexpected bytes.");
     }
 
+    /// <summary>
+    /// Detaches the manager from its interceptor, removes its message handlers and clears its state.
+    /// </summary>
+    /// <remarks>
+    /// Waits for sends and message handlers running on other threads to finish before <see cref="Reset"/> runs. Later
+    /// calls have no effect. An error from removing a message handler is thrown after the state is cleared.
+    /// </remarks>
     public virtual void Dispose()
     {
         CallbackGeneration? callbacks;

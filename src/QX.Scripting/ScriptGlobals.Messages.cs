@@ -7,28 +7,32 @@ public partial class ScriptGlobals
 {
     /// <summary>
     /// Blocks the calling thread until a packet with one of the given message names is seen, or
-    /// 10 seconds pass. The packet is not blocked and still reaches its destination.
+    /// 10 seconds pass.
     /// </summary>
+    /// <remarks>
+    /// The packet is not blocked and still reaches its destination.
+    /// </remarks>
     /// <param name="names">
-    /// The message names to watch, in either direction. Unknown names simply never match.
+    /// The message names to watch, in either direction. Unknown names never match.
     /// </param>
     /// <returns>A copy of the first matching packet; the caller should dispose it.</returns>
-    /// <exception cref="ArgumentException">No name was given.</exception>
-    /// <exception cref="OperationCanceledException">The timeout elapsed or the script was stopped.</exception>
+    /// <exception cref="ArgumentException">Thrown when no name was given.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the timeout elapsed or the script was stopped.</exception>
     public IPacket Receive(params string[] names) => Receive(10000, false, names);
 
     /// <summary>
     /// Blocks the calling thread until a packet with one of the given message names is seen.
     /// </summary>
-    /// <param name="timeoutMs">How long to wait, in milliseconds.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds; -1 waits without a limit.</param>
     /// <param name="block">
-    /// Whether the matching packet is blocked, so the game client or server never receives it.
-    /// Only the one packet that satisfies the call is blocked.
+    /// <see langword="true"/> to block the matching packet, so the game client or server never
+    /// receives it; otherwise, <see langword="false"/>. Only the one packet that satisfies the
+    /// call is blocked.
     /// </param>
     /// <param name="names">The message names to watch, in either direction.</param>
     /// <returns>A copy of the matching packet; the caller should dispose it.</returns>
-    /// <exception cref="ArgumentException">No name was given.</exception>
-    /// <exception cref="OperationCanceledException">The timeout elapsed or the script was stopped.</exception>
+    /// <exception cref="ArgumentException">Thrown when no name was given.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the timeout elapsed or the script was stopped.</exception>
     /// <remarks>
     /// This blocks the calling thread while it waits; prefer
     /// <see cref="ReceiveAnyAsync"/> inside async code.
@@ -39,12 +43,15 @@ public partial class ScriptGlobals
     /// <summary>
     /// Asynchronously waits for a packet with one of the given message names.
     /// </summary>
-    /// <param name="timeoutMs">How long to wait, in milliseconds.</param>
-    /// <param name="block">Whether the matching packet is blocked from reaching its destination.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds; -1 waits without a limit.</param>
+    /// <param name="block">
+    /// <see langword="true"/> to block the matching packet from reaching its destination;
+    /// otherwise, <see langword="false"/>.
+    /// </param>
     /// <param name="names">The message names to watch, in either direction.</param>
     /// <returns>A copy of the matching packet; the caller should dispose it.</returns>
-    /// <exception cref="ArgumentException">No name was given.</exception>
-    /// <exception cref="OperationCanceledException">The timeout elapsed or the script was stopped.</exception>
+    /// <exception cref="ArgumentException">Thrown when no name was given.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the timeout elapsed or the script was stopped.</exception>
     public Task<IPacket> ReceiveAnyAsync(int timeoutMs, bool block, params string[] names) =>
         CaptureAny(names, timeoutMs, block);
 
@@ -58,7 +65,8 @@ public partial class ScriptGlobals
     /// </param>
     /// <param name="names">The message names to watch, in either direction.</param>
     /// <returns><see langword="true"/> when a packet was captured, <see langword="false"/> on timeout.</returns>
-    /// <exception cref="OperationCanceledException">The script was stopped while waiting.</exception>
+    /// <exception cref="ArgumentException">Thrown when no name was given.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while waiting.</exception>
     public bool TryReceive(out IPacket? packet, params string[] names) =>
         TryReceive(10000, false, out packet, names);
 
@@ -66,16 +74,20 @@ public partial class ScriptGlobals
     /// Waits for one of the given messages and reports whether it arrived, instead of throwing
     /// on timeout.
     /// </summary>
-    /// <param name="timeoutMs">How long to wait, in milliseconds.</param>
-    /// <param name="block">Whether the matching packet is blocked from reaching its destination.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds; -1 waits without a limit.</param>
+    /// <param name="block">
+    /// <see langword="true"/> to block the matching packet from reaching its destination;
+    /// otherwise, <see langword="false"/>.
+    /// </param>
     /// <param name="packet">
     /// Receives a copy of the matching packet, or <see langword="null"/> on timeout. The caller
     /// should dispose it when non-null.
     /// </param>
     /// <param name="names">The message names to watch, in either direction.</param>
     /// <returns><see langword="true"/> when a packet was captured, <see langword="false"/> on timeout.</returns>
+    /// <exception cref="ArgumentException">Thrown when no name was given.</exception>
     /// <exception cref="OperationCanceledException">
-    /// The script was stopped while waiting; only the timeout is swallowed.
+    /// Thrown when the script was stopped while waiting; only the timeout is swallowed.
     /// </exception>
     public bool TryReceive(int timeoutMs, bool block, out IPacket? packet, params string[] names)
     {

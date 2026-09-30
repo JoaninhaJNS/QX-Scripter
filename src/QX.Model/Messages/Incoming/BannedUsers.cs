@@ -3,7 +3,8 @@ using Qx.Messages;
 namespace Qx.Model.Messages.Incoming;
 
 /// <summary>
-/// Everyone barred from a room, as the hotel answers a request for the ban list.
+/// Represents the <c>BannedUsersFromRoom</c> message, received with everyone banned from a room in answer to a
+/// request for the ban list.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -19,26 +20,36 @@ public sealed record BannedUsersFromRoom : IParserComposer<BannedUsersFromRoom>
 {
     private IReadOnlyList<IdName> _users = Array.Empty<IdName>();
 
+    /// <summary>Initializes a new instance of the <see cref="BannedUsersFromRoom"/> record.</summary>
+    /// <param name="RoomId">The identifier of the room.</param>
+    /// <param name="Users">The banned users, copied into a read only list.</param>
     public BannedUsersFromRoom(Id RoomId, IReadOnlyList<IdName> Users)
     {
         this.RoomId = RoomId;
         this.Users = Users;
     }
 
+    /// <summary>Gets the identifier of the room.</summary>
     public Id RoomId { get; init; }
 
+    /// <summary>Gets the identifier and name of each banned user, as a read only copy.</summary>
     public IReadOnlyList<IdName> Users
     {
         get => _users;
         init => _users = RoomBanWire.FreezeUsers(value, nameof(Users));
     }
 
+    /// <summary>Deconstructs the message into its room and users.</summary>
+    /// <param name="RoomId">The identifier of the room.</param>
+    /// <param name="Users">The banned users.</param>
     public void Deconstruct(out Id RoomId, out IReadOnlyList<IdName> Users)
     {
         RoomId = this.RoomId;
         Users = this.Users;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BannedUsersFromRoom Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -61,6 +72,8 @@ public sealed record BannedUsersFromRoom : IParserComposer<BannedUsersFromRoom>
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -78,10 +91,17 @@ public sealed record BannedUsersFromRoom : IParserComposer<BannedUsersFromRoom>
     }
 }
 
-/// <summary>One person let back into a room, pushed as it happens rather than asked for.</summary>
+/// <summary>
+/// Represents the <c>UserUnbannedFromRoom</c> message, received when a user is let back into a room.
+/// </summary>
+/// <remarks>The hotel pushes this as it happens rather than in answer to a request.</remarks>
+/// <param name="RoomId">The identifier of the room.</param>
+/// <param name="UserId">The identifier of the unbanned user.</param>
 public sealed record UserUnbannedFromRoom(Id RoomId, Id UserId)
     : IParserComposer<UserUnbannedFromRoom>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static UserUnbannedFromRoom Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -92,6 +112,8 @@ public sealed record UserUnbannedFromRoom(Id RoomId, Id UserId)
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

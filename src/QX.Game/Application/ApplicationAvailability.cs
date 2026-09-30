@@ -5,6 +5,20 @@ using Qx.Protocol;
 
 namespace Qx.Game.Application;
 
+/// <summary>Represents whether one message of an application member can be used with a client.</summary>
+/// <param name="Key">The semantic key of the message.</param>
+/// <param name="Direction">The direction the message travels.</param>
+/// <param name="Role">Whether the member sends or observes the message.</param>
+/// <param name="Required">Whether the member needs the message to be available.</param>
+/// <param name="Registered">Whether the message registry knows the message key.</param>
+/// <param name="Supported">Whether the client has the message in the required direction and a message contract supports it.</param>
+/// <param name="Resolved">Whether the message resolved to headers in the active session: exactly one header for a message the member sends, at least one for a message it observes.</param>
+/// <param name="ModelType">The model type of the message contract, or <see langword="null"/> when there is no contract.</param>
+/// <param name="Headers">The resolved header values in ascending order, or an empty list when the message was not resolved.</param>
+/// <param name="WireCapability">The name of the wire capability that decides whether the message can be used, or <see langword="null"/> when there is none.</param>
+/// <param name="WireAvailable">Whether the wire capability is available, or <see langword="null"/> when there is no named capability.</param>
+/// <param name="WireReason">The reason the wire capability is not available, or <see langword="null"/>.</param>
+/// <param name="HeaderCapabilities">The wire capability of each resolved header, ordered by header value.</param>
 public sealed record ApplicationMessageAvailability(
     MessageKey Key,
     Direction Direction,
@@ -20,17 +34,39 @@ public sealed record ApplicationMessageAvailability(
     string? WireReason,
     IReadOnlyList<ApplicationMessageHeaderCapability> HeaderCapabilities);
 
+/// <summary>Represents the wire capability of one resolved message header.</summary>
+/// <param name="Header">The header value.</param>
+/// <param name="Capability">The name of the capability, or <see langword="null"/> when the header has no named capability.</param>
+/// <param name="Available">Whether the message can be used with this header.</param>
+/// <param name="Reason">The reason the message cannot be used, or <see langword="null"/> when it is available.</param>
 public sealed record ApplicationMessageHeaderCapability(
     int Header,
     string? Capability,
     bool Available,
     string? Reason);
 
+/// <summary>Represents whether an application member is supported by one client type.</summary>
+/// <remarks>The messages are checked against the message registry and contracts only, without resolving headers.</remarks>
+/// <param name="Client">The client type.</param>
+/// <param name="Supported">Whether every required message of the member is supported by the client.</param>
+/// <param name="Messages">The support of each message of the member.</param>
 public sealed record ApplicationClientAvailability(
     ClientType Client,
     bool Supported,
     IReadOnlyList<ApplicationMessageAvailability> Messages);
 
+/// <summary>Represents whether an application member can be invoked in the active session.</summary>
+/// <remarks>
+/// A member is available when every required state is satisfied and, for an operation, every
+/// required message is supported, resolved and not blocked by a wire capability. An event checks
+/// only the required messages it observes, and a query checks no messages.
+/// </remarks>
+/// <param name="Available">Whether the member can be invoked.</param>
+/// <param name="Client">The client type of the active session, or <see cref="ClientType.None"/> when there is no session.</param>
+/// <param name="MissingStates">The required states that are not satisfied.</param>
+/// <param name="ActiveMessages">The availability of each message of the member for the active client.</param>
+/// <param name="Clients">The support of the member for each client type.</param>
+/// <param name="CatalogProvenance">The origin of the message catalog bound to the active session, or <see langword="null"/> when no catalog matches the active client.</param>
 public sealed record ApplicationAvailability(
     bool Available,
     ClientType Client,
@@ -39,6 +75,10 @@ public sealed record ApplicationAvailability(
     IReadOnlyList<ApplicationClientAvailability> Clients,
     CatalogProvenance? CatalogProvenance);
 
+/// <summary>Represents an application member together with its current availability.</summary>
+/// <remarks>Returned by <see cref="IApplicationRuntime.Describe(string)"/>.</remarks>
+/// <param name="Descriptor">The metadata of the member.</param>
+/// <param name="Availability">Whether the member can be invoked in the active session.</param>
 public sealed record ApplicationMemberDescription(
     ApplicationDescriptor Descriptor,
     ApplicationAvailability Availability);

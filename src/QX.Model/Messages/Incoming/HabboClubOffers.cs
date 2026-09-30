@@ -3,6 +3,22 @@ using Qx.Model;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents one club membership offer the hotel sells.</summary>
+/// <param name="OfferId">The identifier of the offer.</param>
+/// <param name="ProductCode">The product code of the offer.</param>
+/// <param name="PriceCredits">The price in credits.</param>
+/// <param name="PriceActivityPoints">The price in activity points.</param>
+/// <param name="PriceActivityPointType">The activity point type of <paramref name="PriceActivityPoints"/>.</param>
+/// <param name="IsVip">Whether the offer is a VIP membership.</param>
+/// <param name="Months">The number of months of membership the offer grants.</param>
+/// <param name="ExtraDays">The number of extra days of membership the offer grants.</param>
+/// <param name="IsGiftable">Whether the offer can be bought as a gift.</param>
+/// <param name="DaysLeftAfterPurchase">
+/// The number of membership days the account would have left after buying the offer.
+/// </param>
+/// <param name="Year">The year of the expiry date the account would reach after buying the offer.</param>
+/// <param name="Month">The month of the expiry date the account would reach after buying the offer.</param>
+/// <param name="Day">The day of the expiry date the account would reach after buying the offer.</param>
 public sealed record HabboClubOffer(
     int OfferId,
     string ProductCode,
@@ -20,6 +36,9 @@ public sealed record HabboClubOffer(
 {
     internal bool ReservedWireFlag { get; init; }
 
+    /// <summary>Parses a club offer from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
+    /// <remarks>An unnamed flag after the product code is kept internally so that composing writes it back.</remarks>
     public static HabboClubOffer Parse(in PacketReader p)
     {
         var strings = new CatalogStringBudget(1, SubscriptionAdjunctWire.MaximumStringBytes);
@@ -67,6 +86,8 @@ public sealed record HabboClubOffer(
         };
     }
 
+    /// <summary>Composes the club offer into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         var strings = new CatalogStringBudget(1, SubscriptionAdjunctWire.MaximumStringBytes);
@@ -88,17 +109,22 @@ public sealed record HabboClubOffer(
     }
 }
 
+/// <summary>Represents the <c>HabboClubOffers</c> message, received with the club membership offers.</summary>
 public sealed record HabboClubOffers : IParserComposer<HabboClubOffers>
 {
     private IReadOnlyList<HabboClubOffer> _offers =
         Array.AsReadOnly(Array.Empty<HabboClubOffer>());
 
+    /// <summary>Initializes a new instance of the <see cref="HabboClubOffers"/> record.</summary>
+    /// <param name="Offers">The offers, copied into a read only list.</param>
+    /// <param name="DaysLeft">The number of membership days the account has left.</param>
     public HabboClubOffers(IReadOnlyList<HabboClubOffer> Offers, int DaysLeft)
     {
         this.Offers = Offers;
         this.DaysLeft = DaysLeft;
     }
 
+    /// <summary>Gets the offers, in the order the hotel sent them, as a read only copy.</summary>
     public IReadOnlyList<HabboClubOffer> Offers
     {
         get => _offers;
@@ -108,8 +134,11 @@ public sealed record HabboClubOffers : IParserComposer<HabboClubOffers>
             nameof(Offers));
     }
 
+    /// <summary>Gets the number of membership days the account has left.</summary>
     public int DaysLeft { get; init; }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static HabboClubOffers Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -144,6 +173,8 @@ public sealed record HabboClubOffers : IParserComposer<HabboClubOffers>
         return new HabboClubOffers(offers, days_left);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -173,6 +204,9 @@ public sealed record HabboClubOffers : IParserComposer<HabboClubOffers>
         p.WriteInt(value.DaysLeft);
     }
 
+    /// <summary>Deconstructs the message into its parts.</summary>
+    /// <param name="Offers">The offers.</param>
+    /// <param name="DaysLeft">The number of membership days the account has left.</param>
     public void Deconstruct(
         out IReadOnlyList<HabboClubOffer> Offers,
         out int DaysLeft)
@@ -182,8 +216,12 @@ public sealed record HabboClubOffers : IParserComposer<HabboClubOffers>
     }
 }
 
+/// <summary>Represents the <c>GetClubOffers</c> message, sent to request the club membership offers.</summary>
+/// <param name="OfferType">The offer set selector sent to the hotel.</param>
 public sealed record GetClubOffers(int OfferType) : IParserComposer<GetClubOffers>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetClubOffers Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -197,6 +235,8 @@ public sealed record GetClubOffers(int OfferType) : IParserComposer<GetClubOffer
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

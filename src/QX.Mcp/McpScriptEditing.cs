@@ -79,7 +79,7 @@ public static partial class McpScriptEditing
     /// The lines around one line, which is what a compiler error points at.
     /// </summary>
     /// <param name="code">The whole script.</param>
-    /// <param name="line">The one-based line to centre on.</param>
+    /// <param name="line">The one-based line to center on.</param>
     /// <param name="context">How many lines to show either side.</param>
     public static string ReadAround(string code, int line, int context)
     {

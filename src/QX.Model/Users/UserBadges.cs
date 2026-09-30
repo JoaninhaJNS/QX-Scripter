@@ -2,6 +2,12 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
+/// <summary>Represents a badge a user wears in one of their badge slots.</summary>
+/// <param name="Slot">The one-based badge slot.</param>
+/// <param name="Code">The badge code.</param>
+/// <param name="OwnerCount">The owner count the hotel reports for the badge, or 0 when <paramref name="HasRarityData"/> is <see langword="false"/>.</param>
+/// <param name="RarityId">The rarity identifier the hotel reports for the badge, or 0 when <paramref name="HasRarityData"/> is <see langword="false"/>.</param>
+/// <param name="HasRarityData">Whether the packet carried <paramref name="OwnerCount"/> and <paramref name="RarityId"/>.</param>
 public readonly record struct SelectedBadge(
     int Slot,
     string Code,
@@ -9,25 +15,38 @@ public readonly record struct SelectedBadge(
     int RarityId,
     bool HasRarityData = true)
 {
+    /// <summary>Initializes a new instance of the <see cref="SelectedBadge"/> struct with rarity data.</summary>
+    /// <param name="Slot">The one-based badge slot.</param>
+    /// <param name="Code">The badge code.</param>
+    /// <param name="First">The owner count, stored in <see cref="OwnerCount"/>.</param>
+    /// <param name="Second">The rarity identifier, stored in <see cref="RarityId"/>.</param>
     public SelectedBadge(int Slot, string Code, int First, int Second)
         : this(Slot, Code, First, Second, true)
     {
     }
 
+    /// <summary>Gets the zero-based badge slot, which is <see cref="Slot"/> minus 1.</summary>
     public int SlotIndex => Slot - 1;
 
+    /// <summary>Gets the owner count, the same value as <see cref="OwnerCount"/>.</summary>
     public int First
     {
         get => OwnerCount;
         init => OwnerCount = value;
     }
 
+    /// <summary>Gets the rarity identifier, the same value as <see cref="RarityId"/>.</summary>
     public int Second
     {
         get => RarityId;
         init => RarityId = value;
     }
 
+    /// <summary>Deconstructs the badge into its slot, code and rarity values.</summary>
+    /// <param name="Slot">The one-based badge slot.</param>
+    /// <param name="Code">The badge code.</param>
+    /// <param name="First">The owner count.</param>
+    /// <param name="Second">The rarity identifier.</param>
     public void Deconstruct(out int Slot, out string Code, out int First, out int Second)
     {
         Slot = this.Slot;
@@ -37,31 +56,50 @@ public readonly record struct SelectedBadge(
     }
 }
 
+/// <summary>Represents the badges a user wears.</summary>
 public sealed record UserBadges : IParserComposer<UserBadges>
 {
     private IReadOnlyList<SelectedBadge> _badges =
         Array.AsReadOnly(Array.Empty<SelectedBadge>());
 
+    /// <summary>Initializes a new instance of the <see cref="UserBadges"/> class.</summary>
+    /// <param name="UserId">The user who wears the badges.</param>
+    /// <param name="Badges">The worn badges; the list is copied.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="Badges"/> is <see langword="null"/>.</exception>
     public UserBadges(Id UserId, IReadOnlyList<SelectedBadge> Badges)
     {
         this.UserId = UserId;
         this.Badges = Badges;
     }
 
+    /// <summary>Gets the user who wears the badges.</summary>
     public Id UserId { get; init; }
 
+    /// <summary>Gets the worn badges as a read-only copy.</summary>
+    /// <exception cref="ArgumentNullException">Thrown when set to <see langword="null"/>.</exception>
     public IReadOnlyList<SelectedBadge> Badges
     {
         get => _badges;
         init => _badges = AchievementBadgeWire.FreezeValues(value, nameof(Badges));
     }
 
+    /// <summary>Deconstructs the value into its user and badges.</summary>
+    /// <param name="UserId">The user who wears the badges.</param>
+    /// <param name="Badges">The worn badges.</param>
     public void Deconstruct(out Id UserId, out IReadOnlyList<SelectedBadge> Badges)
     {
         UserId = this.UserId;
         Badges = this.Badges;
     }
 
+    /// <summary>Reads the worn badges from a packet.</summary>
+    /// <remarks>
+    /// The packet is checked against both entry layouts, with and without rarity data, and exactly
+    /// one of them has to fit.
+    /// </remarks>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when neither layout fits or both do.</exception>
     public static UserBadges Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -90,6 +128,10 @@ public sealed record UserBadges : IParserComposer<UserBadges>
         return new UserBadges(user_id, badges);
     }
 
+    /// <summary>Writes the worn badges to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the badges mix entries with and without rarity data.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

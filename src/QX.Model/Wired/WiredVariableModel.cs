@@ -3,37 +3,65 @@ using Qx.Messages;
 namespace Qx.Model.Wired;
 
 // A WiredContext entry — one of seven tagged variable structures. Compose mirrors the exact read.
+/// <summary>Defines a value carried by an entry of a <see cref="WiredContext"/>.</summary>
 public interface IWiredContextEntry
 {
+    /// <summary>Composes the value into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     void Compose(in PacketWriter p);
 }
 
 // §7.8 — the leaf variable descriptor, appears throughout the context tree.
+/// <summary>Represents the definition of a wired variable.</summary>
 public sealed class WiredVariable : IParserComposer<WiredVariable>, IWiredContextEntry
 {
+    /// <summary>Gets the id of the variable.</summary>
     public string VariableId { get; init; } = "";
+    /// <summary>Gets the variable type code.</summary>
     public int VariableType { get; init; }
+    /// <summary>Gets the name of the variable, empty when it has none.</summary>
     public string VariableName { get; init; } = "";
+    /// <summary>Gets the availability type code.</summary>
+    /// <remarks>Values below 100 are stored, and 10, 11 and 20 are persisted.</remarks>
     public int AvailabilityType { get; init; }
+    /// <summary>Gets the target code of the variable, one of the <see cref="WiredVariableTarget"/> values.</summary>
     public int VariableTarget { get; init; }
+    /// <summary>Gets whether the variable is always available.</summary>
     public bool AlwaysAvailable { get; init; }
+    /// <summary>Gets whether the variable can be created on and deleted from its holders.</summary>
     public bool CanCreateAndDelete { get; init; }
+    /// <summary>Gets whether the variable carries a value.</summary>
     public bool HasValue { get; init; }
+    /// <summary>Gets whether the value can be written.</summary>
     public bool CanWriteValue { get; init; }
+    /// <summary>Gets whether changes to the variable can be intercepted.</summary>
     public bool CanInterceptChanges { get; init; }
+    /// <summary>Gets whether the variable is invisible.</summary>
     public bool IsInvisible { get; init; }
+    /// <summary>Gets whether the creation time of the variable can be read.</summary>
     public bool CanReadCreationTime { get; init; }
+    /// <summary>Gets whether the last update time of the variable can be read.</summary>
     public bool CanReadLastUpdateTime { get; init; }
     // null = presence flag was false (no bytes); non-null (even empty) = flag true.
+    /// <summary>Gets the text connector entries as key and text pairs, or <see langword="null"/> when the variable has no text connector.</summary>
+    /// <remarks>An empty list means the variable has a text connector without entries.</remarks>
     public IReadOnlyList<KeyValuePair<Id, string>>? TextConnector { get; init; }
 
+    /// <summary>Gets whether the variable has a text connector.</summary>
     public bool HasTextConnector => TextConnector is not null;
+    /// <summary>Gets whether the variable is stored, which is the case when <see cref="AvailabilityType"/> is below 100.</summary>
     public bool IsStored => AvailabilityType < 100;
+    /// <summary>Gets whether the variable is persisted, which is the case when <see cref="AvailabilityType"/> is 10, 11 or 20.</summary>
     public bool IsPersisted => AvailabilityType is 10 or 11 or 20;
+    /// <summary>Gets <see cref="VariableTarget"/> as a <see cref="WiredTarget"/> value.</summary>
     public WiredTarget Target => (WiredTarget)VariableTarget;
+    /// <summary>Gets the display name of the variable, which is <see cref="VariableName"/>, or <see cref="VariableId"/> when the name is empty.</summary>
     public string Name => VariableName.Length > 0 ? VariableName : VariableId;
+    /// <summary>Gets whether the value cannot be written.</summary>
     public bool IsReadOnly => !CanWriteValue;
 
+    /// <summary>Parses the variable from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WiredVariable Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -85,6 +113,8 @@ public sealed class WiredVariable : IParserComposer<WiredVariable>, IWiredContex
         };
     }
 
+    /// <summary>Composes the variable into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -140,14 +170,21 @@ public sealed class WiredVariable : IParserComposer<WiredVariable>, IWiredContex
 }
 
 // §7.7
+/// <summary>Represents the value of a wired variable held by a furni item or a user.</summary>
+/// <param name="ObjectId">The id of the furni item or user that holds the value, written as a 32 bit integer.</param>
+/// <param name="Value">The variable value, written as a 32 bit integer.</param>
 public readonly record struct ObjectIdAndValuePair(Id ObjectId, long Value) : IParserComposer<ObjectIdAndValuePair>
 {
+    /// <summary>Parses the pair from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ObjectIdAndValuePair Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static ObjectIdAndValuePair ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the pair into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -161,16 +198,28 @@ public readonly record struct ObjectIdAndValuePair(Id ObjectId, long Value) : IP
 }
 
 // §7.1 — tag 0. Only a hash on the wire; the variable list is synchronised client-side (not transmitted).
+/// <summary>Represents the hash of all variables in the room, carried by context tag 0.</summary>
+/// <remarks>Only the hash is sent. The variable list itself is kept in sync by the variable messages.</remarks>
+/// <param name="Hash">The hash of all variables in the room.</param>
 public sealed record AllVariablesInRoom(int Hash) : IParserComposer<AllVariablesInRoom>, IWiredContextEntry
 {
+    /// <summary>Parses the entry from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static AllVariablesInRoom Parse(in PacketReader p) => new(p.ReadInt());
+    /// <summary>Composes the entry into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) => p.WriteInt(Hash);
 }
 
 // §7.2 — tags 1 (furni) and 2 (user).
+/// <summary>Represents a furni or user variable with the objects that hold it, carried by context tags 1 and 2.</summary>
+/// <param name="Variable">The variable definition.</param>
+/// <param name="Holders">The furni items or users that hold the variable, with their values.</param>
 public sealed record VariableInfoAndHolders(WiredVariable Variable, IReadOnlyList<ObjectIdAndValuePair> Holders)
     : IParserComposer<VariableInfoAndHolders>, IWiredContextEntry
 {
+    /// <summary>Parses the entry from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static VariableInfoAndHolders Parse(in PacketReader p)
     {
         WiredVariable variable = WiredVariable.Parse(p);
@@ -181,6 +230,8 @@ public sealed record VariableInfoAndHolders(WiredVariable Variable, IReadOnlyLis
         return new VariableInfoAndHolders(variable, holders);
     }
 
+    /// <summary>Composes the entry into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         variable_compose(p);
@@ -193,9 +244,14 @@ public sealed record VariableInfoAndHolders(WiredVariable Variable, IReadOnlyLis
 }
 
 // §7.3 — tag 3.
+/// <summary>Represents a global variable with its value, carried by context tag 3.</summary>
+/// <param name="Variable">The variable definition.</param>
+/// <param name="Value">The value of the global variable, written as a 32 bit integer.</param>
 public sealed record VariableInfoAndValue(WiredVariable Variable, long Value)
     : IParserComposer<VariableInfoAndValue>, IWiredContextEntry
 {
+    /// <summary>Parses the entry from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static VariableInfoAndValue Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -205,6 +261,8 @@ public sealed record VariableInfoAndValue(WiredVariable Variable, long Value)
         return new VariableInfoAndValue(variable, p.ReadInt());
     }
 
+    /// <summary>Composes the entry into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -217,9 +275,15 @@ public sealed record VariableInfoAndValue(WiredVariable Variable, long Value)
 }
 
 // §7.4
+/// <summary>Represents a wired variable shared from another room.</summary>
+/// <param name="RoomId">The id of the room that shares the variable.</param>
+/// <param name="RoomName">The name of the room that shares the variable.</param>
+/// <param name="WiredVariable">The variable definition.</param>
 public sealed record SharedVariable(Id RoomId, string RoomName, WiredVariable WiredVariable)
     : IParserComposer<SharedVariable>
 {
+    /// <summary>Parses the shared variable from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SharedVariable Parse(in PacketReader p)
     {
         Id roomId = p.ReadId();
@@ -228,6 +292,8 @@ public sealed record SharedVariable(Id RoomId, string RoomName, WiredVariable Wi
         return new SharedVariable(roomId, roomName, variable);
     }
 
+    /// <summary>Composes the shared variable into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteId(RoomId);
@@ -237,9 +303,13 @@ public sealed record SharedVariable(Id RoomId, string RoomName, WiredVariable Wi
 }
 
 // §7.4 — tag 4.
+/// <summary>Represents the variables other rooms share, carried by context tag 4.</summary>
+/// <param name="SharedVariables">The shared variables.</param>
 public sealed record SharedVariableList(IReadOnlyList<SharedVariable> SharedVariables)
     : IParserComposer<SharedVariableList>, IWiredContextEntry
 {
+    /// <summary>Parses the entry from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SharedVariableList Parse(in PacketReader p)
     {
         int n = p.ReadLength();
@@ -249,6 +319,8 @@ public sealed record SharedVariableList(IReadOnlyList<SharedVariable> SharedVari
         return new SharedVariableList(items);
     }
 
+    /// <summary>Composes the entry into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteLength((Length)SharedVariables.Count);
@@ -258,9 +330,13 @@ public sealed record SharedVariableList(IReadOnlyList<SharedVariable> SharedVari
 }
 
 // §7.5 — tag 5 (via createFromMessage).
+/// <summary>Represents a list of variable definitions, carried by context tag 5.</summary>
+/// <param name="Variables">The variable definitions.</param>
 public sealed record VariableList(IReadOnlyList<WiredVariable> Variables)
     : IParserComposer<VariableList>, IWiredContextEntry
 {
+    /// <summary>Parses the entry from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static VariableList Parse(in PacketReader p)
     {
         int n = p.ReadLength();
@@ -270,6 +346,8 @@ public sealed record VariableList(IReadOnlyList<WiredVariable> Variables)
         return new VariableList(items);
     }
 
+    /// <summary>Composes the entry into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteLength((Length)Variables.Count);
@@ -279,12 +357,20 @@ public sealed record VariableList(IReadOnlyList<WiredVariable> Variables)
 }
 
 // §7.6
+/// <summary>Represents a wired placeholder shared from another room.</summary>
+/// <param name="RoomId">The id of the room that shares the placeholder.</param>
+/// <param name="RoomName">The name of the room that shares the placeholder.</param>
+/// <param name="PlaceholderName">The name of the placeholder.</param>
 public sealed record SharedGlobalPlaceholder(Id RoomId, string RoomName, string PlaceholderName)
     : IParserComposer<SharedGlobalPlaceholder>
 {
+    /// <summary>Parses the shared placeholder from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SharedGlobalPlaceholder Parse(in PacketReader p) =>
         new(p.ReadId(), p.ReadString(), p.ReadString());
 
+    /// <summary>Composes the shared placeholder into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteId(RoomId);
@@ -294,9 +380,13 @@ public sealed record SharedGlobalPlaceholder(Id RoomId, string RoomName, string 
 }
 
 // §7.6 — tag 6.
+/// <summary>Represents the placeholders other rooms share, carried by context tag 6.</summary>
+/// <param name="SharedPlaceholders">The shared placeholders.</param>
 public sealed record SharedGlobalPlaceholderList(IReadOnlyList<SharedGlobalPlaceholder> SharedPlaceholders)
     : IParserComposer<SharedGlobalPlaceholderList>, IWiredContextEntry
 {
+    /// <summary>Parses the entry from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SharedGlobalPlaceholderList Parse(in PacketReader p)
     {
         int n = p.ReadLength();
@@ -306,6 +396,8 @@ public sealed record SharedGlobalPlaceholderList(IReadOnlyList<SharedGlobalPlace
         return new SharedGlobalPlaceholderList(items);
     }
 
+    /// <summary>Composes the entry into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteLength((Length)SharedPlaceholders.Count);
@@ -315,26 +407,47 @@ public sealed record SharedGlobalPlaceholderList(IReadOnlyList<SharedGlobalPlace
 }
 
 // §6 — the tagged-union variables container inlined into every wired config.
+/// <summary>Represents one tagged entry of a <see cref="WiredContext"/>.</summary>
+/// <param name="Tag">The context tag, one of the tag constants of <see cref="WiredContext"/>.</param>
+/// <param name="Value">The value the tag carries.</param>
 public sealed record WiredContextEntry(int Tag, IWiredContextEntry Value);
 
+/// <summary>Represents the variable context the hotel sends with a wired configuration.</summary>
+/// <remarks>The context is a list of tagged entries. When a tag appears more than once, the typed properties return the last entry.</remarks>
+/// <param name="Entries">The context entries in wire order.</param>
 public sealed record WiredContext(IReadOnlyList<WiredContextEntry> Entries) : IParserComposer<WiredContext>
 {
+    /// <summary>Gets a context without entries.</summary>
     public static WiredContext Empty { get; } = new([]);
 
+    /// <summary>The tag of an <see cref="AllVariablesInRoom"/> entry.</summary>
     public const int TagRoomVariables = 0;
+    /// <summary>The tag of a <see cref="VariableInfoAndHolders"/> entry for a furni variable.</summary>
     public const int TagFurniVariableInfo = 1;
+    /// <summary>The tag of a <see cref="VariableInfoAndHolders"/> entry for a user variable.</summary>
     public const int TagUserVariableInfo = 2;
+    /// <summary>The tag of a <see cref="VariableInfoAndValue"/> entry.</summary>
     public const int TagGlobalVariableInfo = 3;
+    /// <summary>The tag of a <see cref="SharedVariableList"/> entry.</summary>
     public const int TagReferenceVariables = 4;
+    /// <summary>The tag of a <see cref="VariableList"/> entry.</summary>
     public const int TagRulesetVariables = 5;
+    /// <summary>The tag of a <see cref="SharedGlobalPlaceholderList"/> entry.</summary>
     public const int TagReferencePlaceholders = 6;
 
+    /// <summary>Gets the last room variables entry, or <see langword="null"/> when there is none.</summary>
     public AllVariablesInRoom? RoomVariables => Last<AllVariablesInRoom>(TagRoomVariables);
+    /// <summary>Gets the last furni variable entry, or <see langword="null"/> when there is none.</summary>
     public VariableInfoAndHolders? FurniVariableInfo => Last<VariableInfoAndHolders>(TagFurniVariableInfo);
+    /// <summary>Gets the last user variable entry, or <see langword="null"/> when there is none.</summary>
     public VariableInfoAndHolders? UserVariableInfo => Last<VariableInfoAndHolders>(TagUserVariableInfo);
+    /// <summary>Gets the last global variable entry, or <see langword="null"/> when there is none.</summary>
     public VariableInfoAndValue? GlobalVariableInfo => Last<VariableInfoAndValue>(TagGlobalVariableInfo);
+    /// <summary>Gets the last shared variables entry, or <see langword="null"/> when there is none.</summary>
     public SharedVariableList? ReferenceVariables => Last<SharedVariableList>(TagReferenceVariables);
+    /// <summary>Gets the last variable definitions entry, or <see langword="null"/> when there is none.</summary>
     public VariableList? RulesetVariables => Last<VariableList>(TagRulesetVariables);
+    /// <summary>Gets the last shared placeholders entry, or <see langword="null"/> when there is none.</summary>
     public SharedGlobalPlaceholderList? ReferencePlaceholders => Last<SharedGlobalPlaceholderList>(TagReferencePlaceholders);
 
     private T? Last<T>(int tag) where T : class
@@ -345,6 +458,9 @@ public sealed record WiredContext(IReadOnlyList<WiredContextEntry> Entries) : IP
         return null;
     }
 
+    /// <summary>Parses the context from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
+    /// <exception cref="InvalidOperationException">Thrown when an entry has an unknown tag.</exception>
     public static WiredContext Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -372,6 +488,9 @@ public sealed record WiredContext(IReadOnlyList<WiredContextEntry> Entries) : IP
         return new WiredContext(entries);
     }
 
+    /// <summary>Composes the context into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidDataException">Thrown when an entry's value does not match its tag.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

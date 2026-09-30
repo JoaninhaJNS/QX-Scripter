@@ -1,12 +1,10 @@
 namespace Qx.Model;
 
-/// <summary>
-/// Whether a furni stands on the floor or hangs on a wall. The values are the character codes
-/// of the letters the client uses for the two kinds.
-/// </summary>
+/// <summary>Specifies whether a furni stands on the floor or hangs on a wall.</summary>
+/// <remarks>The values are the character codes of the letters the client uses for the two kinds.</remarks>
 public enum ItemType
 {
-    /// <summary>0: not a furni, or a type string the hotel did not recognise.</summary>
+    /// <summary>0: not a furni, or a type string the hotel did not recognize.</summary>
     None,
     /// <summary>115, the character <c>'s'</c>: a floor item, placed on a tile.</summary>
     Floor = 's',
@@ -14,10 +12,10 @@ public enum ItemType
     Wall = 'i'
 }
 
-/// <summary>Converts between <see cref="ItemType"/> and the one-letter form the wire uses.</summary>
+/// <summary>Provides conversions between <see cref="ItemType"/> and the one-letter form the wire uses.</summary>
 public static class ItemTypes
 {
-    /// <summary>Reads the one-letter item type the hotel sends.</summary>
+    /// <summary>Converts the one-letter item type the hotel sends to an <see cref="ItemType"/>.</summary>
     /// <param name="value">The letter, matched case-insensitively.</param>
     /// <returns>
     /// <see cref="ItemType.Floor"/> for <c>S</c>, <see cref="ItemType.Wall"/> for <c>I</c>, and
@@ -30,7 +28,7 @@ public static class ItemTypes
         _ => ItemType.None
     };
 
-    /// <summary>Writes the one-letter item type the hotel expects.</summary>
+    /// <summary>Converts an <see cref="ItemType"/> to the one-letter form the hotel expects.</summary>
     /// <param name="type">The item type to encode.</param>
     /// <returns><c>S</c> for a floor item, <c>I</c> for a wall item, and an empty string otherwise.</returns>
     public static string ToShort(this ItemType type) => type switch
@@ -41,7 +39,7 @@ public static class ItemTypes
     };
 }
 
-/// <summary>Who is allowed to interact with a furni standing in a room.</summary>
+/// <summary>Specifies who may interact with a furni standing in a room.</summary>
 public enum FurniUsage
 {
     /// <summary>0: the furni has no interaction at all.</summary>
@@ -52,21 +50,23 @@ public enum FurniUsage
     Anyone = 2
 }
 
-/// <summary>
-/// The special behaviour a furni kind has beyond simply being furniture, mirroring the
-/// client's inventory category constants. This is the <c>specialtype</c> field of the hotel's
-/// furni data and the category an inventory item is filed under.
-/// </summary>
+/// <summary>Specifies the special behavior a furni kind has beyond being plain furniture.</summary>
+/// <remarks>
+/// The values mirror the client's inventory category constants. This is the <c>specialtype</c>
+/// field of the hotel's furni data and the category an inventory item is filed under.
+/// </remarks>
 public enum FurniCategory
 {
-    /// <summary>-100: a QX placeholder for a category the hotel did not send. Not a wire value.</summary>
+    /// <summary>-100: a QX placeholder for a category the hotel did not send.</summary>
+    /// <remarks>Not a wire value.</remarks>
     Unknown = -100,
-    /// <summary>
-    /// -1: badge furni. Not one of the client's numbered categories, whose inventory enum
-    /// starts at 1, so this value never arrives on the wire.
-    /// </summary>
+    /// <summary>-1: badge furni.</summary>
+    /// <remarks>
+    /// Not one of the client's numbered categories, whose inventory enum starts at 1, so this
+    /// value never arrives on the wire.
+    /// </remarks>
     BadgeFurni = -1,
-    /// <summary>1: ordinary furniture with no special behaviour.</summary>
+    /// <summary>1: ordinary furniture with no special behavior.</summary>
     Default = 1,
     /// <summary>2: a wallpaper the room's walls can be set to.</summary>
     Wallpaper = 2,
@@ -90,15 +90,15 @@ public enum FurniCategory
     Trophy = 11,
     /// <summary>12: furni that is redeemed for credits instead of being placed.</summary>
     CreditFurni = 12,
-    /// <summary>13: shampoo that recolours a pet.</summary>
+    /// <summary>13: shampoo that recolors a pet.</summary>
     PetShampoo = 13,
-    /// <summary>14: a customisation part a pet can wear.</summary>
+    /// <summary>14: a customization part a pet can wear.</summary>
     PetCustomPart = 14,
-    /// <summary>15: shampoo that recolours a pet's customisation part.</summary>
+    /// <summary>15: shampoo that recolors a pet's customization part.</summary>
     PetCustomPartShampoo = 15,
     /// <summary>16: a saddle that lets a pet be ridden.</summary>
     PetSaddle = 16,
-    /// <summary>17: group furni whose look follows the group's badge and colours.</summary>
+    /// <summary>17: group furni whose look follows the group's badge and colors.</summary>
     GuildFurni = 17,
     /// <summary>18: furni belonging to a room game, such as a scoreboard or a gate.</summary>
     GameFurni = 18,
@@ -110,10 +110,8 @@ public enum FurniCategory
     MonsterPlantRebreed = 21,
     /// <summary>22: fertiliser that boosts a monsterplant's growth.</summary>
     MonsterPlantFertilize = 22,
-    /// <summary>
-    /// 23: an item that unlocks a clothing set for the avatar. The client calls this
-    /// <c>FIGURE_PURCHASABLE_SET</c>.
-    /// </summary>
+    /// <summary>23: an item that unlocks a clothing set for the avatar.</summary>
+    /// <remarks>The client calls this <c>FIGURE_PURCHASABLE_SET</c>.</remarks>
     ClothingFurni = 23,
     /// <summary>24: a chest that is opened for furni.</summary>
     FurniChest = 24,
@@ -121,10 +119,11 @@ public enum FurniCategory
     CoinsChest = 25
 }
 
-/// <summary>
-/// The shape of a furni's payload, sent as the low byte of the payload's leading integer. It
-/// decides how the rest of the payload is read.
-/// </summary>
+/// <summary>Specifies the shape of a furni's payload.</summary>
+/// <remarks>
+/// It is sent as the low byte of the payload's leading integer and decides how the rest of the
+/// payload is read.
+/// </remarks>
 public enum ItemDataType
 {
     /// <summary>0: a single free-form string, which is what most furni carry.</summary>
@@ -146,8 +145,8 @@ public enum ItemDataType
 }
 
 /// <summary>
-/// Modifier bits carried in the high bytes of a furni payload's leading integer, above the
-/// <see cref="ItemDataType"/> byte.
+/// Specifies the modifier bits carried in the high bytes of a furni payload's leading integer,
+/// above the <see cref="ItemDataType"/> byte.
 /// </summary>
 [Flags]
 public enum ItemDataFlags
@@ -155,7 +154,7 @@ public enum ItemDataFlags
     /// <summary>0: no modifiers.</summary>
     None = 0,
     /// <summary>
-    /// 1: the item belongs to a numbered limited series, which appends its serial number,
+    /// 1: the item belongs to a numbered limited series, which appends its serial number and
     /// series size to the payload.
     /// </summary>
     IsLimitedRare = 1

@@ -2,12 +2,18 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
+/// <summary>Represents who may mute, kick and ban in a room.</summary>
 public sealed class RoomModerationSettings : IParserComposer<RoomModerationSettings>
 {
+    /// <summary>Gets or sets who may mute other users.</summary>
     public RoomModerationPermission Mute { get; set; }
+    /// <summary>Gets or sets who may kick other users.</summary>
     public RoomModerationPermission Kick { get; set; }
+    /// <summary>Gets or sets who may ban other users.</summary>
     public RoomModerationPermission Ban { get; set; }
 
+    /// <summary>Reads the moderation settings from a packet as three integers.</summary>
+    /// <param name="p">The packet to read from.</param>
     public static RoomModerationSettings Parse(in PacketReader p) => new()
     {
         Mute = (RoomModerationPermission)p.ReadInt(),
@@ -15,6 +21,8 @@ public sealed class RoomModerationSettings : IParserComposer<RoomModerationSetti
         Ban = (RoomModerationPermission)p.ReadInt()
     };
 
+    /// <summary>Writes the moderation settings to a packet as three integers.</summary>
+    /// <param name="p">The packet to write to.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteInt((int)Mute);
@@ -23,24 +31,29 @@ public sealed class RoomModerationSettings : IParserComposer<RoomModerationSetti
     }
 }
 
+/// <summary>Represents a room's chat configuration.</summary>
+/// <remarks>
+/// Some Flash builds send only <see cref="FloodProtection"/>; the other properties then keep their
+/// defaults.
+/// </remarks>
 public sealed class RoomChatSettings : IParserComposer<RoomChatSettings>
 {
     private const int FlashCompactLength = sizeof(int);
     private const int FlashFullLength = sizeof(int) * 5;
 
-    /// <summary>How chat bubbles flow in the room.</summary>
+    /// <summary>Gets or sets how chat bubbles flow in the room.</summary>
     public RoomChatFlowMode Flow { get; set; } = RoomChatFlowMode.FreeFlow;
 
-    /// <summary>The chat bubble width the room requests.</summary>
+    /// <summary>Gets or sets the chat bubble width the room requests.</summary>
     public RoomChatBubbleWidth BubbleWidth { get; set; } = RoomChatBubbleWidth.Normal;
 
-    /// <summary>How fast chat bubbles scroll away.</summary>
+    /// <summary>Gets or sets how fast chat bubbles scroll away.</summary>
     public RoomChatScrollSpeed ScrollSpeed { get; set; } = RoomChatScrollSpeed.Normal;
 
-    /// <summary>How many tiles away chat is still heard.</summary>
+    /// <summary>Gets or sets how many tiles away chat is still heard; defaults to 14.</summary>
     public int TalkHearingDistance { get; set; } = 14;
 
-    /// <summary>The strength of the chat flood filter.</summary>
+    /// <summary>Gets or sets the strength of the chat flood filter.</summary>
     public RoomChatFloodSensitivity FloodProtection { get; set; } = RoomChatFloodSensitivity.Normal;
 
     /// <summary>
@@ -49,6 +62,14 @@ public sealed class RoomChatSettings : IParserComposer<RoomChatSettings>
     /// </summary>
     internal GuestRoomResultWireLayout? ParsedLayout { get; set; }
 
+    /// <summary>Reads standalone chat settings from a packet.</summary>
+    /// <remarks>
+    /// The layout is chosen by the bytes left: 4 for the compact form with only
+    /// <see cref="FloodProtection"/>, or 20 for the full form.
+    /// </remarks>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
+    /// <exception cref="NotSupportedException">Thrown when the bytes left match neither layout.</exception>
     public static RoomChatSettings Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -104,6 +125,13 @@ public sealed class RoomChatSettings : IParserComposer<RoomChatSettings>
         return settings;
     }
 
+    /// <summary>Writes the chat settings to a packet.</summary>
+    /// <remarks>
+    /// The full form is written only when the settings were parsed from a full layout; otherwise
+    /// only <see cref="FloodProtection"/> is written.
+    /// </remarks>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -151,7 +179,7 @@ public sealed class RoomChatSettings : IParserComposer<RoomChatSettings>
 /// <para>
 /// So when the profile has no answer the layout is read off the packet instead. The details are the
 /// last thing in the message and the three Flash layouts leave distinct amounts behind at the point
-/// the chat settings begin — five bytes for the compact form, twenty-one and twenty for the two
+/// the chat settings begin: five bytes for the compact form, twenty-one and twenty for the two
 /// full ones. That is measurement rather than a guess, and an amount matching none of them still
 /// throws, now naming what was actually left.
 /// </para>
@@ -206,12 +234,20 @@ internal static class GuestRoomResultLayout
     };
 }
 
+/// <summary>Represents a room's thumbnail image.</summary>
+/// <param name="RoomId">The room identifier.</param>
+/// <param name="Reference">The thumbnail reference as sent by the hotel.</param>
+/// <param name="ImageUrl">The thumbnail image URL.</param>
 public sealed record RoomThumbnailData(Id RoomId, string Reference, string ImageUrl)
     : IParserComposer<RoomThumbnailData>
 {
+    /// <summary>Reads thumbnail data from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
     public static RoomThumbnailData Parse(in PacketReader p) =>
         new(p.ReadId(), p.ReadString(), p.ReadString());
 
+    /// <summary>Writes the thumbnail data to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
     public void Compose(in PacketWriter p)
     {
         p.WriteId(RoomId);
@@ -220,20 +256,37 @@ public sealed record RoomThumbnailData(Id RoomId, string Reference, string Image
     }
 }
 
+/// <summary>Represents the part of a guest room result that follows the <see cref="RoomData"/>.</summary>
 public sealed class RoomResultDetails : IParserComposer<RoomResultDetails>
 {
+    /// <summary>Gets or sets the forward flag of the guest room result.</summary>
     public bool Forward { get; set; }
+    /// <summary>Gets or sets whether the room is a staff pick.</summary>
     public bool IsStaffPick { get; set; }
+    /// <summary>Gets or sets whether the local user is a member of the group that owns the room.</summary>
     public bool IsGroupMember { get; set; }
+    /// <summary>Gets or sets whether the room is muted for everyone.</summary>
     public bool IsRoomMuted { get; set; }
+    /// <summary>Gets or sets who may mute, kick and ban in the room.</summary>
     public RoomModerationSettings Moderation { get; set; } = new();
+    /// <summary>Gets or sets whether the local user may mute others.</summary>
     public bool CanMute { get; set; }
+    /// <summary>Gets or sets the room's chat configuration.</summary>
     public RoomChatSettings Chat { get; set; } = new();
+    /// <summary>
+    /// Gets or sets the trailing opening connection flag, or <see langword="null"/> when the
+    /// packet's layout does not carry it.
+    /// </summary>
+    /// <remarks>Composing a layout that carries the flag requires a value.</remarks>
     public bool? OpeningConnection { get; set; }
 
     /// <inheritdoc cref="RoomChatSettings.ParsedLayout"/>
     internal GuestRoomResultWireLayout? ParsedLayout { get; set; }
 
+    /// <summary>Reads the guest room details from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
+    /// <exception cref="NotSupportedException">Thrown when the layout of the chat settings cannot be determined.</exception>
     public static RoomResultDetails Parse(in PacketReader p)
     {
         var details = new RoomResultDetails
@@ -264,6 +317,16 @@ public sealed class RoomResultDetails : IParserComposer<RoomResultDetails>
         return details;
     }
 
+    /// <summary>Writes the guest room details to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
+    /// <exception cref="NotSupportedException">
+    /// Thrown when the wire layout is unknown and the details were not parsed from a packet.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the layout carries the opening connection flag and
+    /// <see cref="OpeningConnection"/> is <see langword="null"/>.
+    /// </exception>
     public void Compose(in PacketWriter p)
     {
         GuestRoomResultWireLayout layout = GuestRoomResultLayout.Resolve(in p, ParsedLayout);

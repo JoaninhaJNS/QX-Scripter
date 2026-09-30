@@ -4,17 +4,41 @@ using Microsoft.CodeAnalysis;
 
 namespace Qx.Scripting;
 
+/// <summary>Specifies the state of a script run.</summary>
 public enum ScriptRunState
 {
+    /// <summary>No run has started.</summary>
     Idle,
+    /// <summary>The run is being prepared: the host waits for the message catalog, compiles the script and sets up its globals.</summary>
     Compiling,
+    /// <summary>The script body or the handlers it registered are running.</summary>
     Running,
+    /// <summary>A stop was requested and the run has not ended yet.</summary>
     Stopping,
+    /// <summary>The run ended normally, including through <see cref="ScriptGlobals.Finish"/>.</summary>
     Finished,
+    /// <summary>The run was stopped before it finished.</summary>
     Stopped,
+    /// <summary>The run ended with at least one error, such as a compile error, an unhandled exception or a timeout.</summary>
     Faulted
 }
 
+/// <summary>Represents an error reported by a script run.</summary>
+/// <param name="Stage">
+/// The phase the error occurred in, such as <c>compile</c>, <c>setup</c>, <c>runtime</c>,
+/// <c>background</c>, <c>timeout</c> or <c>cleanup</c>.
+/// </param>
+/// <param name="Type">
+/// The compiler diagnostic ID, such as <c>CS0103</c>, or the full name of the exception type.
+/// </param>
+/// <param name="Message">The error message.</param>
+/// <param name="File">The file name without its directory, or <see langword="null"/> when it is unknown.</param>
+/// <param name="Line">The one-based line number, or <see langword="null"/> when it is unknown.</param>
+/// <param name="Column">The one-based column number, or <see langword="null"/> when it is unknown.</param>
+/// <param name="StackTrace">
+/// The stack frames that carry source information, one per line, or <see langword="null"/> when
+/// there are none.
+/// </param>
 public sealed record ScriptExecutionError(
     string Stage,
     string Type,
@@ -24,6 +48,15 @@ public sealed record ScriptExecutionError(
     int? Column,
     string? StackTrace)
 {
+    /// <summary>
+    /// Creates an error in the <c>compile</c> stage from a compiler diagnostic.
+    /// </summary>
+    /// <param name="diagnostic">The compiler diagnostic.</param>
+    /// <param name="fallbackFile">The file to report when the diagnostic has no path, or <see langword="null"/>.</param>
+    /// <returns>
+    /// The error, with the diagnostic ID as its type and the mapped line and column, which are
+    /// <see langword="null"/> when the diagnostic has no location.
+    /// </returns>
     public static ScriptExecutionError FromDiagnostic(Diagnostic diagnostic, string? fallbackFile = null)
     {
         FileLinePositionSpan span = diagnostic.Location.GetMappedLineSpan();
@@ -41,6 +74,22 @@ public sealed record ScriptExecutionError(
             null);
     }
 
+    /// <summary>
+    /// Creates an error from an exception raised during a script run.
+    /// </summary>
+    /// <remarks>
+    /// An <see cref="AggregateException"/> with a single inner exception and the wrapper exceptions
+    /// of the Roslyn scripting API are unwrapped first. The location comes from the first stack
+    /// frame in <paramref name="fallbackFile"/>, or else from the first frame with source
+    /// information, and the stack trace lists only the frames in that file when there are any.
+    /// </remarks>
+    /// <param name="exception">The exception to describe.</param>
+    /// <param name="stage">The phase the exception occurred in, such as <c>runtime</c> or <c>background</c>.</param>
+    /// <param name="fallbackFile">
+    /// The script file, used to pick the relevant stack frames and reported when no frame names a
+    /// file, or <see langword="null"/>.
+    /// </param>
+    /// <returns>The error, with the full name of the exception type and its message.</returns>
     public static ScriptExecutionError FromException(Exception exception, string stage, string? fallbackFile = null)
     {
         Exception error = Unwrap(exception);
@@ -67,6 +116,13 @@ public sealed record ScriptExecutionError(
             sourceTrace);
     }
 
+    /// <summary>
+    /// Formats the error as one line with its type, message and location, followed by the stack
+    /// trace on the next lines when there is one.
+    /// </summary>
+    /// <returns>
+    /// The formatted text, such as <c>System.Exception: text in script.csx:line 3, column 5</c>.
+    /// </returns>
     public string Format()
     {
         string location = File is null
@@ -118,6 +174,15 @@ public sealed record ScriptExecutionError(
         string.IsNullOrWhiteSpace(path) ? null : Path.GetFileName(path);
 }
 
+/// <summary>Represents the outcome of a completed script run.</summary>
+/// <param name="State">The state the run ended in.</param>
+/// <param name="Faulted">
+/// <see langword="true"/> if the run ended in <see cref="ScriptRunState.Faulted"/>; otherwise,
+/// <see langword="false"/>.
+/// </param>
+/// <param name="RuntimeMs">The time the run took, in milliseconds.</param>
+/// <param name="Output">The text the script logged, one line per message.</param>
+/// <param name="Errors">The errors the run reported, in the order they occurred.</param>
 public sealed record ScriptExecutionSnapshot(
     ScriptRunState State,
     bool Faulted,
@@ -125,4 +190,9 @@ public sealed record ScriptExecutionSnapshot(
     string Output,
     ImmutableArray<ScriptExecutionError> Errors);
 
+/// <summary>Thrown when a script ends its run early through <see cref="ScriptGlobals.Finish"/>.</summary>
+/// <remarks>
+/// The host treats it as a normal finish rather than a failure. It derives from
+/// <see cref="OperationCanceledException"/>, so a <c>catch (Exception)</c> in the script swallows it.
+/// </remarks>
 public sealed class ScriptFinishedException : OperationCanceledException;

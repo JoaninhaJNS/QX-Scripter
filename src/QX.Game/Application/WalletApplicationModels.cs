@@ -2,24 +2,72 @@ using Qx.Model;
 
 namespace Qx.Game.Application;
 
+/// <summary>
+/// Provides the activity point types of the common wallet currencies.
+/// </summary>
 public static class WalletPointTypes
 {
+    /// <summary>
+    /// The activity point type of duckets.
+    /// </summary>
     public const int Duckets = 0;
+    /// <summary>
+    /// The activity point type of diamonds.
+    /// </summary>
     public const int Diamonds = 5;
 }
 
+/// <summary>
+/// Represents a request to read the wallet state with a page of activity point balances.
+/// </summary>
+/// <remarks>
+/// Used by <see cref="ApplicationMemberIds.WalletState"/>. Balances are ordered by type. No older
+/// snapshots are retained, so a continuation page fails once the activity points change.
+/// </remarks>
+/// <param name="PointOffset">The zero-based offset of the first balance to return.</param>
+/// <param name="PointLimit">The maximum number of balances to return, from 1 to 500.</param>
+/// <param name="SnapshotRevision">
+/// The activity point snapshot revision that must still be current, or <see langword="null"/> to read the
+/// current balances. Required when <paramref name="PointOffset"/> is greater than 0.
+/// </param>
+/// <param name="PointType">The activity point type to return, or <see langword="null"/> to return every type.</param>
 public sealed record WalletStateRequest(
     int PointOffset = 0,
     int PointLimit = 100,
     long? SnapshotRevision = null,
     int? PointType = null);
 
+/// <summary>
+/// Represents a request to fetch the credit balance from the hotel.
+/// </summary>
+/// <remarks>
+/// Used by <see cref="ApplicationMemberIds.WalletRefresh"/>. The refresh sends a credits request, makes up
+/// to two attempts within the timeout and completes when a new credit balance is received. Activity points
+/// are not requested and are returned as last observed. Concurrent refreshes share one request.
+/// </remarks>
+/// <param name="PointLimit">The maximum number of activity point balances in the result, from 1 to 500.</param>
+/// <param name="TimeoutMilliseconds">The total time to wait for the credit balance in milliseconds, from 1 to 120000.</param>
 public sealed record WalletRefreshRequest(
     int PointLimit = 100,
     int TimeoutMilliseconds = 10000);
 
+/// <summary>
+/// Represents the balance of one activity point type.
+/// </summary>
+/// <param name="Type">The activity point type, such as <see cref="WalletPointTypes.Duckets"/>.</param>
+/// <param name="Amount">The balance.</param>
 public sealed record WalletPointBalance(int Type, int Amount);
 
+/// <summary>
+/// Represents a page of activity point balances.
+/// </summary>
+/// <param name="SnapshotRevision">
+/// The activity point snapshot revision, passed back to read the next page.
+/// </param>
+/// <param name="TotalPoints">The number of balances that match the requested type.</param>
+/// <param name="Offset">The zero-based offset of the first balance in the page.</param>
+/// <param name="NextOffset">The offset of the next page, or <see langword="null"/> when this is the last page.</param>
+/// <param name="Points">The balances in the page, ordered by type.</param>
 public sealed record WalletPointPage(
     long SnapshotRevision,
     int TotalPoints,
@@ -27,6 +75,26 @@ public sealed record WalletPointPage(
     int? NextOffset,
     IReadOnlyList<WalletPointBalance> Points);
 
+/// <summary>
+/// Represents the wallet state of the local user.
+/// </summary>
+/// <remarks>
+/// Returned by <see cref="ApplicationMemberIds.WalletState"/> and <see cref="ApplicationMemberIds.WalletRefresh"/>.
+/// </remarks>
+/// <param name="Connected">Whether the state belongs to the active hotel session.</param>
+/// <param name="Client">
+/// The client type of the hotel session, or <see langword="null"/> when <paramref name="Connected"/> is
+/// <see langword="false"/>.
+/// </param>
+/// <param name="SessionGeneration">The state generation of the hotel session the state belongs to.</param>
+/// <param name="Revision">The wallet state revision, increased by every committed wallet change and reset.</param>
+/// <param name="CreditsSnapshotRevision">
+/// The credits revision, increased when a credit balance is received and when the balances are cleared.
+/// </param>
+/// <param name="CreditsLoaded">Whether a credit balance was received in the hotel session.</param>
+/// <param name="Credits">The credit balance, or <see langword="null"/> when <paramref name="CreditsLoaded"/> is <see langword="false"/>.</param>
+/// <param name="PointsLoaded">Whether the full activity point balances were received in the hotel session.</param>
+/// <param name="ActivityPoints">The requested page of activity point balances.</param>
 public sealed record WalletStateView(
     bool Connected,
     ClientType? Client,
@@ -38,14 +106,50 @@ public sealed record WalletStateView(
     bool PointsLoaded,
     WalletPointPage ActivityPoints);
 
+/// <summary>
+/// Specifies the kind of change reported by <see cref="WalletChanged"/>.
+/// </summary>
 public enum WalletChangeKind
 {
+    /// <summary>A credit balance was received.</summary>
     CreditsRefreshed,
+    /// <summary>The full activity point balances were received.</summary>
     ActivityPointsRefreshed,
+    /// <summary>The balance of one activity point type changed.</summary>
     ActivityPointUpdated,
+    /// <summary>The balances were cleared because the manager was reset or a new hotel session connected.</summary>
     Reset
 }
 
+/// <summary>
+/// Represents a change of the wallet state.
+/// </summary>
+/// <remarks>
+/// Published by <see cref="ApplicationMemberIds.WalletChanged"/>.
+/// </remarks>
+/// <param name="Kind">The kind of change.</param>
+/// <param name="ChangedAtUtc">The time the change was published.</param>
+/// <param name="Client">The client type of the hotel session, or <see langword="null"/> when no session is active.</param>
+/// <param name="SessionGeneration">The state generation of the hotel session.</param>
+/// <param name="Revision">The wallet state revision after the change.</param>
+/// <param name="CreditsSnapshotRevision">The credits revision after the change.</param>
+/// <param name="ActivityPointsSnapshotRevision">
+/// The activity point snapshot revision after the change, increased when balances are received, when one
+/// balance changes and when the balances are cleared.
+/// </param>
+/// <param name="CreditsLoaded">Whether a credit balance was received in the hotel session.</param>
+/// <param name="Credits">The credit balance, or <see langword="null"/> when <paramref name="CreditsLoaded"/> is <see langword="false"/>.</param>
+/// <param name="PointsLoaded">Whether the full activity point balances were received in the hotel session.</param>
+/// <param name="TotalPoints">The number of activity point types with a known balance.</param>
+/// <param name="PointType">
+/// The changed activity point type for <see cref="WalletChangeKind.ActivityPointUpdated"/>; otherwise, <see langword="null"/>.
+/// </param>
+/// <param name="PointAmount">
+/// The new balance for <see cref="WalletChangeKind.ActivityPointUpdated"/>; otherwise, <see langword="null"/>.
+/// </param>
+/// <param name="PointChange">
+/// The change reported by the hotel for <see cref="WalletChangeKind.ActivityPointUpdated"/>; otherwise, <see langword="null"/>.
+/// </param>
 public sealed record WalletChanged(
     WalletChangeKind Kind,
     DateTimeOffset ChangedAtUtc,
@@ -69,10 +173,31 @@ internal interface IWalletOperations
         CancellationToken cancellation_token = default);
 }
 
+/// <summary>
+/// Provides helpers that read the wallet state with every activity point balance.
+/// </summary>
+/// <remarks>
+/// The helpers call <see cref="ApplicationMemberIds.WalletState"/> in pages of 500 balances and join the
+/// pages of one snapshot.
+/// </remarks>
 public static class WalletApplicationPages
 {
     private const int page_limit = 500;
 
+    /// <summary>
+    /// Reads the wallet state with every activity point balance.
+    /// </summary>
+    /// <param name="application">The application runtime to call.</param>
+    /// <param name="point_type">The activity point type to return, or <see langword="null"/> to return every type.</param>
+    /// <param name="cancellation_token">The token that cancels the read.</param>
+    /// <returns>The wallet state whose activity point page holds every matching balance.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="application"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the wallet returns an invalid page or the snapshot changes while the pages are read.
+    /// </exception>
+    /// <remarks>
+    /// Blocks the calling thread until every page is read.
+    /// </remarks>
     public static WalletStateView Read(
         IApplicationRuntime application,
         int? point_type = null,
@@ -82,6 +207,17 @@ public static class WalletApplicationPages
             .GetAwaiter()
             .GetResult();
 
+    /// <summary>
+    /// Reads the wallet state with every activity point balance.
+    /// </summary>
+    /// <param name="application">The application runtime to call.</param>
+    /// <param name="point_type">The activity point type to return, or <see langword="null"/> to return every type.</param>
+    /// <param name="cancellation_token">The token that cancels the read.</param>
+    /// <returns>The wallet state whose activity point page holds every matching balance.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="application"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the wallet returns an invalid page or the snapshot changes while the pages are read.
+    /// </exception>
     public static async ValueTask<WalletStateView> ReadAsync(
         IApplicationRuntime application,
         int? point_type = null,
@@ -101,6 +237,23 @@ public static class WalletApplicationPages
             cancellation_token).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Reads the remaining activity point pages of a wallet state read from its first page.
+    /// </summary>
+    /// <param name="application">The application runtime to call.</param>
+    /// <param name="first">The wallet state read with a point offset of 0.</param>
+    /// <param name="point_type">The activity point type <paramref name="first"/> was read with, or <see langword="null"/> for every type.</param>
+    /// <param name="cancellation_token">The token that cancels the read.</param>
+    /// <returns>The wallet state whose activity point page holds every matching balance.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="application"/> or <paramref name="first"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when a page is invalid or the snapshot changes while the pages are read.
+    /// </exception>
+    /// <remarks>
+    /// Blocks the calling thread until every page is read.
+    /// </remarks>
     public static WalletStateView Complete(
         IApplicationRuntime application,
         WalletStateView first,
@@ -111,6 +264,20 @@ public static class WalletApplicationPages
             .GetAwaiter()
             .GetResult();
 
+    /// <summary>
+    /// Reads the remaining activity point pages of a wallet state read from its first page.
+    /// </summary>
+    /// <param name="application">The application runtime to call.</param>
+    /// <param name="first">The wallet state read with a point offset of 0.</param>
+    /// <param name="point_type">The activity point type <paramref name="first"/> was read with, or <see langword="null"/> for every type.</param>
+    /// <param name="cancellation_token">The token that cancels the read.</param>
+    /// <returns>The wallet state whose activity point page holds every matching balance.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="application"/> or <paramref name="first"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when a page is invalid or the snapshot changes while the pages are read.
+    /// </exception>
     public static async ValueTask<WalletStateView> CompleteAsync(
         IApplicationRuntime application,
         WalletStateView first,

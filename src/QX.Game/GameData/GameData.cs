@@ -29,6 +29,15 @@ internal interface IGameDataTransport
         CancellationToken cancellation_token);
 }
 
+/// <summary>
+/// Provides the hotel's game data files: furni data, product data, external texts and external
+/// variables.
+/// </summary>
+/// <remarks>
+/// The files are downloaded from the hotel's web host under <c>/gamedata/</c>, versioned by the
+/// hashes the host publishes, and cached on disk under <see cref="StoragePaths.Cache"/>. Every
+/// data property is <see langword="null"/> until a load for the current host completes.
+/// </remarks>
 public sealed class GameData
 {
     private static readonly Dictionary<string, string> web_hosts = new(
@@ -52,6 +61,10 @@ public sealed class GameData
     private GameDataLoadOperation? active_load;
     private long load_generation;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GameData"/> class that downloads over HTTPS
+    /// with a 30 second timeout and caches files on disk.
+    /// </summary>
     public GameData()
         : this(new DefaultGameDataTransport())
     {
@@ -62,20 +75,63 @@ public sealed class GameData
         this.transport = transport ?? throw new ArgumentNullException(nameof(transport));
     }
 
+    /// <summary>Gets the furni data, or <see langword="null"/> when game data is not loaded.</summary>
     public FurniData? Furni => State.Furni;
+    /// <summary>Gets the product data, or <see langword="null"/> when game data is not loaded.</summary>
     public ProductData? Products => State.Products;
+    /// <summary>Gets the external texts, or <see langword="null"/> when game data is not loaded.</summary>
     public ExternalTexts? Texts => State.Texts;
+    /// <summary>
+    /// Gets the external variables, or <see langword="null"/> when game data is not loaded or the
+    /// variables file failed to load.
+    /// </summary>
+    /// <remarks>
+    /// A failure to load the variables does not fail the whole load; it is reported through
+    /// <see cref="Status"/> and the other files are still published.
+    /// </remarks>
     public ExternalVariables? Variables => State.Variables;
+    /// <summary>Gets whether game data for the current web host has finished loading.</summary>
     public bool IsLoaded => State.Loaded;
 
     internal GameDataState State => Volatile.Read(ref state);
 
+    /// <summary>Occurs when a load completes and its data is published.</summary>
+    /// <remarks>
+    /// Raised on the thread that finished the load. Handlers are skipped once a newer load has
+    /// replaced the one that completed, and exceptions thrown by handlers are ignored.
+    /// </remarks>
     public event Action? Loaded;
+    /// <summary>Occurs when the loader reports progress or an error as a human-readable message.</summary>
+    /// <remarks>
+    /// Messages report the start of a load, an unavailable variables file, the final counts and
+    /// load failures. Exceptions thrown by handlers are ignored.
+    /// </remarks>
     public event Action<string>? Status;
 
+    /// <summary>Gets the web host that serves game data for a game server host.</summary>
+    /// <param name="gameHost">The game server host name, such as <c>game-us.habbo.com</c>, matched case-insensitively.</param>
+    /// <returns>The matching web host, such as <c>www.habbo.com</c>, or <c>www.habbo.com</c> when the host is not known.</returns>
     public static string WebHostFor(string gameHost) =>
         web_hosts.GetValueOrDefault(gameHost, "www.habbo.com");
 
+    /// <summary>Loads the game data for a game server host.</summary>
+    /// <remarks>
+    /// <para>
+    /// Returns at once when data for the same web host is already loaded, and joins a load that
+    /// is already running for that host. A request for a different host cancels the running load,
+    /// clears the current data and starts over.
+    /// </para>
+    /// <para>
+    /// The returned task completes when the load ends, whether it succeeded or not; a failure is
+    /// reported through <see cref="Status"/> and leaves <see cref="IsLoaded"/>
+    /// <see langword="false"/>. Canceling <paramref name="cancellationToken"/> only stops the wait
+    /// and does not stop the load.
+    /// </para>
+    /// </remarks>
+    /// <param name="gameHost">The game server host name, resolved with <see cref="WebHostFor"/>.</param>
+    /// <param name="cancellationToken">The token that cancels the wait.</param>
+    /// <returns>A task that completes when the load has ended.</returns>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is canceled.</exception>
     public async Task LoadAsync(
         string gameHost,
         CancellationToken cancellationToken = default)

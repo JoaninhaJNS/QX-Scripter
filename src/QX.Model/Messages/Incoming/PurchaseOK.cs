@@ -2,11 +2,23 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the catalog offer a completed purchase was made from.</summary>
 public sealed record PurchaseOffer : IParserComposer<PurchaseOffer>
 {
     private string _localization_id = "";
     private IReadOnlyList<CatalogProduct> _products = Array.AsReadOnly(Array.Empty<CatalogProduct>());
 
+    /// <summary>Initializes a new instance of the <see cref="PurchaseOffer"/> class.</summary>
+    /// <param name="OfferId">The ID of the catalog offer.</param>
+    /// <param name="LocalizationId">The localization key of the offer's name.</param>
+    /// <param name="IsRent">Whether the offer is a rental.</param>
+    /// <param name="PriceInCredits">The price in credits.</param>
+    /// <param name="PriceInActivityPoints">The price in activity points.</param>
+    /// <param name="ActivityPointType">The activity point type the activity point price is paid in.</param>
+    /// <param name="Giftable">Whether the offer can be bought as a gift.</param>
+    /// <param name="Products">The products the offer contains.</param>
+    /// <param name="ClubLevel">The club level required to buy the offer.</param>
+    /// <param name="BundlePurchaseAllowed">Whether several of the offer can be bought at once.</param>
     public PurchaseOffer(
         int OfferId,
         string LocalizationId,
@@ -31,24 +43,32 @@ public sealed record PurchaseOffer : IParserComposer<PurchaseOffer>
         this.BundlePurchaseAllowed = BundlePurchaseAllowed;
     }
 
+    /// <summary>Gets the ID of the catalog offer.</summary>
     public int OfferId { get; init; }
 
+    /// <summary>Gets the localization key of the offer's name.</summary>
     public string LocalizationId
     {
         get => _localization_id;
         init => _localization_id = CatalogWire.RequireReference(value, nameof(LocalizationId));
     }
 
+    /// <summary>Gets whether the offer is a rental.</summary>
     public bool IsRent { get; init; }
 
+    /// <summary>Gets the price in credits.</summary>
     public int PriceInCredits { get; init; }
 
+    /// <summary>Gets the price in activity points of the type given by <see cref="ActivityPointType"/>.</summary>
     public int PriceInActivityPoints { get; init; }
 
+    /// <summary>Gets the activity point type the activity point price is paid in.</summary>
     public int ActivityPointType { get; init; }
 
+    /// <summary>Gets whether the offer can be bought as a gift.</summary>
     public bool Giftable { get; init; }
 
+    /// <summary>Gets the products the offer contains, at most 65535.</summary>
     public IReadOnlyList<CatalogProduct> Products
     {
         get => _products;
@@ -58,22 +78,39 @@ public sealed record PurchaseOffer : IParserComposer<PurchaseOffer>
             nameof(Products));
     }
 
+    /// <summary>Gets the club level required to buy the offer.</summary>
     public int ClubLevel { get; init; }
 
+    /// <summary>Gets whether several of the offer can be bought at once.</summary>
     public bool BundlePurchaseAllowed { get; init; }
 
+    /// <summary>Parses the offer from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PurchaseOffer Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static PurchaseOffer ParseFlash(in PacketReader p) =>
         CatalogPurchaseWire.ParseOffer(in p);
 
+    /// <summary>Composes the offer into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(PurchaseOffer value, in PacketWriter p) =>
         CatalogPurchaseWire.ComposeOffer(value, in p);
 
+    /// <summary>Deconstructs the offer into its values.</summary>
+    /// <param name="OfferId">The ID of the catalog offer.</param>
+    /// <param name="LocalizationId">The localization key of the offer's name.</param>
+    /// <param name="IsRent">Whether the offer is a rental.</param>
+    /// <param name="PriceInCredits">The price in credits.</param>
+    /// <param name="PriceInActivityPoints">The price in activity points.</param>
+    /// <param name="ActivityPointType">The activity point type the activity point price is paid in.</param>
+    /// <param name="Giftable">Whether the offer can be bought as a gift.</param>
+    /// <param name="Products">The products the offer contains.</param>
+    /// <param name="ClubLevel">The club level required to buy the offer.</param>
+    /// <param name="BundlePurchaseAllowed">Whether several of the offer can be bought at once.</param>
     public void Deconstruct(
         out int OfferId,
         out string LocalizationId,
@@ -99,33 +136,47 @@ public sealed record PurchaseOffer : IParserComposer<PurchaseOffer>
     }
 }
 
+/// <summary>Represents the <c>PurchaseOk</c> message, received when the server accepts a catalog purchase.</summary>
+/// <remarks>
+/// Some Flash builds append three integers after the offer. The parser accepts and discards them, and
+/// composing leaves them out.
+/// </remarks>
 public sealed record PurchaseOK : IParserComposer<PurchaseOK>
 {
     private PurchaseOffer _offer = null!;
 
+    /// <summary>Initializes a new instance of the <see cref="PurchaseOK"/> class.</summary>
+    /// <param name="Offer">The offer that was bought.</param>
     public PurchaseOK(PurchaseOffer Offer)
     {
         this.Offer = Offer;
     }
 
+    /// <summary>Gets the offer that was bought.</summary>
     public PurchaseOffer Offer
     {
         get => _offer;
         init => _offer = CatalogWire.RequireReference(value, nameof(Offer));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PurchaseOK Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static PurchaseOK ParseFlash(in PacketReader p) =>
         new(CatalogPurchaseWire.ParseFlashAcceptedOffer(in p));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(PurchaseOK value, in PacketWriter p) =>
         CatalogPurchaseWire.ComposeOffer(value.Offer, in p);
 
+    /// <summary>Deconstructs the message into its values.</summary>
+    /// <param name="Offer">The offer that was bought.</param>
     public void Deconstruct(out PurchaseOffer Offer)
     {
         Offer = this.Offer;

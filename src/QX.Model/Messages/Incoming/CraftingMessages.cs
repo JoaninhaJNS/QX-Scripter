@@ -3,6 +3,9 @@ using Qx.Model.Crafting;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>
+/// Represents the <c>CraftableProducts</c> message, received with the products a crafting furniture can make.
+/// </summary>
 public sealed record CraftableProducts : IParserComposer<CraftableProducts>
 {
     private IReadOnlyList<CraftingProduct> _products =
@@ -10,6 +13,11 @@ public sealed record CraftableProducts : IParserComposer<CraftableProducts>
     private IReadOnlyList<string> _usable_inventory_furniture_classes =
         Array.AsReadOnly(Array.Empty<string>());
 
+    /// <summary>Initializes a new instance of the <see cref="CraftableProducts"/> record.</summary>
+    /// <param name="Products">The products that can be crafted, copied into a read only list.</param>
+    /// <param name="UsableInventoryFurnitureClasses">
+    /// The inventory furniture class names that can be used as ingredients, copied into a read only list.
+    /// </param>
     public CraftableProducts(
         IReadOnlyList<CraftingProduct> Products,
         IReadOnlyList<string> UsableInventoryFurnitureClasses)
@@ -18,12 +26,16 @@ public sealed record CraftableProducts : IParserComposer<CraftableProducts>
         this.UsableInventoryFurnitureClasses = UsableInventoryFurnitureClasses;
     }
 
+    /// <summary>Gets the products that can be crafted, as a read only copy.</summary>
     public IReadOnlyList<CraftingProduct> Products
     {
         get => _products;
         init => _products = CraftingWire.FreezeReferences(value, nameof(Products));
     }
 
+    /// <summary>
+    /// Gets the inventory furniture class names that can be used as ingredients, as a read only copy.
+    /// </summary>
     public IReadOnlyList<string> UsableInventoryFurnitureClasses
     {
         get => _usable_inventory_furniture_classes;
@@ -31,12 +43,21 @@ public sealed record CraftableProducts : IParserComposer<CraftableProducts>
             CraftingWire.FreezeStrings(value, nameof(UsableInventoryFurnitureClasses));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CraftableProducts Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
+    /// <summary>Deconstructs the message into its parts.</summary>
+    /// <param name="Products">The products that can be crafted.</param>
+    /// <param name="UsableInventoryFurnitureClasses">
+    /// The inventory furniture class names that can be used as ingredients.
+    /// </param>
     public void Deconstruct(
         out IReadOnlyList<CraftingProduct> Products,
         out IReadOnlyList<string> UsableInventoryFurnitureClasses)
@@ -128,28 +149,38 @@ public sealed record CraftableProducts : IParserComposer<CraftableProducts>
     }
 }
 
+/// <summary>Represents the <c>CraftingRecipe</c> message, received with the ingredients of a recipe.</summary>
 public sealed record CraftingRecipe : IParserComposer<CraftingRecipe>
 {
     private IReadOnlyList<CraftingIngredient> _ingredients =
         Array.AsReadOnly(Array.Empty<CraftingIngredient>());
 
+    /// <summary>Initializes a new instance of the <see cref="CraftingRecipe"/> record.</summary>
+    /// <param name="Ingredients">The ingredients of the recipe, copied into a read only list.</param>
     public CraftingRecipe(IReadOnlyList<CraftingIngredient> Ingredients)
     {
         this.Ingredients = Ingredients;
     }
 
+    /// <summary>Gets the ingredients of the recipe, as a read only copy.</summary>
     public IReadOnlyList<CraftingIngredient> Ingredients
     {
         get => _ingredients;
         init => _ingredients = CraftingWire.FreezeReferences(value, nameof(Ingredients));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CraftingRecipe Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
+    /// <summary>Deconstructs the message into its ingredients.</summary>
+    /// <param name="Ingredients">The ingredients of the recipe.</param>
     public void Deconstruct(out IReadOnlyList<CraftingIngredient> Ingredients)
     {
         Ingredients = this.Ingredients;
@@ -200,14 +231,26 @@ public sealed record CraftingRecipe : IParserComposer<CraftingRecipe>
     }
 }
 
+/// <summary>Represents the <c>CraftingResult</c> message, received with the result of a craft.</summary>
+/// <param name="Success">Whether the craft succeeded.</param>
+/// <param name="Product">
+/// The crafted product when <paramref name="Success"/> is <see langword="true"/>; otherwise, <see langword="null"/>.
+/// </param>
 public sealed record CraftingResult(
     bool Success,
     CraftingProduct? Product)
     : IParserComposer<CraftingResult>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CraftingResult Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when <see cref="Product"/> is set on a failed result or missing on a successful one.
+    /// </exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -251,14 +294,24 @@ public sealed record CraftingResult(
     }
 }
 
+/// <summary>
+/// Represents the <c>CraftingRecipesAvailable</c> message, received with the number of recipes that match a set of
+/// ingredients.
+/// </summary>
+/// <param name="Count">The number of recipes that match the ingredients.</param>
+/// <param name="IsRecipeComplete">Whether the ingredients form a complete recipe.</param>
 public sealed record CraftingRecipesAvailable(
     int Count,
     bool IsRecipeComplete)
     : IParserComposer<CraftingRecipesAvailable>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CraftingRecipesAvailable Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -292,13 +345,21 @@ public sealed record CraftingRecipesAvailable(
     }
 }
 
+/// <summary>
+/// Represents the <c>GetCraftableProducts</c> message, sent to request the products a crafting furniture can make.
+/// </summary>
+/// <param name="CraftingFurnitureId">The floor item identifier of the crafting furniture.</param>
 public sealed record GetCraftableProducts(
     Id CraftingFurnitureId)
     : IParserComposer<GetCraftableProducts>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetCraftableProducts Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -324,13 +385,19 @@ public sealed record GetCraftableProducts(
     }
 }
 
+/// <summary>Represents the <c>GetCraftingRecipe</c> message, sent to request the ingredients of a recipe.</summary>
+/// <param name="RecipeCode">The recipe code taken from a craftable product.</param>
 public sealed record GetCraftingRecipe(
     string RecipeCode)
     : IParserComposer<GetCraftingRecipe>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetCraftingRecipe Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -357,14 +424,21 @@ public sealed record GetCraftingRecipe(
     }
 }
 
+/// <summary>Represents the <c>Craft</c> message, sent to craft a recipe with a crafting furniture.</summary>
+/// <param name="CraftingFurnitureId">The floor item identifier of the crafting furniture.</param>
+/// <param name="RecipeCode">The recipe code to craft.</param>
 public sealed record Craft(
     Id CraftingFurnitureId,
     string RecipeCode)
     : IParserComposer<Craft>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static Craft Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -398,11 +472,17 @@ public sealed record Craft(
     }
 }
 
+/// <summary>
+/// Represents the <c>CraftSecret</c> message, sent to craft a secret recipe from a set of ingredient items.
+/// </summary>
 public sealed record CraftSecret : IParserComposer<CraftSecret>
 {
     private IReadOnlyList<Id> _ingredient_item_ids =
         Array.AsReadOnly(Array.Empty<Id>());
 
+    /// <summary>Initializes a new instance of the <see cref="CraftSecret"/> record.</summary>
+    /// <param name="CraftingFurnitureId">The floor item identifier of the crafting furniture.</param>
+    /// <param name="IngredientItemIds">The inventory item identifiers to consume, copied into a read only list.</param>
     public CraftSecret(
         Id CraftingFurnitureId,
         IReadOnlyList<Id> IngredientItemIds)
@@ -411,8 +491,10 @@ public sealed record CraftSecret : IParserComposer<CraftSecret>
         this.IngredientItemIds = IngredientItemIds;
     }
 
+    /// <summary>Gets the floor item identifier of the crafting furniture.</summary>
     public Id CraftingFurnitureId { get; init; }
 
+    /// <summary>Gets the inventory item identifiers to consume, as a read only copy.</summary>
     public IReadOnlyList<Id> IngredientItemIds
     {
         get => _ingredient_item_ids;
@@ -420,12 +502,19 @@ public sealed record CraftSecret : IParserComposer<CraftSecret>
             CraftingWire.FreezeValues(value, nameof(IngredientItemIds));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CraftSecret Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
+    /// <summary>Deconstructs the message into its parts.</summary>
+    /// <param name="CraftingFurnitureId">The floor item identifier of the crafting furniture.</param>
+    /// <param name="IngredientItemIds">The inventory item identifiers to consume.</param>
     public void Deconstruct(
         out Id CraftingFurnitureId,
         out IReadOnlyList<Id> IngredientItemIds)
@@ -493,12 +582,19 @@ public sealed record CraftSecret : IParserComposer<CraftSecret>
     }
 }
 
+/// <summary>
+/// Represents the <c>GetCraftingRecipesAvailable</c> message, sent to request the number of recipes that match a set
+/// of ingredient items.
+/// </summary>
 public sealed record GetCraftingRecipesAvailable
     : IParserComposer<GetCraftingRecipesAvailable>
 {
     private IReadOnlyList<Id> _ingredient_item_ids =
         Array.AsReadOnly(Array.Empty<Id>());
 
+    /// <summary>Initializes a new instance of the <see cref="GetCraftingRecipesAvailable"/> record.</summary>
+    /// <param name="CraftingFurnitureId">The floor item identifier of the crafting furniture.</param>
+    /// <param name="IngredientItemIds">The inventory item identifiers to check, copied into a read only list.</param>
     public GetCraftingRecipesAvailable(
         Id CraftingFurnitureId,
         IReadOnlyList<Id> IngredientItemIds)
@@ -507,8 +603,10 @@ public sealed record GetCraftingRecipesAvailable
         this.IngredientItemIds = IngredientItemIds;
     }
 
+    /// <summary>Gets the floor item identifier of the crafting furniture.</summary>
     public Id CraftingFurnitureId { get; init; }
 
+    /// <summary>Gets the inventory item identifiers to check, as a read only copy.</summary>
     public IReadOnlyList<Id> IngredientItemIds
     {
         get => _ingredient_item_ids;
@@ -516,12 +614,19 @@ public sealed record GetCraftingRecipesAvailable
             CraftingWire.FreezeValues(value, nameof(IngredientItemIds));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetCraftingRecipesAvailable Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
+    /// <summary>Deconstructs the message into its parts.</summary>
+    /// <param name="CraftingFurnitureId">The floor item identifier of the crafting furniture.</param>
+    /// <param name="IngredientItemIds">The inventory item identifiers to check.</param>
     public void Deconstruct(
         out Id CraftingFurnitureId,
         out IReadOnlyList<Id> IngredientItemIds)

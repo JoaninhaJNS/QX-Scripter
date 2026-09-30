@@ -3,62 +3,68 @@ using System.Reflection;
 namespace Qx.Scripting;
 
 /// <summary>
-/// What the editor draws next to a member, matching the completion list's own glyphs.
+/// Specifies the glyph the editor draws next to a member, matching the completion list's own glyphs.
 /// </summary>
 public enum ScriptApiGlyph
 {
-    /// <summary>Returns nothing.</summary>
+    /// <summary>The glyph for a member that returns nothing.</summary>
     Keyword,
 
-    /// <summary>A value type: int, long, bool, a struct.</summary>
+    /// <summary>The glyph for a value type such as <c>int</c>, <c>long</c>, <c>bool</c> or a struct.</summary>
     Structure,
 
-    /// <summary>A reference type: string, a model, a manager.</summary>
+    /// <summary>The glyph for a reference type such as <c>string</c>, a model or a manager.</summary>
     Class,
 
-    /// <summary>An interface, which is what most collections come back as.</summary>
+    /// <summary>The glyph for an interface, which is what most collections come back as.</summary>
     Interface,
 
-    /// <summary>An enum.</summary>
+    /// <summary>The glyph for an enum.</summary>
     Enum,
 
-    /// <summary>A delegate.</summary>
+    /// <summary>The glyph for a delegate.</summary>
     Delegate
 }
 
-/// <summary>What a script-facing member is, which is how the browser groups them.</summary>
+/// <summary>Specifies what a script-facing member is, which is how the API browser groups them.</summary>
 public enum ScriptApiKind
 {
-    /// <summary>A live piece of game state: the room, the inventory, a manager.</summary>
+    /// <summary>A property that exposes a live piece of game state, such as the room, the inventory or a manager.</summary>
     State,
 
-    /// <summary>Something to call that does or fetches something.</summary>
+    /// <summary>A method to call that does or fetches something.</summary>
     Action,
 
-    /// <summary>Something to subscribe to, which runs a callback later.</summary>
+    /// <summary>A method whose name starts with <c>On</c> and that takes a callback to run later.</summary>
     Event
 }
 
 /// <summary>
-/// One member a script can write without any using or qualification.
+/// Represents one member a script can write without any using directive or qualification.
 /// </summary>
 /// <param name="Name">The bare name, which is what a search matches first.</param>
 /// <param name="Signature">The whole declaration, return type included.</param>
-/// <param name="Insert">What to put into the editor, with the caret where the arguments go.</param>
-/// <param name="CaretOffset">How far into <paramref name="Insert"/> the caret belongs.</param>
-/// <param name="Kind">Which group it belongs to.</param>
-/// <param name="Group">The subsystem it belongs to, taken from the declaring file.</param>
-/// <param name="Summary">The one-line documentation, empty when it carries none.</param>
-/// <param name="Returns">What it gives back, empty when it carries none.</param>
-/// <param name="ReturnType">The return type as it would be written.</param>
+/// <param name="Insert">
+/// The text to put into the editor: the property name, or the method call with empty brackets and
+/// a leading <c>await</c> when the method returns a task.
+/// </param>
+/// <param name="CaretOffset">
+/// The caret position within <paramref name="Insert"/>: after a property name, or between the
+/// brackets of a method call.
+/// </param>
+/// <param name="Kind">The kind of member, which decides the group the browser shows it under.</param>
+/// <param name="Group">The subsystem the member belongs to, derived from a keyword in its name, or <c>General</c>.</param>
+/// <param name="Summary">The first sentence of the member's summary, or an empty string when it has none.</param>
+/// <param name="Returns">The first sentence of the member's returns text, or an empty string when it has none.</param>
+/// <param name="ReturnType">The return type, or the property type, as it would be written.</param>
 /// <param name="ReturnFilter">
 /// The return type without its generic arguments, which is what a type filter offers: every
 /// <c>Task&lt;T&gt;</c> belongs under one <c>Task</c> rather than under a hundred separate ones.
 /// </param>
-/// <param name="Glyph">Which completion glyph the return type draws.</param>
+/// <param name="Glyph">The completion glyph for the return type.</param>
 /// <param name="Parameters">
-/// The parameter list in brackets, empty for anything that takes none. Without it two overloads
-/// of the same name are one row twice over, which is exactly what they are not.
+/// The parameter list in brackets for a method, <c>()</c> when it takes none, and an empty string
+/// for a property. It keeps overloads of the same name apart.
 /// </param>
 public sealed record ScriptApiMember(
     string Name,
@@ -74,14 +80,21 @@ public sealed record ScriptApiMember(
     ScriptApiGlyph Glyph,
     string Parameters)
 {
-    /// <summary>Whether it takes arguments, so the row can leave the brackets out.</summary>
+    /// <summary>Gets whether the member has a parameter list, so the row can leave the brackets out when it has none.</summary>
+    /// <remarks>
+    /// Every method has a parameter list, even one that takes no arguments, so this is
+    /// <see langword="false"/> only for properties.
+    /// </remarks>
     public bool HasParameters => Parameters.Length > 0;
 
-    /// <summary>Whether it carries a one-line description, so the row can leave the space out.</summary>
+    /// <summary>Gets whether the member carries a one-line description, so the row can leave the space out.</summary>
     public bool HasSummary => Summary.Length > 0;
 
-    /// <summary>Whether a search term appears anywhere worth matching.</summary>
-    /// <param name="term">The term, matched without regard to case.</param>
+    /// <summary>
+    /// Gets whether a search term appears in the name, signature, parameters, group or summary.
+    /// </summary>
+    /// <param name="term">The term, matched without regard to case. An empty term matches every member.</param>
+    /// <returns><see langword="true"/> if the term matches; otherwise, <see langword="false"/>.</returns>
     public bool Matches(string term) =>
         term.Length == 0 ||
         Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
@@ -90,8 +103,12 @@ public sealed record ScriptApiMember(
         Group.Contains(term, StringComparison.OrdinalIgnoreCase) ||
         Summary.Contains(term, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>How well the term fits, so the closest match sorts first.</summary>
+    /// <summary>Gets how well a search term fits the member, so the closest match sorts first.</summary>
     /// <param name="term">The term, matched without regard to case.</param>
+    /// <returns>
+    /// 0 for an exact name match, 1 for a name prefix, 2 for a name substring or an empty term,
+    /// 3 for a group match, and 4 otherwise.
+    /// </returns>
     public int Rank(string term)
     {
         if (term.Length == 0)
@@ -109,31 +126,37 @@ public sealed record ScriptApiMember(
 }
 
 /// <summary>
-/// Everything a script can reach without writing a using, read off <see cref="ScriptGlobals"/>
-/// itself so it can never drift from what actually compiles.
+/// Provides every member a script can reach without writing a using directive, read from
+/// <see cref="ScriptGlobals"/> itself so it can never drift from what actually compiles.
 /// </summary>
 /// <remarks>
-/// The same surface the completion list offers, but readable in one go and searchable. Built once
-/// and held, because reflecting over the whole globals surface is not free and it cannot change
-/// while the process runs.
+/// <para>
+/// It lists the public instance properties and the public instance methods declared on
+/// <see cref="ScriptGlobals"/>, which is the same surface the completion list offers, but
+/// readable in one go and searchable. Members with the same signature are listed once.
+/// </para>
+/// <para>
+/// The list is built on first use and held, because reflecting over the whole globals surface is
+/// not free and it cannot change while the process runs.
+/// </para>
 /// </remarks>
 public static class ScriptApiCatalog
 {
     private static readonly Lazy<IReadOnlyList<ScriptApiMember>> Members = new(Build);
 
-    /// <summary>Every member, ordered by group and then by name.</summary>
+    /// <summary>Gets every member, ordered by group and then by name.</summary>
     public static IReadOnlyList<ScriptApiMember> All => Members.Value;
 
-    /// <summary>The groups that have members, in the order they should be shown.</summary>
+    /// <summary>Gets the groups that have members, in alphabetical order.</summary>
     public static IReadOnlyList<string> Groups =>
         [.. All.Select(m => m.Group).Distinct().OrderBy(g => g, StringComparer.OrdinalIgnoreCase)];
 
     /// <summary>
-    /// The return types worth filtering by, the most common first.
+    /// Gets the return types worth filtering by, the most common first.
     /// </summary>
     /// <remarks>
     /// A type that only one member returns is not a filter, it is that member; those are left out
-    /// so the row stays short enough to read.
+    /// so the row stays short enough to read. Types returned equally often are sorted by name.
     /// </remarks>
     public static IReadOnlyList<string> ReturnTypes =>
     [
@@ -146,12 +169,22 @@ public static class ScriptApiCatalog
     ];
 
     /// <summary>
-    /// The members matching a search term, closest first.
+    /// Searches the members for a term, closest match first.
     /// </summary>
-    /// <param name="term">What was typed; empty returns everything.</param>
-    /// <param name="kind">Restrict to one kind, or null for all.</param>
-    /// <param name="group">Restrict to one group, or null for all.</param>
-    /// <param name="returnType">Restrict to one return type, or null for all.</param>
+    /// <param name="term">
+    /// The text that was typed, trimmed and matched without regard to case; <see langword="null"/>
+    /// or empty matches every member.
+    /// </param>
+    /// <param name="kind">The kind to restrict to, or <see langword="null"/> for every kind.</param>
+    /// <param name="group">
+    /// The group to restrict to, compared without regard to case, or <see langword="null"/> for
+    /// every group.
+    /// </param>
+    /// <param name="returnType">
+    /// The return type filter to restrict to, one of <see cref="ReturnTypes"/> compared exactly,
+    /// or <see langword="null"/> for every return type.
+    /// </param>
+    /// <returns>The matching members, ordered by <see cref="ScriptApiMember.Rank(string)"/> and then by name.</returns>
     public static IReadOnlyList<ScriptApiMember> Search(
         string? term,
         ScriptApiKind? kind = null,

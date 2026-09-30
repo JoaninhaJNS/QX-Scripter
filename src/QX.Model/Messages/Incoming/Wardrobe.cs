@@ -2,15 +2,23 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents an outfit saved in a wardrobe slot.</summary>
+/// <param name="SlotId">The wardrobe slot number.</param>
+/// <param name="Figure">The figure string of the outfit.</param>
+/// <param name="Gender">The gender of the outfit's figure.</param>
 public readonly record struct WardrobeOutfit(int SlotId, string Figure, string Gender)
     : IParserComposer<WardrobeOutfit>
 {
+    /// <summary>Parses the outfit from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WardrobeOutfit Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static WardrobeOutfit ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadString(), p.ReadString());
 
+    /// <summary>Composes the outfit into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -29,24 +37,32 @@ public readonly record struct WardrobeOutfit(int SlotId, string Figure, string G
     }
 }
 
+/// <summary>Represents the <c>Wardrobe</c> message, received with the outfits saved in the user's wardrobe.</summary>
 public sealed record Wardrobe : IParserComposer<Wardrobe>
 {
     private IReadOnlyList<WardrobeOutfit> _outfits = Array.Empty<WardrobeOutfit>();
 
+    /// <summary>Initializes a new instance of the <see cref="Wardrobe"/> class.</summary>
+    /// <param name="state">The wardrobe state value sent by the server.</param>
+    /// <param name="outfits">The saved outfits.</param>
     public Wardrobe(int state, IReadOnlyList<WardrobeOutfit> outfits)
     {
         State = state;
         Outfits = outfits;
     }
 
+    /// <summary>Gets the wardrobe state value sent by the server.</summary>
     public int State { get; init; }
 
+    /// <summary>Gets the saved outfits.</summary>
     public IReadOnlyList<WardrobeOutfit> Outfits
     {
         get => _outfits;
         init => _outfits = WardrobeWire.Freeze(value, nameof(Outfits));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static Wardrobe Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -60,6 +76,8 @@ public sealed record Wardrobe : IParserComposer<Wardrobe>
         return new Wardrobe(state, outfits);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

@@ -3,55 +3,73 @@ using Qx.Messages;
 namespace Qx.Model.Messages.Incoming;
 
 /// <summary>
-/// What the hotel says an achievement is for, which decides where the client files it.
+/// Contains the state codes the hotel sends for an achievement, which decide where the client files it.
 /// </summary>
 public static class AchievementState
 {
-    /// <summary>Ordinary, listed under its own category.</summary>
+    /// <summary>An ordinary achievement, listed under its own category.</summary>
     public const short Normal = 0;
 
-    /// <summary>Retired: the client moves these into a single "archive" category.</summary>
+    /// <summary>A retired achievement, which the client moves into a single archive category.</summary>
     public const short Archived = 2;
 
-    /// <summary>
-    /// Hidden. The client drops these from the list entirely, unless they belong to
+    /// <summary>An achievement hidden from the achievement list.</summary>
+    /// <remarks>
+    /// The client drops these from the list entirely, unless they belong to
     /// <c>wired_games</c>, which is shown from the room's own wired state instead.
-    /// </summary>
+    /// </remarks>
     public const short Hidden = 4;
 }
 
-/// <summary>How the client draws an achievement's progress.</summary>
+/// <summary>Contains the display codes that decide how the client draws an achievement's progress.</summary>
 public static class AchievementDisplay
 {
-    /// <summary>Draw the progress bar while the achievement is not at its final level.</summary>
+    /// <summary>A progress bar, drawn while the achievement is not at its final level.</summary>
     public const int Progress = 0;
 
-    /// <summary>Draw no progress bar: the achievement is one-shot rather than counted.</summary>
+    /// <summary>No progress bar, for an achievement that is reached once rather than counted.</summary>
     public const int NoProgress = 1;
 }
 
+/// <summary>Represents an achievement and the user's progress in it.</summary>
 public sealed class Achievement : IParserComposer<Achievement>
 {
     /// <summary>The prefix every achievement badge code carries.</summary>
     public const string BadgePrefix = "ACH_";
 
+    /// <summary>Gets or sets the identifier of the achievement.</summary>
     public int Id { get; set; }
+    /// <summary>Gets or sets the current level, counted from one.</summary>
     public int Level { get; set; }
+    /// <summary>Gets or sets the badge code of the current level, for example <c>ACH_RoomEntry5</c>.</summary>
     public string BadgeCode { get; set; } = "";
+    /// <summary>Gets or sets the score at which the current level starts.</summary>
     public int BaseProgress { get; set; }
+    /// <summary>Gets or sets the score the current level needs, as sent by the hotel.</summary>
     public int MaxProgress { get; set; }
+    /// <summary>Gets or sets the number of activity points the level rewards.</summary>
     public int LevelRewardPoints { get; set; }
+    /// <summary>Gets or sets the activity point type of the level reward.</summary>
     public int LevelRewardPointType { get; set; }
+    /// <summary>Gets or sets the user's current score.</summary>
     public int CurrentProgress { get; set; }
+    /// <summary>Gets or sets whether the current level is the last one.</summary>
     public bool IsComplete { get; set; }
+    /// <summary>Gets or sets the category the achievement is listed under.</summary>
     public string Category { get; set; } = "";
+    /// <summary>Gets or sets the subcategory of the achievement.</summary>
     public string Subcategory { get; set; } = "";
+    /// <summary>Gets or sets the number of levels the achievement has.</summary>
     public int MaxLevel { get; set; }
+    /// <summary>
+    /// Gets or sets how the client draws the progress, one of the <see cref="AchievementDisplay"/> values.
+    /// </summary>
     public int DisplayMethod { get; set; }
+    /// <summary>Gets or sets the state of the achievement, one of the <see cref="AchievementState"/> values.</summary>
     public short State { get; set; }
 
     /// <summary>
-    /// The achievement's stable code, with the badge prefix and the level suffix taken off.
+    /// Gets the achievement's stable code, with the badge prefix and the level suffix taken off.
     /// </summary>
     /// <remarks>
     /// Derived exactly as the client's own <c>AchievementData</c> constructor does it: drop a
@@ -62,22 +80,22 @@ public sealed class Achievement : IParserComposer<Achievement>
     public string Code => CodeOf(BadgeCode);
 
     /// <summary>
-    /// Whether this is the last level, so there is nothing further to reach.
+    /// Gets whether this is the last level, so there is nothing further to reach.
     /// </summary>
     /// <remarks>
     /// The same flag as <see cref="IsComplete"/>, under the name the client gives it. It does not
-    /// mean the level is finished — it means no further level exists.
+    /// mean the level is finished. It means no further level exists.
     /// </remarks>
     public bool IsFinalLevel => IsComplete;
 
     /// <summary>
-    /// Whether at least one level has ever been reached, so a badge is owned.
+    /// Gets whether at least one level has ever been reached, so a badge is owned.
     /// </summary>
     /// <remarks>The client's <c>firstLevelAchieved</c>: past level one, or already at the last.</remarks>
     public bool HasBadge => Level > 1 || IsComplete;
 
     /// <summary>
-    /// How many points this level needs, counted from where the level started.
+    /// Gets how many points this level needs, counted from where the level started.
     /// </summary>
     /// <remarks>
     /// The client clamps the raw limit to at least one as it parses, then subtracts the level's
@@ -86,10 +104,10 @@ public sealed class Achievement : IParserComposer<Achievement>
     /// </remarks>
     public int ScoreLimit => Math.Max(1, MaxProgress) - BaseProgress;
 
-    /// <summary>How many points are in, counted from where the level started.</summary>
+    /// <summary>Gets how many points are in, counted from where the level started.</summary>
     public int CurrentPoints => CurrentProgress - BaseProgress;
 
-    /// <summary>The points still to earn before the level is done, never below zero.</summary>
+    /// <summary>Gets the points still to earn before the level is done, never below zero.</summary>
     public int PointsToNextLevel => Math.Max(0, ScoreLimit - CurrentPoints);
 
     /// <summary>
@@ -111,20 +129,20 @@ public sealed class Achievement : IParserComposer<Achievement>
         }
     }
 
-    /// <summary>Whether the client draws a progress bar for this one.</summary>
+    /// <summary>Gets whether the client draws a progress bar for this one.</summary>
     public bool ShowsProgress => DisplayMethod != AchievementDisplay.NoProgress && !IsComplete;
 
     /// <summary>
-    /// How many levels are done: every level below the current one, and the current one too once
+    /// Gets how many levels are done: every level below the current one, and the current one too once
     /// there is nothing above it.
     /// </summary>
     /// <remarks>The client's per-category progress is the sum of this over its achievements.</remarks>
     public int LevelsAchieved => IsComplete ? Level : Level - 1;
 
-    /// <summary>How many levels this achievement has in total.</summary>
+    /// <summary>Gets how many levels this achievement has in total.</summary>
     public int LevelCount => MaxLevel;
 
-    /// <summary>Whether the client would leave this out of its list.</summary>
+    /// <summary>Gets whether the client shows this in its achievement list.</summary>
     /// <remarks>
     /// Hidden achievements outside <c>wired_games</c> are dropped, and so is anything the hotel
     /// sent with no category at all.
@@ -133,11 +151,11 @@ public sealed class Achievement : IParserComposer<Achievement>
         Category.Length > 0 &&
         (State != AchievementState.Hidden || Category == "wired_games");
 
-    /// <summary>Whether the client files this under its archive category rather than its own.</summary>
+    /// <summary>Gets whether the client files this under its archive category rather than its own.</summary>
     public bool IsArchived => State == AchievementState.Archived;
 
     /// <summary>
-    /// The badge code for a given level of this achievement.
+    /// Gets the badge code for a given level of this achievement.
     /// </summary>
     /// <remarks>
     /// Built the way the hotel builds it for badge point limits: the prefix, the code, then the
@@ -157,7 +175,7 @@ public sealed class Achievement : IParserComposer<Achievement>
     }
 
     /// <summary>
-    /// The badge the next level would grant, or <see langword="null"/> at the last level.
+    /// Gets the badge the next level would grant, or <see langword="null"/> at the last level.
     /// </summary>
     public string? NextBadgeCode => IsComplete ? null : BadgeCodeForLevel(Level + 1);
 
@@ -176,13 +194,18 @@ public sealed class Achievement : IParserComposer<Achievement>
         return new string(code);
     }
 
+    /// <summary>Initializes a new instance of the <see cref="Achievement"/> class.</summary>
     public Achievement() { }
 
+    /// <summary>Parses an achievement from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static Achievement Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static Achievement ParseFlash(in PacketReader p) => ParseRoot(in p);
 
+    /// <summary>Composes the achievement into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -318,13 +341,19 @@ internal readonly record struct AchievementWireSnapshot(
     int DisplayMethod,
     short State);
 
+/// <summary>Represents the <c>Achievement</c> message, received when one of the user's achievements changes.</summary>
+/// <param name="Achievement">The achievement in its new state.</param>
 public sealed record AchievementUpdate(Achievement Achievement) : IParserComposer<AchievementUpdate>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static AchievementUpdate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static AchievementUpdate ParseFlash(in PacketReader p) => ParseMessage(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -351,6 +380,26 @@ public sealed record AchievementUpdate(Achievement Achievement) : IParserCompose
     }
 }
 
+/// <summary>
+/// Represents the <c>HabboAchievementNotification</c> message, received when the user reaches a new achievement level.
+/// </summary>
+/// <param name="Type">The notification type sent by the server.</param>
+/// <param name="Level">The level that was reached.</param>
+/// <param name="BadgeId">The identifier of the badge granted for the level.</param>
+/// <param name="BadgeCode">The code of the badge granted for the level.</param>
+/// <param name="Points">The achievement points awarded.</param>
+/// <param name="LevelRewardPoints">The number of activity points the level rewards.</param>
+/// <param name="LevelRewardPointType">The activity point type of the level reward.</param>
+/// <param name="BonusPoints">The bonus points awarded.</param>
+/// <param name="AchievementId">The identifier of the achievement.</param>
+/// <param name="RemovedBadgeCode">
+/// The code of the badge the new one replaces, which is taken out of the badge inventory when it differs from
+/// <paramref name="BadgeCode"/>.
+/// </param>
+/// <param name="Category">The category of the achievement.</param>
+/// <param name="ShowDialogToUser">Whether the client should show a dialog for the notification.</param>
+/// <param name="OwnerCount">The number of users who own the granted badge.</param>
+/// <param name="BadgeRarityId">The rarity of the granted badge.</param>
 public sealed record AchievementNotification(
     int Type,
     int Level,
@@ -367,6 +416,8 @@ public sealed record AchievementNotification(
     int OwnerCount,
     int BadgeRarityId) : IParserComposer<AchievementNotification>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static AchievementNotification Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -425,6 +476,8 @@ public sealed record AchievementNotification(
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -459,8 +512,12 @@ public sealed record AchievementNotification(
     }
 }
 
+/// <summary>Represents the <c>AchievementsScore</c> message, received with the user's achievement score.</summary>
+/// <param name="Score">The achievement score.</param>
 public sealed record AchievementScore(int Score) : IParserComposer<AchievementScore>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static AchievementScore Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -476,6 +533,8 @@ public sealed record AchievementScore(int Score) : IParserComposer<AchievementSc
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -487,7 +546,7 @@ public sealed record AchievementScore(int Score) : IParserComposer<AchievementSc
 }
 
 /// <summary>
-/// How many points one level of one achievement asks for.
+/// Represents the number of points one level of one achievement asks for.
 /// </summary>
 /// <param name="AchievementCode">The achievement's code, without prefix or level.</param>
 /// <param name="Level">The level.</param>
@@ -495,7 +554,7 @@ public sealed record AchievementScore(int Score) : IParserComposer<AchievementSc
 public sealed record BadgePointLimit(string AchievementCode, int Level, int Limit)
 {
     /// <summary>
-    /// The badge code this limit belongs to.
+    /// Gets the badge code this limit belongs to.
     /// </summary>
     /// <remarks>
     /// Composed the way the hotel's own parser composes it, prefix then code then level, which is
@@ -504,28 +563,36 @@ public sealed record BadgePointLimit(string AchievementCode, int Level, int Limi
     public string BadgeCode => Achievement.BadgePrefix + AchievementCode + Level;
 }
 
+/// <summary>
+/// Represents the <c>BadgePointLimits</c> message, received with the points each achievement level needs.
+/// </summary>
 public sealed record BadgePointLimits : IParserComposer<BadgePointLimits>
 {
     private IReadOnlyList<BadgePointLimit> _limits =
         Array.AsReadOnly(Array.Empty<BadgePointLimit>());
 
+    /// <summary>Initializes a new instance of the <see cref="BadgePointLimits"/> record.</summary>
+    /// <param name="Limits">The point limits, copied into a read only list.</param>
     public BadgePointLimits(IReadOnlyList<BadgePointLimit> Limits)
     {
         this.Limits = Limits;
     }
 
+    /// <summary>Gets the point limit of each achievement level, as a read only copy.</summary>
     public IReadOnlyList<BadgePointLimit> Limits
     {
         get => _limits;
         init => _limits = AchievementBadgeWire.FreezeReferences(value, nameof(Limits));
     }
 
+    /// <summary>Deconstructs the message into its limits.</summary>
+    /// <param name="Limits">The point limit of each achievement level.</param>
     public void Deconstruct(out IReadOnlyList<BadgePointLimit> Limits)
     {
         Limits = this.Limits;
     }
 
-    /// <summary>The point limit for one badge, or <see langword="null"/> when none was sent.</summary>
+    /// <summary>Gets the point limit for one badge, or <see langword="null"/> when none was sent.</summary>
     /// <param name="achievementCode">The achievement's code, without prefix or level.</param>
     /// <param name="level">The level.</param>
     public int? Limit(string achievementCode, int level)
@@ -540,6 +607,8 @@ public sealed record BadgePointLimits : IParserComposer<BadgePointLimits>
         return null;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static BadgePointLimits Parse(in PacketReader p) =>
     FlashWire.Parse(in p, ParseFlash);
 
@@ -582,6 +651,9 @@ public sealed record BadgePointLimits : IParserComposer<BadgePointLimits>
         return new BadgePointLimits(limits);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <remarks>Consecutive limits with the same achievement code are written as one group.</remarks>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -648,25 +720,34 @@ internal readonly record struct BadgePointLimitWireValue(
     int Level,
     int Limit);
 
+/// <summary>Represents the <c>Achievements</c> message, received with the user's full achievement list.</summary>
 public sealed record Achievements : IParserComposer<Achievements>
 {
     private IReadOnlyList<Achievement> _items =
         Array.AsReadOnly(Array.Empty<Achievement>());
 
+    /// <summary>Initializes a new instance of the <see cref="Achievements"/> record.</summary>
+    /// <param name="Items">The achievements, copied into a read only list.</param>
+    /// <param name="DefaultCategory">The category the client opens first.</param>
     public Achievements(IReadOnlyList<Achievement> Items, string DefaultCategory)
     {
         this.Items = Items;
         this.DefaultCategory = DefaultCategory;
     }
 
+    /// <summary>Gets the achievements, as a read only copy.</summary>
     public IReadOnlyList<Achievement> Items
     {
         get => _items;
         init => _items = AchievementBadgeWire.FreezeReferences(value, nameof(Items));
     }
 
+    /// <summary>Gets the category the client opens first.</summary>
     public string DefaultCategory { get; init; }
 
+    /// <summary>Deconstructs the message into its parts.</summary>
+    /// <param name="Items">The achievements.</param>
+    /// <param name="DefaultCategory">The category the client opens first.</param>
     public void Deconstruct(
         out IReadOnlyList<Achievement> Items,
         out string DefaultCategory)
@@ -675,6 +756,8 @@ public sealed record Achievements : IParserComposer<Achievements>
         DefaultCategory = this.DefaultCategory;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static Achievements Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -704,6 +787,8 @@ public sealed record Achievements : IParserComposer<Achievements>
         return new Achievements(items, default_category);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

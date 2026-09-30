@@ -2,26 +2,47 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents a badge in the user's badge inventory.</summary>
 public readonly record struct OwnedBadge : IParserComposer<OwnedBadge>
 {
+    /// <summary>Gets the identifier of the badge.</summary>
     public Id NativeBadgeId { get; init; }
 
+    /// <summary>Gets the identifier of the badge as a 32 bit integer.</summary>
+    /// <exception cref="OverflowException">
+    /// Thrown when <see cref="NativeBadgeId"/> does not fit in an <see cref="int"/>.
+    /// </exception>
     public int BadgeId
     {
         get => checked((int)(long)NativeBadgeId);
         init => NativeBadgeId = value;
     }
 
+    /// <summary>Gets the badge code.</summary>
     public string Code { get; init; }
+    /// <summary>Gets the number of users who own the badge, or 0 when there is no rarity data.</summary>
     public int OwnerCount { get; init; }
+    /// <summary>Gets the rarity of the badge, or 0 when there is no rarity data.</summary>
     public int RarityId { get; init; }
+    /// <summary>Gets whether the hotel sent the owner count and rarity for the badge.</summary>
     public bool HasRarityData { get; init; }
 
+    /// <summary>Initializes a new instance of the <see cref="OwnedBadge"/> struct with rarity data.</summary>
+    /// <param name="BadgeId">The identifier of the badge.</param>
+    /// <param name="Code">The badge code.</param>
+    /// <param name="OwnerCount">The number of users who own the badge.</param>
+    /// <param name="RarityId">The rarity of the badge.</param>
     public OwnedBadge(int BadgeId, string Code, int OwnerCount, int RarityId)
         : this((Id)BadgeId, Code, OwnerCount, RarityId, true)
     {
     }
 
+    /// <summary>Initializes a new instance of the <see cref="OwnedBadge"/> struct.</summary>
+    /// <param name="BadgeId">The identifier of the badge.</param>
+    /// <param name="Code">The badge code.</param>
+    /// <param name="OwnerCount">The number of users who own the badge.</param>
+    /// <param name="RarityId">The rarity of the badge.</param>
+    /// <param name="HasRarityData">Whether the owner count and rarity are present.</param>
     public OwnedBadge(
         int BadgeId,
         string Code,
@@ -32,6 +53,12 @@ public readonly record struct OwnedBadge : IParserComposer<OwnedBadge>
     {
     }
 
+    /// <summary>Initializes a new instance of the <see cref="OwnedBadge"/> struct.</summary>
+    /// <param name="BadgeId">The identifier of the badge.</param>
+    /// <param name="Code">The badge code.</param>
+    /// <param name="OwnerCount">The number of users who own the badge.</param>
+    /// <param name="RarityId">The rarity of the badge.</param>
+    /// <param name="HasRarityData">Whether the owner count and rarity are present.</param>
     public OwnedBadge(
         Id BadgeId,
         string Code,
@@ -46,6 +73,11 @@ public readonly record struct OwnedBadge : IParserComposer<OwnedBadge>
         this.HasRarityData = HasRarityData;
     }
 
+    /// <summary>Deconstructs the badge into its parts, with a 32 bit identifier.</summary>
+    /// <param name="BadgeId">The identifier of the badge.</param>
+    /// <param name="Code">The badge code.</param>
+    /// <param name="OwnerCount">The number of users who own the badge.</param>
+    /// <param name="RarityId">The rarity of the badge.</param>
     public void Deconstruct(
         out int BadgeId,
         out string Code,
@@ -58,6 +90,12 @@ public readonly record struct OwnedBadge : IParserComposer<OwnedBadge>
         RarityId = this.RarityId;
     }
 
+    /// <summary>Deconstructs the badge into its parts, including whether rarity data is present.</summary>
+    /// <param name="BadgeId">The identifier of the badge.</param>
+    /// <param name="Code">The badge code.</param>
+    /// <param name="OwnerCount">The number of users who own the badge.</param>
+    /// <param name="RarityId">The rarity of the badge.</param>
+    /// <param name="HasRarityData">Whether the owner count and rarity are present.</param>
     public void Deconstruct(
         out Id BadgeId,
         out string Code,
@@ -72,6 +110,9 @@ public readonly record struct OwnedBadge : IParserComposer<OwnedBadge>
         HasRarityData = this.HasRarityData;
     }
 
+    /// <summary>Parses a badge from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
+    /// <remarks>The owner count and rarity are read only when exactly 8 bytes follow the badge code.</remarks>
     public static OwnedBadge Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -100,6 +141,8 @@ public readonly record struct OwnedBadge : IParserComposer<OwnedBadge>
         return value;
     }
 
+    /// <summary>Composes the badge into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -143,6 +186,7 @@ public readonly record struct OwnedBadge : IParserComposer<OwnedBadge>
         return Prepare(value, in p, ref strings);
     }
 
+    /// <inheritdoc/>
     public override string ToString() =>
         $"{nameof(OwnedBadge)} {{ {nameof(NativeBadgeId)} = {NativeBadgeId}, {nameof(Code)} = {Code}, " +
         $"{nameof(OwnerCount)} = {OwnerCount}, {nameof(RarityId)} = {RarityId}, " +
@@ -156,11 +200,16 @@ internal readonly record struct OwnedBadgeWireValue(
     int RarityId,
     bool HasRarityData);
 
+/// <summary>Represents the <c>Badges</c> message, received with one page of the user's badge inventory.</summary>
 public sealed record BadgeInventory : IParserComposer<BadgeInventory>
 {
     private IReadOnlyList<OwnedBadge> _badges =
         Array.AsReadOnly(Array.Empty<OwnedBadge>());
 
+    /// <summary>Initializes a new instance of the <see cref="BadgeInventory"/> record.</summary>
+    /// <param name="TotalPages">The total number of pages in the badge inventory.</param>
+    /// <param name="CurrentPage">The zero based index of this page.</param>
+    /// <param name="Badges">The badges on this page, copied into a read only list.</param>
     public BadgeInventory(
         int TotalPages,
         int CurrentPage,
@@ -171,15 +220,22 @@ public sealed record BadgeInventory : IParserComposer<BadgeInventory>
         this.Badges = Badges;
     }
 
+    /// <summary>Gets the total number of pages in the badge inventory.</summary>
     public int TotalPages { get; init; }
+    /// <summary>Gets the zero based index of this page.</summary>
     public int CurrentPage { get; init; }
 
+    /// <summary>Gets the badges on this page, as a read only copy.</summary>
     public IReadOnlyList<OwnedBadge> Badges
     {
         get => _badges;
         init => _badges = AchievementBadgeWire.FreezeValues(value, nameof(Badges));
     }
 
+    /// <summary>Deconstructs the message into its parts.</summary>
+    /// <param name="TotalPages">The total number of pages in the badge inventory.</param>
+    /// <param name="CurrentPage">The zero based index of this page.</param>
+    /// <param name="Badges">The badges on this page.</param>
     public void Deconstruct(
         out int TotalPages,
         out int CurrentPage,
@@ -190,6 +246,12 @@ public sealed record BadgeInventory : IParserComposer<BadgeInventory>
         Badges = this.Badges;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
+    /// <remarks>
+    /// The parser detects whether the entries carry rarity data and throws <see cref="InvalidDataException"/> when
+    /// neither layout, or both, fit the payload.
+    /// </remarks>
     public static BadgeInventory Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -218,6 +280,11 @@ public sealed record BadgeInventory : IParserComposer<BadgeInventory>
         return new BadgeInventory(total_pages, current_page, badges);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when some badges have rarity data and others do not.
+    /// </exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

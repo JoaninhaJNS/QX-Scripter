@@ -6,47 +6,59 @@ using Qx.Model.Messages.Outgoing;
 namespace Qx.Game;
 
 /// <summary>
-/// Which parts of someone else are worth copying.
+/// Specifies which parts of another avatar to copy.
 /// </summary>
 /// <remarks>
-/// Named individually rather than as one switch because they are wanted separately: copying a look
-/// is a wardrobe act, copying a dance and a direction is a joke, and copying chat is something to
-/// turn on deliberately and off quickly.
+/// Values can be combined. <see cref="MimicService.Copy"/> acts on the appearance parts,
+/// <see cref="MimicParts.Typing"/> and <see cref="MimicParts.Walk"/>. <see cref="MimicParts.Talk"/>,
+/// <see cref="MimicParts.Shout"/> and <see cref="MimicParts.Expression"/> are not copied by it;
+/// callers repeat them with <see cref="MimicService.Say"/> and <see cref="MimicService.Express"/>.
 /// </remarks>
 [Flags]
 public enum MimicParts
 {
+    /// <summary>No parts.</summary>
     None = 0,
+    /// <summary>The avatar's figure.</summary>
     Figure = 1 << 0,
+    /// <summary>The avatar's motto.</summary>
     Motto = 1 << 1,
+    /// <summary>The avatar's dance.</summary>
     Dance = 1 << 2,
+    /// <summary>The direction the avatar faces.</summary>
     Direction = 1 << 3,
+    /// <summary>The sign the avatar is holding up.</summary>
     Sign = 1 << 4,
+    /// <summary>The avatar's effect.</summary>
     Effect = 1 << 5,
+    /// <summary>The avatar's typing indicator.</summary>
     Typing = 1 << 6,
+    /// <summary>The tile the avatar stands on.</summary>
     Walk = 1 << 7,
+    /// <summary>The avatar's talk messages.</summary>
     Talk = 1 << 8,
+    /// <summary>The avatar's shout messages.</summary>
     Shout = 1 << 9,
+    /// <summary>The avatar's expressions, such as a wave or a laugh.</summary>
     Expression = 1 << 10,
 
-    /// <summary>Everything a person carries about with them, without following them around.</summary>
+    /// <summary>The figure, motto, dance, direction, sign and effect.</summary>
     Appearance = Figure | Motto | Dance | Direction | Sign | Effect,
 
-    /// <summary>What they are doing rather than what they look like.</summary>
+    /// <summary>The typing indicator, position, talk, shout and expressions.</summary>
     Behaviour = Typing | Walk | Talk | Shout | Expression,
 
+    /// <summary>Every part.</summary>
     All = Appearance | Behaviour
 }
 
 /// <summary>
-/// Copies what another avatar is doing onto your own.
+/// Provides methods that copy another avatar's appearance and behavior onto the local user's avatar.
 /// </summary>
+/// <param name="game">The game state that avatars are read from and requests are sent through.</param>
 /// <remarks>
-/// <para>
-/// Copying is one-way and one-shot. Nothing here subscribes to the target or holds a timer: a caller
-/// that wants continuous mimicry calls again when the room says the target changed, which keeps the
-/// decision about how eager to be with the caller rather than buried in here.
-/// </para>
+/// Each call copies once. Nothing subscribes to the target or runs a timer, so continuous mimicry
+/// calls again whenever the target changes.
 /// </remarks>
 public sealed class MimicService(GameState game)
 {
@@ -54,13 +66,25 @@ public sealed class MimicService(GameState game)
         game ?? throw new ArgumentNullException(nameof(game));
 
     /// <summary>
-    /// Copies the named parts of an avatar onto your own.
+    /// Copies parts of an avatar onto the local user's avatar.
     /// </summary>
-    /// <returns>What was actually sent, which is what the avatar had to copy.</returns>
+    /// <param name="target">The avatar to copy.</param>
+    /// <param name="parts">The parts to copy.</param>
+    /// <returns>The parts that were sent.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the profile or room avatar operations are not bound.</exception>
     /// <remarks>
-    /// A part the target has nothing for is skipped rather than sent as a default. Sending an empty
-    /// figure or a dance of zero would not copy them, it would reset you — which is the opposite of
-    /// what was asked and is not obvious afterwards.
+    /// <para>
+    /// A part the target has no value for is skipped instead of being sent as a default: an empty
+    /// figure or motto, a dance or effect of 0, or no sign. Sending those would reset the local
+    /// user's avatar instead of copying the target.
+    /// </para>
+    /// <para>
+    /// The direction is copied by looking at the tile one step ahead of the target in the direction it
+    /// faces. <see cref="MimicParts.Walk"/> walks to the target's tile, and
+    /// <see cref="MimicParts.Typing"/> sends the target's typing state. The figure is sent with the
+    /// female gender when the target is a female user and with the male gender otherwise.
+    /// </para>
     /// </remarks>
     public MimicParts Copy(Avatar target, MimicParts parts = MimicParts.Appearance)
     {
@@ -118,10 +142,17 @@ public sealed class MimicService(GameState game)
         return done;
     }
 
-    /// <summary>Says what they said, in the way they said it.</summary>
+    /// <summary>Repeats a chat message as talk or shout, matching the way it was said.</summary>
+    /// <param name="message">The message to repeat.</param>
+    /// <param name="type">The type of chat the message was sent as.</param>
+    /// <param name="bubble">The chat bubble style.</param>
+    /// <returns>
+    /// <see langword="true"/> when the message was sent; <see langword="false"/> when it is empty or
+    /// <paramref name="type"/> is neither <see cref="ChatType.Talk"/> nor <see cref="ChatType.Shout"/>.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">Thrown when the room chat operations are not bound.</exception>
     /// <remarks>
-    /// A whisper is deliberately not repeated. It was addressed to someone, and echoing it into the
-    /// room is not mimicry but disclosure.
+    /// Whispers are not repeated, because they were addressed to one user.
     /// </remarks>
     public bool Say(string message, ChatType type, int bubble = 0)
     {
@@ -142,23 +173,31 @@ public sealed class MimicService(GameState game)
         }
     }
 
-    /// <summary>Performs an expression: a wave, a laugh, an idle.</summary>
+    /// <summary>Performs an avatar expression such as a wave, a laugh or going idle.</summary>
+    /// <param name="expression">The id of the expression.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the room avatar operations are not bound.</exception>
     public void Express(int expression) =>
         RequireRoomAvatarOperations().Expression(
             new Application.RoomAvatarExpressionRequest(expression));
 
-    /// <summary>Walks after a friend, which the hotel does on its own once told who.</summary>
+    /// <summary>Sends a request to follow a friend into the room they are in.</summary>
+    /// <param name="friend_id">The id of the friend.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the friend operations are not bound.</exception>
     public void Follow(Id friend_id) =>
         RequireFriendOperations().Follow(
             new Application.FriendFollowRequest(friend_id),
             default);
 
     /// <summary>
-    /// The avatar in the room going by that name, if one is.
+    /// Finds an avatar in the current room by name.
     /// </summary>
+    /// <param name="name">The name of the avatar.</param>
+    /// <returns>
+    /// The first avatar with a matching name, or <see langword="null"/> when none matches or
+    /// <paramref name="name"/> is empty.
+    /// </returns>
     /// <remarks>
-    /// Matched without regard to case because a name typed by hand rarely matches the capitals the
-    /// hotel holds, and no two people in a room share a name.
+    /// The name is compared without regard to case.
     /// </remarks>
     public Avatar? Find(string name) =>
         name is { Length: > 0 }
@@ -167,11 +206,11 @@ public sealed class MimicService(GameState game)
             : null;
 
     /// <summary>
-    /// Which figure set the look belongs to.
+    /// Gets the gender code the target's figure is sent with.
     /// </summary>
+    /// <param name="target">The avatar whose figure is copied.</param>
     /// <remarks>
-    /// Read off the figure itself rather than from a separate field, because the message carries the
-    /// two together and a mismatch between them is what makes a copied look come back wrong.
+    /// F for a female user and M for every other avatar.
     /// </remarks>
     private static string Gender(Avatar target) =>
         target is User user && user.Gender is Model.Gender.Female ? "F" : "M";

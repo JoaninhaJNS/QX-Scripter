@@ -2,13 +2,30 @@ using Qx.Messages;
 
 namespace Qx.Model.Forums;
 
+/// <summary>Specifies which forum directory list to request.</summary>
 public enum ForumListCode
 {
+    /// <summary>The most active forums.</summary>
     Active = 0,
+    /// <summary>The most popular forums.</summary>
     Popular = 1,
+    /// <summary>The forums of the viewer's groups.</summary>
     MyForums = 2
 }
 
+/// <summary>Represents one group forum as listed in the forum directory.</summary>
+/// <param name="GroupId">The id of the group that owns the forum.</param>
+/// <param name="Name">The forum name.</param>
+/// <param name="Description">The forum description.</param>
+/// <param name="Icon">The forum icon as sent by the server.</param>
+/// <param name="TotalThreads">The number of threads in the forum.</param>
+/// <param name="LeaderboardScore">The forum's leaderboard score.</param>
+/// <param name="TotalMessages">The number of messages in the forum.</param>
+/// <param name="UnreadMessages">The number of messages the viewer has not read.</param>
+/// <param name="LastMessageId">The id of the latest message.</param>
+/// <param name="LastMessageAuthorId">The user id of the latest message's author.</param>
+/// <param name="LastMessageAuthorName">The name of the latest message's author.</param>
+/// <param name="LastMessageSecondsAgo">The number of seconds since the latest message was posted, at the time the summary was sent.</param>
 public sealed record ForumSummary(
     Id GroupId,
     string Name,
@@ -29,24 +46,28 @@ public sealed record ForumSummary(
     private string last_message_author_name = LastMessageAuthorName ??
         throw new ArgumentNullException(nameof(LastMessageAuthorName));
 
+    /// <summary>Gets the forum name.</summary>
     public string Name
     {
         get => name;
         init => name = value ?? throw new ArgumentNullException(nameof(Name));
     }
 
+    /// <summary>Gets the forum description.</summary>
     public string Description
     {
         get => description;
         init => description = value ?? throw new ArgumentNullException(nameof(Description));
     }
 
+    /// <summary>Gets the forum icon as sent by the server.</summary>
     public string Icon
     {
         get => icon;
         init => icon = value ?? throw new ArgumentNullException(nameof(Icon));
     }
 
+    /// <summary>Gets the name of the latest message's author.</summary>
     public string LastMessageAuthorName
     {
         get => last_message_author_name;
@@ -54,9 +75,13 @@ public sealed record ForumSummary(
             throw new ArgumentNullException(nameof(LastMessageAuthorName));
     }
 
+    /// <summary>Gets the last read message id, computed as <see cref="TotalMessages"/> minus <see cref="UnreadMessages"/>.</summary>
     public int LastReadMessageId => TotalMessages - UnreadMessages;
+    /// <summary>Gets whether the forum has messages the viewer has not read.</summary>
     public bool HasUnreadMessages => UnreadMessages > 0;
 
+    /// <summary>Parses a forum summary from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ForumSummary Parse(in PacketReader p)
     {
         ForumStringBudget budget = ForumProtocol.NewStringBudget();
@@ -119,6 +144,8 @@ public sealed record ForumSummary(
             last_message_seconds_ago);
     }
 
+    /// <summary>Composes the forum summary into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p)
     {
         FlashWire.Compose(this, in p, ComposeFlash);

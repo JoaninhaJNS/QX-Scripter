@@ -2,9 +2,18 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>
+/// Represents the <c>CatalogPublished</c> message, received when the hotel publishes a new version of the catalog.
+/// </summary>
+/// <param name="InstantlyRefreshCatalogue">Whether the client should refresh the catalog right away.</param>
+/// <param name="NewFurniDataHash">
+/// The hash of the new furni data, or <see langword="null"/> when the message does not carry one.
+/// </param>
 public sealed record CatalogPublished(bool InstantlyRefreshCatalogue, string? NewFurniDataHash)
     : IParserComposer<CatalogPublished>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CatalogPublished Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -21,6 +30,8 @@ public sealed record CatalogPublished(bool InstantlyRefreshCatalogue, string? Ne
         return new CatalogPublished(instantly_refresh_catalogue, new_furni_data_hash);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

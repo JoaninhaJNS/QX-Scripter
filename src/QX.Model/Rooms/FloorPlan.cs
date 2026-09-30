@@ -2,27 +2,56 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
+/// <summary>Represents the static floor layout of a room.</summary>
+/// <remarks>
+/// The map is a block of text with one line per row. Each character is a tile height, <c>0</c> to
+/// <c>9</c> and then <c>a</c> to <c>z</c> (or <c>A</c> to <c>Z</c>) for 10 to 35, and <c>x</c> or
+/// <c>X</c> marks a spot with no floor.
+/// </remarks>
 public sealed class FloorPlan : IParserComposer<FloorPlan>
 {
     private readonly int[] _tiles;
 
+    /// <summary>Gets whether the room is drawn at the legacy 32 pixel scale instead of 64.</summary>
     public bool UseLegacyScale { get; init; }
+    /// <summary>Gets the wall height as sent by the hotel.</summary>
     public int WallHeight { get; init; }
+    /// <summary>Gets the floor map text.</summary>
     public string Map { get; }
+    /// <summary>Gets the regions of the floor that area-hide furni hide.</summary>
     public IReadOnlyList<AreaHideData> HiddenAreas { get; init; } = [];
+    /// <summary>Gets the x coordinate of the room camera as sent by the hotel.</summary>
     public int CameraX { get; init; }
+    /// <summary>Gets the y coordinate of the room camera as sent by the hotel.</summary>
     public int CameraY { get; init; }
+    /// <summary>Gets the z coordinate of the room camera as sent by the hotel.</summary>
     public float CameraZ { get; init; }
+    /// <summary>Gets whether the camera fields hold values; always <see langword="true"/> for a parsed floor plan.</summary>
     public bool HasCameraData { get; init; } = true;
 
+    /// <summary>Gets the number of tiles along x, which is the length of the longest map line.</summary>
     public int Width { get; }
+    /// <summary>Gets the number of tiles along y, which is the number of map lines.</summary>
     public int Length { get; }
+    /// <summary>Gets the drawing scale in pixels: 32 with <see cref="UseLegacyScale"/>, otherwise 64.</summary>
     public int Scale => UseLegacyScale ? 32 : 64;
+    /// <summary>Gets the height of every tile row by row, with -1 where there is no floor.</summary>
     public IReadOnlyList<int> Tiles => _tiles;
 
+    /// <summary>Gets the height of a tile, or -1 where there is no floor.</summary>
+    /// <param name="x">The tile x coordinate.</param>
+    /// <param name="y">The tile y coordinate.</param>
     public int this[int x, int y] => HeightAt(x, y);
+    /// <summary>Gets the height of a tile, or -1 where there is no floor.</summary>
+    /// <param name="point">The tile coordinates.</param>
     public int this[Point point] => HeightAt(point.X, point.Y);
 
+    /// <summary>Initializes a new instance of the <see cref="FloorPlan"/> class from map text.</summary>
+    /// <remarks>
+    /// Lines are split on carriage returns and line feeds, and empty lines are dropped. Positions past
+    /// the end of a shorter line count as no floor.
+    /// </remarks>
+    /// <param name="map">The floor map text; <see langword="null"/> is treated as empty.</param>
     public FloorPlan(string map)
     {
         Map = map ?? "";
@@ -31,11 +60,21 @@ public sealed class FloorPlan : IParserComposer<FloorPlan>
         Length = length;
     }
 
+    /// <summary>Gets the height of a tile.</summary>
+    /// <param name="x">The tile x coordinate.</param>
+    /// <param name="y">The tile y coordinate.</param>
+    /// <returns>The tile height, or -1 when there is no floor or the tile is outside the map.</returns>
     public int HeightAt(int x, int y) =>
         x < 0 || y < 0 || x >= Width || y >= Length ? -1 : _tiles[y * Width + x];
 
+    /// <summary>Gets whether a tile is floor, meaning its height is not -1.</summary>
+    /// <param name="x">The tile x coordinate.</param>
+    /// <param name="y">The tile y coordinate.</param>
     public bool IsOpen(int x, int y) => HeightAt(x, y) >= 0;
 
+    /// <summary>Reads a floor plan from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
     public static FloorPlan Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -61,6 +100,10 @@ public sealed class FloorPlan : IParserComposer<FloorPlan>
         };
     }
 
+    /// <summary>Writes the floor plan to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
+    /// <exception cref="OverflowException">Thrown when there are more than 65535 hidden areas.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

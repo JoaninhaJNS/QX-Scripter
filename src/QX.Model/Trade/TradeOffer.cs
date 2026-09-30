@@ -2,24 +2,38 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
+/// <summary>Represents one side of a trade: the user and the items they offer.</summary>
 public sealed class TradeOffer : IParserComposer<TradeOffer>
 {
     private IReadOnlyList<TradeItem> _items = Array.Empty<TradeItem>();
 
+    /// <summary>Gets or sets the identifier of the user who makes the offer.</summary>
     public Id UserId { get; set; }
 
+    /// <summary>Gets or sets the offered items; the list is copied on set.</summary>
+    /// <exception cref="ArgumentNullException">Thrown when set to <see langword="null"/> or a list with a <see langword="null"/> item.</exception>
     public IReadOnlyList<TradeItem> Items
     {
         get => _items;
         set => _items = TradeWire.FreezeReferences(value, nameof(Items));
     }
 
+    /// <summary>Gets or sets the furni count the hotel reports for the offer.</summary>
     public int FurniCount { get; set; }
 
+    /// <summary>Gets or sets the credit count the hotel reports for the offer.</summary>
     public int CreditCount { get; set; }
 
+    /// <summary>Initializes a new instance of the <see cref="TradeOffer"/> class.</summary>
     public TradeOffer() { }
 
+    /// <summary>Reads a trade offer from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when the user identifier is not positive, a count is invalid or two items share an
+    /// inventory item identifier.
+    /// </exception>
     public static TradeOffer Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -49,6 +63,13 @@ public sealed class TradeOffer : IParserComposer<TradeOffer>
         };
     }
 
+    /// <summary>Writes the trade offer to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when the user identifier is not positive, a count is negative, two items share an
+    /// inventory item identifier or an item is invalid.
+    /// </exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

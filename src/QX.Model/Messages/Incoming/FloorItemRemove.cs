@@ -2,8 +2,15 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the <c>ObjectRemove</c> message, received when a floor item is removed from the room.</summary>
+/// <param name="Id">The identifier of the removed floor item, sent on the wire as a decimal string.</param>
+/// <param name="IsExpired">Whether the item was removed because it expired.</param>
+/// <param name="PickerId">The identifier of the user who picked the item up.</param>
+/// <param name="Delay">The delay before the client removes the item.</param>
 public sealed record FloorItemRemove(Id Id, bool IsExpired, Id PickerId, int Delay) : IParserComposer<FloorItemRemove>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FloorItemRemove Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -22,6 +29,8 @@ public sealed record FloorItemRemove(Id Id, bool IsExpired, Id PickerId, int Del
         return result;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -40,9 +49,19 @@ public sealed record FloorItemRemove(Id Id, bool IsExpired, Id PickerId, int Del
     }
 }
 
+/// <summary>
+/// Represents the <c>ObjectRemoveConfirm</c> message, received when the server asks the user to confirm picking up an
+/// item.
+/// </summary>
+/// <param name="Category">The item category, 1 for a wall item or 2 for a floor item.</param>
+/// <param name="ItemId">The identifier of the item to pick up.</param>
+/// <param name="Title">The title of the confirmation dialog.</param>
+/// <param name="Body">The body text of the confirmation dialog.</param>
 public sealed record PickupConfirmation(int Category, Id ItemId, string Title, string Body)
     : IParserComposer<PickupConfirmation>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PickupConfirmation Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -58,6 +77,8 @@ public sealed record PickupConfirmation(int Category, Id ItemId, string Title, s
         return result;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -77,16 +98,17 @@ public sealed record PickupConfirmation(int Category, Id ItemId, string Title, s
 }
 
 /// <summary>
-/// Removes several floor items in one message.
+/// Represents the <c>ObjectRemoveMultiple</c> message, received when several floor items are removed at once.
 /// </summary>
 /// <param name="Ids">The identifiers of the removed floor items.</param>
 /// <param name="PickerId">
-/// The user who picked the items up. The singular <see cref="FloorItemRemove"/> handler discards
-/// this as well, so it is parsed for wire fidelity only.
+/// The identifier of the user who picked the items up. The room state ignores it and only removes the items.
 /// </param>
 public sealed record FloorItemsRemove(IReadOnlyList<Id> Ids, Id PickerId)
     : IParserComposer<FloorItemsRemove>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FloorItemsRemove Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -101,6 +123,8 @@ public sealed record FloorItemsRemove(IReadOnlyList<Id> Ids, Id PickerId)
         return new FloorItemsRemove(ids, p.ReadId());
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

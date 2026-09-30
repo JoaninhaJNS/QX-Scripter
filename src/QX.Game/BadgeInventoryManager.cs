@@ -77,6 +77,13 @@ internal sealed record BadgeInventoryDelta(
     bool RemoveBeforeUpsert,
     long Order);
 
+/// <summary>Manages the badges the user owns and the selected badges of users seen in the session.</summary>
+/// <remarks>
+/// All members are safe to call from any thread. The state is cleared when the hotel connection
+/// closes and when a new session connects. The badge inventory arrives in fragments; the owned
+/// badges are replaced only once every fragment of a load has been received, and badges received
+/// or removed while a load is in progress are applied on top of the loaded list.
+/// </remarks>
 public sealed class BadgeInventoryManager : GameStateManager
 {
     private readonly object operations_sync = new();
@@ -102,6 +109,7 @@ public sealed class BadgeInventoryManager : GameStateManager
     private bool delivering;
     private int delivery_thread_id;
 
+    /// <summary>Initializes a new instance of the <see cref="BadgeInventoryManager"/> class.</summary>
     public BadgeInventoryManager()
     {
     }
@@ -111,29 +119,55 @@ public sealed class BadgeInventoryManager : GameStateManager
         ArgumentNullException.ThrowIfNull(time_provider);
     }
 
+    /// <summary>Gets the badges the user owns.</summary>
+    /// <remarks>
+    /// Before the inventory is loaded, this holds only the badges received during the session.
+    /// Check <see cref="IsLoaded"/> and <see cref="IsStale"/> to tell a complete list from a partial one.
+    /// </remarks>
     public IReadOnlyCollection<OwnedBadge> OwnedBadges =>
         State.OwnedBadges.ToArray();
 
+    /// <summary>Gets the selected badges of every user whose selection was received in the session.</summary>
     public IReadOnlyCollection<UserBadges> SelectedBadgeSets =>
         State.SelectedBadgeSets.Select(selected => Clone(selected.Value)).ToArray();
 
+    /// <summary>Gets whether the complete badge inventory has been received in the current session.</summary>
     public bool IsLoaded => State.Loaded;
+    /// <summary>Gets whether a badge inventory request is pending or its fragments are still arriving.</summary>
     public bool IsLoading => State.Loading;
+    /// <summary>Gets whether <see cref="OwnedBadges"/> holds badges that a completed load has not yet confirmed.</summary>
     public bool IsStale => State.Stale;
+    /// <summary>Gets the load generation, which increases each time a new inventory load begins or the state is cleared.</summary>
     public long Generation => State.LoadGeneration;
+    /// <summary>Gets the number of fragments the current load expects, or -1 when it is not known yet.</summary>
     public int ExpectedFragments => State.ExpectedFragments;
+    /// <summary>Gets the number of fragments received in the current load.</summary>
     public int ReceivedFragments => State.ReceivedFragments;
 
     internal BadgeInventoryState State => Volatile.Read(ref state);
 
+    /// <summary>Occurs when every fragment of the badge inventory has been received and <see cref="OwnedBadges"/> is replaced.</summary>
     public event Action? Loaded;
+    /// <summary>Occurs when the user receives a badge they did not own.</summary>
+    /// <remarks>The argument is the new badge. Raised for received badges and for badges granted by achievements.</remarks>
     public event Action<OwnedBadge>? BadgeAdded;
+    /// <summary>Occurs when the server sends a badge the user already owns again.</summary>
+    /// <remarks>The argument is the updated badge.</remarks>
     public event Action<OwnedBadge>? BadgeUpdated;
+    /// <summary>Occurs when an achievement replaces one of the user's badges.</summary>
+    /// <remarks>The argument is the removed badge, usually the previous level of the achievement.</remarks>
     public event Action<OwnedBadge>? BadgeRemoved;
+    /// <summary>Occurs when the selected badges of a user are received.</summary>
+    /// <remarks>The argument is the user's selected badges.</remarks>
     public event Action<UserBadges>? SelectedBadgesUpdated;
     internal event Action<BadgeInventoryStateUpdate>? StateCommitted;
     internal event Action<BadgeInventoryStateUpdate>? StateChanged;
 
+    /// <summary>Runs a projection while holding the state lock, so every read inside it sees the same state.</summary>
+    /// <remarks>Incoming state updates wait until the projection returns.</remarks>
+    /// <typeparam name="TResult">The type of the projected value.</typeparam>
+    /// <param name="projection">The function that reads from the manager.</param>
+    /// <returns>The value the projection returns.</returns>
     public TResult Capture<TResult>(Func<BadgeInventoryManager, TResult> projection)
     {
         ArgumentNullException.ThrowIfNull(projection);
@@ -141,6 +175,10 @@ public sealed class BadgeInventoryManager : GameStateManager
             return projection(this);
     }
 
+    /// <summary>Gets the owned badge with the specified code.</summary>
+    /// <param name="code">The badge code. The comparison ignores case.</param>
+    /// <returns>The badge, or <see langword="null"/> if the user does not own it.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="code"/> is empty or white space.</exception>
     public OwnedBadge? Badge(string code)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
@@ -152,6 +190,10 @@ public sealed class BadgeInventoryManager : GameStateManager
         return null;
     }
 
+    /// <summary>Gets the owned badge with the specified id.</summary>
+    /// <remarks>Badges whose id does not fit in an <see cref="int"/> are never matched.</remarks>
+    /// <param name="badge_id">The id of the badge.</param>
+    /// <returns>The badge, or <see langword="null"/> if the user does not own it.</returns>
     public OwnedBadge? Badge(int badge_id)
     {
         foreach (OwnedBadge badge in State.OwnedBadges)
@@ -165,6 +207,9 @@ public sealed class BadgeInventoryManager : GameStateManager
         return null;
     }
 
+    /// <summary>Gets the owned badge with the specified id.</summary>
+    /// <param name="badge_id">The id of the badge.</param>
+    /// <returns>The badge, or <see langword="null"/> if the user does not own it.</returns>
     public OwnedBadge? Badge(Id badge_id)
     {
         foreach (OwnedBadge badge in State.OwnedBadges)
@@ -175,6 +220,9 @@ public sealed class BadgeInventoryManager : GameStateManager
         return null;
     }
 
+    /// <summary>Gets the selected badges of a user.</summary>
+    /// <param name="user_id">The id of the user.</param>
+    /// <returns>The user's selected badges, or <see langword="null"/> if none were received in the session.</returns>
     public UserBadges? SelectedBadgeSet(Id user_id)
     {
         BadgeSelectedState? selected = State.SelectedBadgeSets.FirstOrDefault(
@@ -182,6 +230,9 @@ public sealed class BadgeInventoryManager : GameStateManager
         return selected is null ? null : Clone(selected.Value);
     }
 
+    /// <summary>Gets the badges a user has selected.</summary>
+    /// <param name="user_id">The id of the user.</param>
+    /// <returns>The selected badges, or an empty list if none were received in the session.</returns>
     public IReadOnlyList<SelectedBadge> SelectedBadgesFor(Id user_id)
     {
         BadgeSelectedState? selected = State.SelectedBadgeSets.FirstOrDefault(
@@ -189,6 +240,14 @@ public sealed class BadgeInventoryManager : GameStateManager
         return selected?.Value.Badges.ToArray() ?? [];
     }
 
+    /// <summary>Requests the badge inventory if it has not been loaded and waits for every fragment.</summary>
+    /// <remarks>Completes immediately when the inventory is already loaded. Concurrent callers share one request.</remarks>
+    /// <param name="timeout_ms">The time to wait for the inventory, in milliseconds.</param>
+    /// <param name="cancellation_token">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the owned badges.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeout_ms"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active.</exception>
+    /// <exception cref="RequestTimeoutException">Thrown when the inventory does not arrive within <paramref name="timeout_ms"/>.</exception>
     public Task<IReadOnlyCollection<OwnedBadge>> EnsureLoadedAsync(
         int timeout_ms = 10000,
         CancellationToken cancellation_token = default)
@@ -198,6 +257,7 @@ public sealed class BadgeInventoryManager : GameStateManager
         return Operations().EnsureLoadedAsync(timeout_ms, cancellation_token);
     }
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
         CommitReset(CurrentSession);
@@ -460,6 +520,7 @@ public sealed class BadgeInventoryManager : GameStateManager
     internal bool IsCurrentPublication(BadgeInventoryStateUpdate update) =>
         UpdateCurrent(update);
 
+    /// <inheritdoc/>
     protected override void Reset() => CommitReset(CurrentSession);
 
     private void BindSession(Session session) => CommitReset(session);

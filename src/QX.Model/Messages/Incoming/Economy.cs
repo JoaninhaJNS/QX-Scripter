@@ -3,8 +3,12 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the <c>GetCreditsInfo</c> message, sent to request the user's credit balance.</summary>
+/// <remarks>The message has no payload.</remarks>
 public sealed record WalletBalanceRequest : IParserComposer<WalletBalanceRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WalletBalanceRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -14,6 +18,8 @@ public sealed record WalletBalanceRequest : IParserComposer<WalletBalanceRequest
         return new WalletBalanceRequest();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -22,8 +28,14 @@ public sealed record WalletBalanceRequest : IParserComposer<WalletBalanceRequest
     }
 }
 
+/// <summary>Represents the <c>CreditBalance</c> message, received with the user's credit balance.</summary>
+/// <param name="Balance">The credit balance as the decimal string sent by the server.</param>
 public sealed record CreditBalance(string Balance) : IParserComposer<CreditBalance>
 {
+    /// <summary>Gets the credit balance as a whole number, with any decimal part truncated.</summary>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when <see cref="Balance"/> is not a number or does not fit in an <see cref="int"/>.
+    /// </exception>
     public int Credits
     {
         get
@@ -39,6 +51,8 @@ public sealed record CreditBalance(string Balance) : IParserComposer<CreditBalan
         }
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CreditBalance Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -49,6 +63,8 @@ public sealed record CreditBalance(string Balance) : IParserComposer<CreditBalan
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -59,9 +75,18 @@ public sealed record CreditBalance(string Balance) : IParserComposer<CreditBalan
     }
 }
 
+/// <summary>
+/// Represents the <c>HabboActivityPointNotification</c> message, received when the balance of an activity point
+/// currency changes.
+/// </summary>
+/// <param name="Amount">The new balance of the currency.</param>
+/// <param name="Change">The amount the balance changed by.</param>
+/// <param name="Type">The activity point type of the currency.</param>
 public sealed record ActivityPointNotification(int Amount, int Change, int Type)
     : IParserComposer<ActivityPointNotification>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ActivityPointNotification Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -72,6 +97,8 @@ public sealed record ActivityPointNotification(int Amount, int Change, int Type)
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -83,27 +110,41 @@ public sealed record ActivityPointNotification(int Amount, int Change, int Type)
     }
 }
 
+/// <summary>Represents the balance of one activity point currency.</summary>
+/// <param name="Type">The activity point type of the currency.</param>
+/// <param name="Amount">The balance of the currency.</param>
 public readonly record struct ActivityPoint(int Type, int Amount);
 
+/// <summary>Represents the <c>ActivityPoints</c> message, received with the user's activity point balances.</summary>
 public sealed record ActivityPoints : IParserComposer<ActivityPoints>
 {
     private IReadOnlyList<ActivityPoint> points = Array.Empty<ActivityPoint>();
 
+    /// <summary>Initializes a new instance of the <see cref="ActivityPoints"/> record.</summary>
+    /// <param name="Points">The balances, copied into a read only list.</param>
     public ActivityPoints(IReadOnlyList<ActivityPoint> Points)
     {
         this.Points = Points;
     }
 
+    /// <summary>Gets the balance of each activity point currency, as a read only copy.</summary>
     public IReadOnlyList<ActivityPoint> Points
     {
         get => points;
         init => points = EconomyWire.FreezePoints(value, nameof(Points));
     }
 
+    /// <summary>Deconstructs the message into its balances.</summary>
+    /// <param name="Points">The balance of each activity point currency.</param>
     public void Deconstruct(out IReadOnlyList<ActivityPoint> Points) => Points = this.Points;
 
+    /// <summary>Gets the balance of an activity point currency.</summary>
+    /// <param name="type">The activity point type of the currency.</param>
+    /// <returns>The balance of the first entry with the type, or 0 when there is none.</returns>
     public int Get(int type) => Points.Where(point => point.Type == type).Select(point => point.Amount).FirstOrDefault();
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ActivityPoints Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -122,6 +163,8 @@ public sealed record ActivityPoints : IParserComposer<ActivityPoints>
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

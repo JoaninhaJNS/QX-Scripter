@@ -2,19 +2,20 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
-/// <summary>One place on a game leaderboard.</summary>
+/// <summary>Represents one entry on a game leaderboard.</summary>
 public sealed record LeaderboardEntry : IParserComposer<LeaderboardEntry>
 {
     private string name = "";
     private string figure = "";
     private string gender = "";
 
-    /// <param name="UserId">The player.</param>
-    /// <param name="Score">Their score.</param>
-    /// <param name="Rank">Their position, counted from one.</param>
-    /// <param name="Name">Their name.</param>
-    /// <param name="Figure">Their look.</param>
-    /// <param name="Gender">Their gender.</param>
+    /// <summary>Initializes a new instance of the <see cref="LeaderboardEntry"/> class.</summary>
+    /// <param name="UserId">The player's user ID.</param>
+    /// <param name="Score">The player's score.</param>
+    /// <param name="Rank">The player's rank, counted from one.</param>
+    /// <param name="Name">The player's name.</param>
+    /// <param name="Figure">The player's figure string.</param>
+    /// <param name="Gender">The player's gender.</param>
     public LeaderboardEntry(
         int UserId,
         int Score,
@@ -31,12 +32,16 @@ public sealed record LeaderboardEntry : IParserComposer<LeaderboardEntry>
         this.Gender = Gender;
     }
 
+    /// <summary>Gets the player's user ID.</summary>
     public int UserId { get; init; }
 
+    /// <summary>Gets the player's score.</summary>
     public int Score { get; init; }
 
+    /// <summary>Gets the player's rank, counted from one.</summary>
     public int Rank { get; init; }
 
+    /// <summary>Gets the player's name.</summary>
     public string Name
     {
         get => name;
@@ -47,6 +52,7 @@ public sealed record LeaderboardEntry : IParserComposer<LeaderboardEntry>
         }
     }
 
+    /// <summary>Gets the player's figure string.</summary>
     public string Figure
     {
         get => figure;
@@ -57,6 +63,7 @@ public sealed record LeaderboardEntry : IParserComposer<LeaderboardEntry>
         }
     }
 
+    /// <summary>Gets the player's gender.</summary>
     public string Gender
     {
         get => gender;
@@ -67,6 +74,13 @@ public sealed record LeaderboardEntry : IParserComposer<LeaderboardEntry>
         }
     }
 
+    /// <summary>Deconstructs the entry into its values.</summary>
+    /// <param name="UserId">The player's user ID.</param>
+    /// <param name="Score">The player's score.</param>
+    /// <param name="Rank">The player's rank, counted from one.</param>
+    /// <param name="Name">The player's name.</param>
+    /// <param name="Figure">The player's figure string.</param>
+    /// <param name="Gender">The player's gender.</param>
     public void Deconstruct(
         out int UserId,
         out int Score,
@@ -83,6 +97,8 @@ public sealed record LeaderboardEntry : IParserComposer<LeaderboardEntry>
         Gender = this.Gender;
     }
 
+    /// <summary>Parses the entry from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static LeaderboardEntry Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -94,6 +110,8 @@ public sealed record LeaderboardEntry : IParserComposer<LeaderboardEntry>
         return value;
     }
 
+    /// <summary>Composes the entry into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -161,9 +179,7 @@ internal readonly record struct LeaderboardEntryWireSnapshot(
     string Figure,
     string Gender);
 
-/// <summary>
-/// A page of a game leaderboard.
-/// </summary>
+/// <summary>Represents one page of a game leaderboard.</summary>
 /// <remarks>
 /// The hotel sends a window rather than the whole board, so the entries are a slice and
 /// <see cref="TotalListSize"/> is how long the board really is. The ranks in the slice are absolute,
@@ -175,9 +191,10 @@ public sealed record Leaderboard : IParserComposer<Leaderboard>
     private IReadOnlyList<LeaderboardEntry> entries =
         Array.AsReadOnly(Array.Empty<LeaderboardEntry>());
 
-    /// <param name="Entries">The rows in this window.</param>
-    /// <param name="TotalListSize">How many rows the whole board has.</param>
-    /// <param name="GameTypeId">Which game the board belongs to.</param>
+    /// <summary>Initializes a new instance of the <see cref="Leaderboard"/> class.</summary>
+    /// <param name="Entries">The entries in this window.</param>
+    /// <param name="TotalListSize">The number of entries on the whole board.</param>
+    /// <param name="GameTypeId">The ID of the game the board belongs to.</param>
     public Leaderboard(
         IReadOnlyList<LeaderboardEntry> Entries,
         int TotalListSize,
@@ -188,16 +205,23 @@ public sealed record Leaderboard : IParserComposer<Leaderboard>
         this.GameTypeId = GameTypeId;
     }
 
+    /// <summary>Gets the entries in this window.</summary>
     public IReadOnlyList<LeaderboardEntry> Entries
     {
         get => entries;
         init => entries = LeaderboardWire.FreezeReferences(value, nameof(Entries));
     }
 
+    /// <summary>Gets the number of entries on the whole board.</summary>
     public int TotalListSize { get; init; }
 
+    /// <summary>Gets the ID of the game the board belongs to.</summary>
     public int GameTypeId { get; init; }
 
+    /// <summary>Deconstructs the leaderboard into its values.</summary>
+    /// <param name="Entries">The entries in this window.</param>
+    /// <param name="TotalListSize">The number of entries on the whole board.</param>
+    /// <param name="GameTypeId">The ID of the game the board belongs to.</param>
     public void Deconstruct(
         out IReadOnlyList<LeaderboardEntry> Entries,
         out int TotalListSize,
@@ -208,18 +232,20 @@ public sealed record Leaderboard : IParserComposer<Leaderboard>
         GameTypeId = this.GameTypeId;
     }
 
-    /// <summary>The best rank in this window, or zero when it is empty.</summary>
+    /// <summary>Gets the best rank in this window, or 0 when it is empty.</summary>
     public int FirstRank => Entries.Count > 0 ? Entries[0].Rank : 0;
 
-    /// <summary>The worst rank in this window, or zero when it is empty.</summary>
+    /// <summary>Gets the worst rank in this window, or 0 when it is empty.</summary>
     public int LastRank => Entries.Count > 0 ? Entries[^1].Rank : 0;
 
-    /// <summary>Whether there are rows above this window.</summary>
+    /// <summary>Gets whether there are entries above this window.</summary>
     public bool HasMoreAbove => Entries.Count > 0 && FirstRank > 1;
 
-    /// <summary>Whether there are rows below this window.</summary>
+    /// <summary>Gets whether there are entries below this window.</summary>
     public bool HasMoreBelow => Entries.Count > 0 && LastRank < TotalListSize;
 
+    /// <summary>Parses the leaderboard from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static Leaderboard Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -231,6 +257,8 @@ public sealed record Leaderboard : IParserComposer<Leaderboard>
         return value;
     }
 
+    /// <summary>Composes the leaderboard into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -296,17 +324,19 @@ internal readonly record struct LeaderboardWireSnapshot(
     int TotalListSize,
     int GameTypeId);
 
-/// <summary>The all-time board covering everyone.</summary>
+/// <summary>Represents the <c>Game2TotalLeaderboard</c> message, received with a page of the all-time leaderboard of all players.</summary>
 public sealed record TotalLeaderboard : IParserComposer<TotalLeaderboard>
 {
     private Leaderboard board = null!;
 
-    /// <param name="Board">The window.</param>
+    /// <summary>Initializes a new instance of the <see cref="TotalLeaderboard"/> class.</summary>
+    /// <param name="Board">The leaderboard page.</param>
     public TotalLeaderboard(Leaderboard Board)
     {
         this.Board = Board;
     }
 
+    /// <summary>Gets the leaderboard page.</summary>
     public Leaderboard Board
     {
         get => board;
@@ -317,11 +347,15 @@ public sealed record TotalLeaderboard : IParserComposer<TotalLeaderboard>
         }
     }
 
+    /// <summary>Deconstructs the message into its values.</summary>
+    /// <param name="Board">The leaderboard page.</param>
     public void Deconstruct(out Leaderboard Board)
     {
         Board = this.Board;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TotalLeaderboard Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -333,6 +367,8 @@ public sealed record TotalLeaderboard : IParserComposer<TotalLeaderboard>
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -345,17 +381,19 @@ public sealed record TotalLeaderboard : IParserComposer<TotalLeaderboard>
     }
 }
 
-/// <summary>The all-time board covering the local user's friends.</summary>
+/// <summary>Represents the <c>Game2FriendsLeaderboard</c> message, received with a page of the all-time leaderboard of the user's friends.</summary>
 public sealed record FriendsLeaderboard : IParserComposer<FriendsLeaderboard>
 {
     private Leaderboard board = null!;
 
-    /// <param name="Board">The window.</param>
+    /// <summary>Initializes a new instance of the <see cref="FriendsLeaderboard"/> class.</summary>
+    /// <param name="Board">The leaderboard page.</param>
     public FriendsLeaderboard(Leaderboard Board)
     {
         this.Board = Board;
     }
 
+    /// <summary>Gets the leaderboard page.</summary>
     public Leaderboard Board
     {
         get => board;
@@ -366,11 +404,15 @@ public sealed record FriendsLeaderboard : IParserComposer<FriendsLeaderboard>
         }
     }
 
+    /// <summary>Deconstructs the message into its values.</summary>
+    /// <param name="Board">The leaderboard page.</param>
     public void Deconstruct(out Leaderboard Board)
     {
         Board = this.Board;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FriendsLeaderboard Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -382,6 +424,8 @@ public sealed record FriendsLeaderboard : IParserComposer<FriendsLeaderboard>
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -394,19 +438,22 @@ public sealed record FriendsLeaderboard : IParserComposer<FriendsLeaderboard>
     }
 }
 
-/// <summary>The all-time board covering groups.</summary>
+/// <summary>Represents the <c>Game2TotalGroupLeaderboard</c> message, received with a page of the all-time group leaderboard.</summary>
+/// <remarks>The favorite group ID follows the leaderboard page on the wire.</remarks>
 public sealed record TotalGroupLeaderboard : IParserComposer<TotalGroupLeaderboard>
 {
     private Leaderboard board = null!;
 
-    /// <param name="Board">The window.</param>
-    /// <param name="FavouriteGroupId">The group the local user has marked as their favourite.</param>
+    /// <summary>Initializes a new instance of the <see cref="TotalGroupLeaderboard"/> class.</summary>
+    /// <param name="Board">The leaderboard page.</param>
+    /// <param name="FavouriteGroupId">The ID of the group the user has marked as their favorite.</param>
     public TotalGroupLeaderboard(Leaderboard Board, int FavouriteGroupId)
     {
         this.Board = Board;
         this.FavouriteGroupId = FavouriteGroupId;
     }
 
+    /// <summary>Gets the leaderboard page.</summary>
     public Leaderboard Board
     {
         get => board;
@@ -417,14 +464,20 @@ public sealed record TotalGroupLeaderboard : IParserComposer<TotalGroupLeaderboa
         }
     }
 
+    /// <summary>Gets the ID of the group the user has marked as their favorite.</summary>
     public int FavouriteGroupId { get; init; }
 
+    /// <summary>Deconstructs the message into its values.</summary>
+    /// <param name="Board">The leaderboard page.</param>
+    /// <param name="FavouriteGroupId">The ID of the group the user has marked as their favorite.</param>
     public void Deconstruct(out Leaderboard Board, out int FavouriteGroupId)
     {
         Board = this.Board;
         FavouriteGroupId = this.FavouriteGroupId;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static TotalGroupLeaderboard Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -438,6 +491,8 @@ public sealed record TotalGroupLeaderboard : IParserComposer<TotalGroupLeaderboa
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -451,18 +506,16 @@ public sealed record TotalGroupLeaderboard : IParserComposer<TotalGroupLeaderboa
     }
 }
 
-/// <summary>
-/// The header a weekly board carries in front of its window.
-/// </summary>
+/// <summary>Represents the week header a weekly leaderboard sends in front of its page.</summary>
 /// <remarks>
 /// Weekly boards are addressed by an offset back from the current week rather than by date, and
 /// <see cref="MaxOffset"/> is how far back the hotel keeps them.
 /// </remarks>
-/// <param name="Year">The year the window covers.</param>
-/// <param name="Week">The week number the window covers.</param>
-/// <param name="MaxOffset">The oldest week that can be asked for, counted back from this one.</param>
-/// <param name="CurrentOffset">How many weeks back this window is.</param>
-/// <param name="MinutesUntilReset">How long until the running week ends.</param>
+/// <param name="Year">The year the page covers.</param>
+/// <param name="Week">The week number the page covers.</param>
+/// <param name="MaxOffset">The oldest week that can be requested, counted back from the current week.</param>
+/// <param name="CurrentOffset">The number of weeks this page is back from the current week, 0 for the current week.</param>
+/// <param name="MinutesUntilReset">The time in minutes until the current week ends.</param>
 public sealed record WeeklyLeaderboardPeriod(
     int Year,
     int Week,
@@ -470,9 +523,11 @@ public sealed record WeeklyLeaderboardPeriod(
     int CurrentOffset,
     int MinutesUntilReset) : IParserComposer<WeeklyLeaderboardPeriod>
 {
-    /// <summary>Whether this window is the week currently running.</summary>
+    /// <summary>Gets whether this page covers the current week.</summary>
     public bool IsCurrentWeek => CurrentOffset == 0;
 
+    /// <summary>Parses the period from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WeeklyLeaderboardPeriod Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -483,6 +538,8 @@ public sealed record WeeklyLeaderboardPeriod(
         return value;
     }
 
+    /// <summary>Composes the period into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -517,20 +574,22 @@ public sealed record WeeklyLeaderboardPeriod(
     }
 }
 
-/// <summary>The weekly board covering everyone.</summary>
+/// <summary>Represents the <c>Game2WeeklyLeaderboard</c> message, received with a page of the weekly leaderboard of all players.</summary>
 public sealed record WeeklyLeaderboard : IParserComposer<WeeklyLeaderboard>
 {
     private WeeklyLeaderboardPeriod period = null!;
     private Leaderboard board = null!;
 
-    /// <param name="Period">Which week the window covers.</param>
-    /// <param name="Board">The window.</param>
+    /// <summary>Initializes a new instance of the <see cref="WeeklyLeaderboard"/> class.</summary>
+    /// <param name="Period">The week the page covers.</param>
+    /// <param name="Board">The leaderboard page.</param>
     public WeeklyLeaderboard(WeeklyLeaderboardPeriod Period, Leaderboard Board)
     {
         this.Period = Period;
         this.Board = Board;
     }
 
+    /// <summary>Gets the week the page covers.</summary>
     public WeeklyLeaderboardPeriod Period
     {
         get => period;
@@ -541,6 +600,7 @@ public sealed record WeeklyLeaderboard : IParserComposer<WeeklyLeaderboard>
         }
     }
 
+    /// <summary>Gets the leaderboard page.</summary>
     public Leaderboard Board
     {
         get => board;
@@ -551,12 +611,17 @@ public sealed record WeeklyLeaderboard : IParserComposer<WeeklyLeaderboard>
         }
     }
 
+    /// <summary>Deconstructs the message into its values.</summary>
+    /// <param name="Period">The week the page covers.</param>
+    /// <param name="Board">The leaderboard page.</param>
     public void Deconstruct(out WeeklyLeaderboardPeriod Period, out Leaderboard Board)
     {
         Period = this.Period;
         Board = this.Board;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WeeklyLeaderboard Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -571,6 +636,8 @@ public sealed record WeeklyLeaderboard : IParserComposer<WeeklyLeaderboard>
         return new WeeklyLeaderboard(period, board);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -585,20 +652,22 @@ public sealed record WeeklyLeaderboard : IParserComposer<WeeklyLeaderboard>
     }
 }
 
-/// <summary>The weekly board covering the local user's friends.</summary>
+/// <summary>Represents the <c>Game2WeeklyFriendsLeaderboard</c> message, received with a page of the weekly leaderboard of the user's friends.</summary>
 public sealed record WeeklyFriendsLeaderboard : IParserComposer<WeeklyFriendsLeaderboard>
 {
     private WeeklyLeaderboardPeriod period = null!;
     private Leaderboard board = null!;
 
-    /// <param name="Period">Which week the window covers.</param>
-    /// <param name="Board">The window.</param>
+    /// <summary>Initializes a new instance of the <see cref="WeeklyFriendsLeaderboard"/> class.</summary>
+    /// <param name="Period">The week the page covers.</param>
+    /// <param name="Board">The leaderboard page.</param>
     public WeeklyFriendsLeaderboard(WeeklyLeaderboardPeriod Period, Leaderboard Board)
     {
         this.Period = Period;
         this.Board = Board;
     }
 
+    /// <summary>Gets the week the page covers.</summary>
     public WeeklyLeaderboardPeriod Period
     {
         get => period;
@@ -609,6 +678,7 @@ public sealed record WeeklyFriendsLeaderboard : IParserComposer<WeeklyFriendsLea
         }
     }
 
+    /// <summary>Gets the leaderboard page.</summary>
     public Leaderboard Board
     {
         get => board;
@@ -619,12 +689,17 @@ public sealed record WeeklyFriendsLeaderboard : IParserComposer<WeeklyFriendsLea
         }
     }
 
+    /// <summary>Deconstructs the message into its values.</summary>
+    /// <param name="Period">The week the page covers.</param>
+    /// <param name="Board">The leaderboard page.</param>
     public void Deconstruct(out WeeklyLeaderboardPeriod Period, out Leaderboard Board)
     {
         Period = this.Period;
         Board = this.Board;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WeeklyFriendsLeaderboard Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -639,6 +714,8 @@ public sealed record WeeklyFriendsLeaderboard : IParserComposer<WeeklyFriendsLea
         return new WeeklyFriendsLeaderboard(period, board);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -653,11 +730,9 @@ public sealed record WeeklyFriendsLeaderboard : IParserComposer<WeeklyFriendsLea
     }
 }
 
-/// <summary>
-/// The weekly board covering groups.
-/// </summary>
+/// <summary>Represents the <c>Game2WeeklyGroupLeaderboard</c> message, received with a page of the weekly group leaderboard.</summary>
 /// <remarks>
-/// The favourite group trails the window rather than sitting in the header, which is the one place
+/// The favorite group trails the window rather than sitting in the header, which is the one place
 /// the group variants differ from the plain ones.
 /// </remarks>
 public sealed record WeeklyGroupLeaderboard : IParserComposer<WeeklyGroupLeaderboard>
@@ -665,9 +740,10 @@ public sealed record WeeklyGroupLeaderboard : IParserComposer<WeeklyGroupLeaderb
     private WeeklyLeaderboardPeriod period = null!;
     private Leaderboard board = null!;
 
-    /// <param name="Period">Which week the window covers.</param>
-    /// <param name="Board">The window.</param>
-    /// <param name="FavouriteGroupId">The group the local user has marked as their favourite.</param>
+    /// <summary>Initializes a new instance of the <see cref="WeeklyGroupLeaderboard"/> class.</summary>
+    /// <param name="Period">The week the page covers.</param>
+    /// <param name="Board">The leaderboard page.</param>
+    /// <param name="FavouriteGroupId">The ID of the group the user has marked as their favorite.</param>
     public WeeklyGroupLeaderboard(
         WeeklyLeaderboardPeriod Period,
         Leaderboard Board,
@@ -678,6 +754,7 @@ public sealed record WeeklyGroupLeaderboard : IParserComposer<WeeklyGroupLeaderb
         this.FavouriteGroupId = FavouriteGroupId;
     }
 
+    /// <summary>Gets the week the page covers.</summary>
     public WeeklyLeaderboardPeriod Period
     {
         get => period;
@@ -688,6 +765,7 @@ public sealed record WeeklyGroupLeaderboard : IParserComposer<WeeklyGroupLeaderb
         }
     }
 
+    /// <summary>Gets the leaderboard page.</summary>
     public Leaderboard Board
     {
         get => board;
@@ -698,8 +776,13 @@ public sealed record WeeklyGroupLeaderboard : IParserComposer<WeeklyGroupLeaderb
         }
     }
 
+    /// <summary>Gets the ID of the group the user has marked as their favorite.</summary>
     public int FavouriteGroupId { get; init; }
 
+    /// <summary>Deconstructs the message into its values.</summary>
+    /// <param name="Period">The week the page covers.</param>
+    /// <param name="Board">The leaderboard page.</param>
+    /// <param name="FavouriteGroupId">The ID of the group the user has marked as their favorite.</param>
     public void Deconstruct(
         out WeeklyLeaderboardPeriod Period,
         out Leaderboard Board,
@@ -710,6 +793,8 @@ public sealed record WeeklyGroupLeaderboard : IParserComposer<WeeklyGroupLeaderb
         FavouriteGroupId = this.FavouriteGroupId;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static WeeklyGroupLeaderboard Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -726,6 +811,8 @@ public sealed record WeeklyGroupLeaderboard : IParserComposer<WeeklyGroupLeaderb
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

@@ -8,28 +8,36 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// How far the open trade has got: <c>Idle</c> when no trade is open, <c>Trading</c> while
-    /// offers may still change, and <c>AwaitingConfirmation</c> once both sides accepted and the
-    /// offers are locked. Reverts to <c>Trading</c> if either side withdraws their acceptance.
+    /// Gets the phase of the open trade.
     /// </summary>
+    /// <remarks>
+    /// The phase is <see cref="Qx.Game.TradePhase.Idle"/> when no trade is open,
+    /// <see cref="Qx.Game.TradePhase.Trading"/> while offers may still change, and
+    /// <see cref="Qx.Game.TradePhase.AwaitingConfirmation"/> once both sides accepted and the
+    /// offers are locked. It reverts to <see cref="Qx.Game.TradePhase.Trading"/> if either side
+    /// withdraws their acceptance.
+    /// </remarks>
     public TradePhase TradePhase => Trade.Active?.Phase ?? Qx.Game.TradePhase.Idle;
 
     /// <summary>
-    /// Whether the trade has reached the final confirmation step, where the offers are locked and
-    /// both sides still have to confirm.
+    /// Gets whether the trade has reached the final confirmation step, where the offers are
+    /// locked and both sides still have to confirm.
     /// </summary>
     public bool IsTradeWaitingConfirmation =>
         Trade.Active?.Phase is Qx.Game.TradePhase.AwaitingConfirmation;
 
     /// <summary>
-    /// Subscribes to the trade entering the final confirmation phase. Same subscription as
-    /// <see cref="OnTradeConfirmed"/>, under the name that matches the phase it reports.
+    /// Registers a handler that runs when the trade enters the final confirmation phase.
     /// </summary>
-    /// <param name="handler">Invoked with no arguments.</param>
+    /// <remarks>
+    /// Same subscription as <see cref="OnTradeConfirmed"/>, under the name that matches the phase
+    /// it reports.
+    /// </remarks>
+    /// <param name="handler">The handler to call, with no arguments.</param>
     /// <returns>
-    /// A handle that removes the handler when disposed. The subscription is also torn down when
+    /// A handle that removes the handler when disposed. The subscription is also removed when
     /// the script stops.
     /// </returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnTradeWaitingConfirm(Action handler) => OnTradeConfirmed(handler);
 }

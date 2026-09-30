@@ -4,15 +4,34 @@ using ForumThreadData = Qx.Model.Forums.ForumThread;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>
+/// Represents a forum post message, either the client's request to post or the server's notice of the posted message.
+/// </summary>
+/// <remarks>
+/// The packet direction selects the form. The outgoing request carries <see cref="Subject"/> and
+/// <see cref="MessageText"/>, and a thread id of 0 starts a new thread. The incoming notice carries
+/// the posted <see cref="Message"/>.
+/// </remarks>
 public sealed record PostMessage : IParserComposer<PostMessage>
 {
+    /// <summary>Gets the id of the group that owns the forum.</summary>
     public Id GroupId { get; init; }
+    /// <summary>Gets the thread id, 0 in a request that starts a new thread.</summary>
     public Id ThreadId { get; init; }
+    /// <summary>Gets the subject of a new thread, empty in an incoming notice.</summary>
     public string Subject { get; init; }
+    /// <summary>Gets the text to post, empty for incoming notices.</summary>
     public string MessageText { get; init; }
+    /// <summary>Gets the posted message, or <see langword="null"/> for an outgoing request.</summary>
     public ForumPost? Message { get; init; }
+    /// <summary>Gets whether the value is an outgoing request, which is when <see cref="Message"/> is <see langword="null"/>.</summary>
     public bool IsRequest => Message is null;
 
+    /// <summary>Initializes a new outgoing post request.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The thread to reply to, or 0 to start a new thread.</param>
+    /// <param name="subject">The subject of a new thread.</param>
+    /// <param name="message_text">The text to post.</param>
     public PostMessage(
         Id group_id,
         Id thread_id,
@@ -25,6 +44,10 @@ public sealed record PostMessage : IParserComposer<PostMessage>
         MessageText = message_text;
     }
 
+    /// <summary>Initializes a new incoming notice of a posted message.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The thread the message was posted in.</param>
+    /// <param name="message">The posted message.</param>
     public PostMessage(
         Id group_id,
         Id thread_id,
@@ -37,6 +60,8 @@ public sealed record PostMessage : IParserComposer<PostMessage>
         Message = message;
     }
 
+    /// <summary>Parses the message from a packet, in the form its direction selects.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PostMessage Parse(in PacketReader p) =>
         ParseRoot(in p);
 
@@ -61,6 +86,9 @@ public sealed record PostMessage : IParserComposer<PostMessage>
         };
     }
 
+    /// <summary>Composes the message into a packet, in the form the packet direction selects.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidDataException">Thrown when the value does not match the form the packet direction requires.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -124,15 +152,33 @@ public sealed record PostMessage : IParserComposer<PostMessage>
     }
 }
 
+/// <summary>
+/// Represents a forum thread update, either the client's request to change the sticky and locked flags or the server's notice of the updated thread.
+/// </summary>
+/// <remarks>
+/// The packet direction selects the form. The outgoing request carries the flags; the incoming
+/// notice carries the whole <see cref="Thread"/>, and the flags are copied from it.
+/// </remarks>
 public sealed record UpdateThread : IParserComposer<UpdateThread>
 {
+    /// <summary>Gets the id of the group that owns the forum.</summary>
     public Id GroupId { get; init; }
+    /// <summary>Gets the thread id.</summary>
     public Id ThreadId { get; init; }
+    /// <summary>Gets whether the thread is pinned to the top of the thread list.</summary>
     public bool IsSticky { get; init; }
+    /// <summary>Gets whether the thread rejects further replies.</summary>
     public bool IsLocked { get; init; }
+    /// <summary>Gets the updated thread, or <see langword="null"/> for an outgoing request.</summary>
     public ForumThreadData? Thread { get; init; }
+    /// <summary>Gets whether the value is an outgoing request, which is when <see cref="Thread"/> is <see langword="null"/>.</summary>
     public bool IsRequest => Thread is null;
 
+    /// <summary>Initializes a new outgoing request to change a thread's flags.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread_id">The thread to change.</param>
+    /// <param name="is_sticky">Whether the thread is pinned to the top of the thread list.</param>
+    /// <param name="is_locked">Whether the thread rejects further replies.</param>
     public UpdateThread(
         Id group_id,
         Id thread_id,
@@ -145,6 +191,9 @@ public sealed record UpdateThread : IParserComposer<UpdateThread>
         IsLocked = is_locked;
     }
 
+    /// <summary>Initializes a new incoming notice of an updated thread.</summary>
+    /// <param name="group_id">The id of the group that owns the forum.</param>
+    /// <param name="thread">The updated thread, which also supplies the thread id and flags.</param>
     public UpdateThread(Id group_id, ForumThreadData thread)
     {
         GroupId = group_id;
@@ -154,6 +203,8 @@ public sealed record UpdateThread : IParserComposer<UpdateThread>
         Thread = thread;
     }
 
+    /// <summary>Parses the message from a packet, in the form its direction selects.</summary>
+    /// <param name="p">The packet reader.</param>
     public static UpdateThread Parse(in PacketReader p) =>
         ParseRoot(in p);
 
@@ -178,6 +229,9 @@ public sealed record UpdateThread : IParserComposer<UpdateThread>
         };
     }
 
+    /// <summary>Composes the message into a packet, in the form the packet direction selects.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidDataException">Thrown when the value does not match the form the packet direction requires.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

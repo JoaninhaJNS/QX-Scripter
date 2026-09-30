@@ -5,27 +5,39 @@ using Qx.Model.Messages.Incoming;
 
 namespace Qx.Scripting;
 
-/// <summary>
-/// The friend actions that were missing from <see cref="ScriptGlobals"/>: loading the list
-/// rather than reading whatever happens to be cached, searching the hotel, relationships, and the
-/// membership events.
-/// </summary>
+/// <content>
+/// Friend list loading, user search, relationships and friend list events.
+/// </content>
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// The friend list, loading it from the hotel when it has not been seen.
+    /// Gets the friend list, loading it from the hotel when it has not been received yet.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// <see cref="Friends"/> is the cached snapshot and is empty until the hotel has sent the list.
     /// A script that attached to a session already in progress therefore reads nothing from it and
     /// concludes the account has no friends. This asks instead.
+    /// </para>
+    /// <para>
+    /// The list is read in pages of 500 and retried up to three times when it changes while being
+    /// read, so the result is one consistent snapshot.
+    /// </para>
     /// </remarks>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for loading the list, from 1 to 120000.</param>
+    /// <returns>The friends on the list.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="timeoutMs"/> is zero or negative, or above 120000 when the list has to be loaded.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the hotel session changed while the list was read, or the list kept changing on every attempt.
+    /// </exception>
     public Task<IReadOnlyCollection<Friend>> GetFriends(int timeoutMs = 10000) =>
         LoadFriends(timeoutMs, Ct);
 
-    /// <summary>The friends who are online, loading the list first when needed.</summary>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <summary>Gets the friends who are online, loading the list first when needed.</summary>
+    /// <param name="timeoutMs">The timeout in milliseconds for loading the list.</param>
+    /// <returns>The friends whose <see cref="Friend.IsOnline"/> is <see langword="true"/>.</returns>
     public async Task<IReadOnlyList<Friend>> GetOnlineFriends(int timeoutMs = 10000)
     {
         IReadOnlyCollection<Friend> friends = await GetFriends(timeoutMs);
@@ -36,8 +48,10 @@ public partial class ScriptGlobals
     /// Searches the hotel for users by name.
     /// </summary>
     /// <remarks>
-    /// The answer arrives as a separate message; read it with
-    /// <c>OnIn&lt;HabboSearchResult&gt;(result =&gt; ...)</c>.
+    /// The search runs in the background and the call returns at once. The answer arrives as a
+    /// separate message that also reaches the game client; read it with
+    /// <c>OnIn&lt;UserSearchResults&gt;("HabboSearchResult", result =&gt; ...)</c>. A failure,
+    /// such as no answer within 10000 milliseconds, is reported as a background script error.
     /// </remarks>
     /// <param name="query">The name or fragment to search for.</param>
     public void SearchUsers(string query) => StartObservedTask(
@@ -51,6 +65,11 @@ public partial class ScriptGlobals
         Ct);
 
     /// <summary>Asks the hotel to send the pending friend requests.</summary>
+    /// <remarks>
+    /// The request runs in the background and the call returns at once. The reply also reaches the
+    /// game client. A failure, such as no reply within 10000 milliseconds, is reported as a
+    /// background script error.
+    /// </remarks>
     public void RequestFriendRequests() => StartObservedTask(
         async () =>
         {
@@ -65,7 +84,7 @@ public partial class ScriptGlobals
     /// Sets the relationship shown against a friend, which is the heart, smile or bobba the client
     /// draws on their entry.
     /// </summary>
-    /// <param name="friendId">The friend.</param>
+    /// <param name="friendId">The id of the friend.</param>
     /// <param name="relationship">The relationship to show, or <see cref="RelationshipType.None"/> to clear it.</param>
     public void SetRelationship(Id friendId, RelationshipType relationship) =>
         Application.Invoke<FriendRelationshipSetRequest, FriendOperationResult>(
@@ -76,7 +95,8 @@ public partial class ScriptGlobals
     /// <summary>Sets the relationship shown against a friend, by name.</summary>
     /// <param name="name">The friend's name.</param>
     /// <param name="relationship">The relationship to show.</param>
-    /// <exception cref="InvalidOperationException">There is no friend by that name.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no friend by that name in the cached friend list.</exception>
     public void SetRelationship(string name, RelationshipType relationship)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
@@ -185,21 +205,27 @@ public partial class ScriptGlobals
         };
     }
 
-    /// <summary>Runs a callback whenever someone joins the friend list.</summary>
-    /// <param name="handler">Receives the friend.</param>
+    /// <summary>Registers a handler that runs when someone joins the friend list.</summary>
+    /// <remarks>No handle is returned; the handler stays registered until the script stops.</remarks>
+    /// <param name="handler">The handler to call with the new friend.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnFriendAdded(Action<Friend> handler)
         => OnFriendChange(FriendChangeKind.Added, handler);
 
     /// <summary>
-    /// Runs a callback whenever a friend's details change, which is also how going online and
-    /// offline is reported.
+    /// Registers a handler that runs when a friend's details change, which is also how going
+    /// online and offline is reported.
     /// </summary>
-    /// <param name="handler">Receives the friend as they now stand.</param>
+    /// <remarks>No handle is returned; the handler stays registered until the script stops.</remarks>
+    /// <param name="handler">The handler to call with the friend as they now stand.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnFriendUpdated(Action<Friend> handler)
         => OnFriendChange(FriendChangeKind.Updated, handler);
 
-    /// <summary>Runs a callback whenever someone leaves the friend list.</summary>
-    /// <param name="handler">Receives the friend.</param>
+    /// <summary>Registers a handler that runs when someone leaves the friend list.</summary>
+    /// <remarks>No handle is returned; the handler stays registered until the script stops.</remarks>
+    /// <param name="handler">The handler to call with the removed friend.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnFriendRemoved(Action<Friend> handler)
         => OnFriendChange(FriendChangeKind.Removed, handler);
 

@@ -7,48 +7,83 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// The habbicons: the small pictures that can be sent in a private conversation, the
-    /// collections they are sold in, and which of them the local user owns.
+    /// Gets the habbicon manager, which tracks the small pictures that can be sent in a private
+    /// conversation, the collections they are sold in, and which of them the local user owns.
     /// </summary>
     public HabbiconManager Habbicons => Game.Habbicons;
 
-    /// <summary>Whether the hotel has habbicons switched on.</summary>
+    /// <summary>Gets whether the hotel has habbicons switched on.</summary>
+    /// <remarks>
+    /// It is read from the <c>habbicons.enabled</c> flag in the hotel's game data.
+    /// </remarks>
     public bool HabbiconsEnabled => Game.Habbicons.IsEnabled;
 
     /// <summary>
-    /// The habbicon collections, fetching the shop from the hotel on first use.
+    /// Gets the habbicon collections, requesting the shop from the hotel when it has not been
+    /// loaded yet.
     /// </summary>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <remarks>
+    /// Once the shop is loaded, the cached copy is read without a request. Every page of the
+    /// cached snapshot is collected into one list.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds for the shop request.</param>
+    /// <returns>The collections, each with its habbicons.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the habbicon state changed while it was read.</exception>
     public async Task<IReadOnlyList<HabbiconCollection>> GetHabbiconCollections(int timeoutMs = 10000) =>
         (await ReadHabbiconSnapshot(timeoutMs).ConfigureAwait(false)).Collections;
 
     /// <summary>
-    /// Every habbicon the shop knows, with the local user's state applied.
+    /// Gets every habbicon the shop knows, with the local user's state applied.
     /// </summary>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <remarks>
+    /// The shop is requested from the hotel only when it has not been loaded yet.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds for the shop request.</param>
+    /// <returns>Every habbicon the shop lists.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the habbicon state changed while it was read.</exception>
     public async Task<IReadOnlyList<Habbicon>> GetHabbicons(int timeoutMs = 10000) =>
         (await ReadHabbiconSnapshot(timeoutMs).ConfigureAwait(false)).Habbicons;
 
-    /// <summary>The habbicons the local user owns, favourited or not.</summary>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <summary>Gets the habbicons the local user owns, favorited or not.</summary>
+    /// <remarks>
+    /// The shop is requested from the hotel only when it has not been loaded yet.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds for the shop request.</param>
+    /// <returns>The owned habbicons.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the habbicon state changed while it was read.</exception>
     public async Task<IReadOnlyList<Habbicon>> GetOwnedHabbicons(int timeoutMs = 10000)
     {
         HabbiconReadSnapshot snapshot = await ReadHabbiconSnapshot(timeoutMs).ConfigureAwait(false);
         return Array.AsReadOnly(snapshot.Habbicons.Where(icon => icon.IsOwned).ToArray());
     }
 
-    /// <summary>The habbicons that are earned and still waiting to be claimed.</summary>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <summary>Gets the habbicons that are earned and still waiting to be claimed.</summary>
+    /// <remarks>
+    /// The shop is requested from the hotel only when it has not been loaded yet.
+    /// </remarks>
+    /// <param name="timeoutMs">The timeout in milliseconds for the shop request.</param>
+    /// <returns>The claimable habbicons.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the habbicon state changed while it was read.</exception>
     public async Task<IReadOnlyList<Habbicon>> GetClaimableHabbicons(int timeoutMs = 10000)
     {
         HabbiconReadSnapshot snapshot = await ReadHabbiconSnapshot(timeoutMs).ConfigureAwait(false);
         return Array.AsReadOnly(snapshot.Habbicons.Where(icon => icon.IsClaimable).ToArray());
     }
 
-    /// <summary>Looks a habbicon up by name, ignoring case.</summary>
+    /// <summary>Finds a habbicon by name, ignoring case.</summary>
+    /// <remarks>
+    /// The shop is requested from the hotel only when it has not been loaded yet.
+    /// </remarks>
     /// <param name="name">The icon's name.</param>
-    /// <param name="timeoutMs">How long to wait for the hotel to answer.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for the shop request.</param>
     /// <returns>The icon, or <see langword="null"/> when the shop has no icon by that name.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the habbicon state changed while it was read.</exception>
     public async Task<Habbicon?> FindHabbicon(string name, int timeoutMs = 10000)
     {
         ArgumentNullException.ThrowIfNull(name);
@@ -57,16 +92,29 @@ public partial class ScriptGlobals
             icon.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>Buys a single habbicon.</summary>
-    /// <param name="habbiconId">The icon to buy.</param>
+    /// <summary>Sends a request to buy a single habbicon.</summary>
+    /// <remarks>
+    /// It returns once the request is sent.
+    /// </remarks>
+    /// <param name="habbiconId">The id of the icon to buy.</param>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the application runtime is not active.</exception>
     public void BuyHabbicon(int habbiconId) => Game.Habbicons.Buy(habbiconId);
 
-    /// <summary>Buys a whole habbicon collection.</summary>
-    /// <param name="collectionId">The collection to buy.</param>
+    /// <summary>Sends a request to buy a whole habbicon collection.</summary>
+    /// <remarks>
+    /// It returns once the request is sent.
+    /// </remarks>
+    /// <param name="collectionId">The id of the collection to buy.</param>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the application runtime is not active.</exception>
     public void BuyHabbiconCollection(int collectionId) => Game.Habbicons.BuyCollection(collectionId);
 
-    /// <summary>Claims a habbicon that has been earned.</summary>
-    /// <param name="habbiconId">The icon to claim.</param>
+    /// <summary>Sends a request to claim a habbicon that has been earned.</summary>
+    /// <remarks>
+    /// It returns once the request is sent; <see cref="OnHabbiconGained"/> reports the icon once it
+    /// is owned.
+    /// </remarks>
+    /// <param name="habbiconId">The id of the icon to claim.</param>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the application runtime is not active.</exception>
     public void ClaimHabbicon(int habbiconId) => Game.Habbicons.Claim(habbiconId);
 
     /// <summary>
@@ -74,10 +122,13 @@ public partial class ScriptGlobals
     /// </summary>
     /// <remarks>
     /// The hotel confirms each claim with its own status change, so this returns once the requests
-    /// are away. Subscribe with <see cref="OnHabbiconGained"/> to see them land.
+    /// are sent, one per claimable icon. Subscribe with <see cref="OnHabbiconGained"/> to see them
+    /// land. The shop is requested from the hotel first when it has not been loaded yet.
     /// </remarks>
-    /// <param name="timeoutMs">How long to wait for the shop.</param>
-    /// <returns>How many claims were sent.</returns>
+    /// <param name="timeoutMs">The timeout in milliseconds for the shop request.</param>
+    /// <returns>The number of claims that were sent.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeoutMs"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, the session changed, or the habbicon state changed while it was read.</exception>
     public async Task<int> ClaimAllHabbicons(int timeoutMs = 10000)
     {
         HabbiconReadSnapshot snapshot = await ReadHabbiconSnapshot(timeoutMs).ConfigureAwait(false);
@@ -102,16 +153,22 @@ public partial class ScriptGlobals
         return claimable.Length;
     }
 
-    /// <summary>Marks an owned habbicon as a favourite.</summary>
-    /// <param name="habbiconId">The icon to favourite.</param>
+    /// <summary>Sends a request to mark an owned habbicon as a favorite.</summary>
+    /// <param name="habbiconId">The id of the icon to favorite.</param>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the application runtime is not active.</exception>
     public void FavoriteHabbicon(int habbiconId) => Game.Habbicons.Favorite(habbiconId);
 
-    /// <summary>Removes a habbicon from the favourites.</summary>
-    /// <param name="habbiconId">The icon to unfavourite.</param>
+    /// <summary>Sends a request to remove a habbicon from the favorites.</summary>
+    /// <param name="habbiconId">The id of the icon to unfavorite.</param>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session, or the application runtime is not active.</exception>
     public void UnfavoriteHabbicon(int habbiconId) => Game.Habbicons.Unfavorite(habbiconId);
 
-    /// <summary>Runs a callback whenever a habbicon's state changes.</summary>
-    /// <param name="handler">Receives the identifier and the new state.</param>
+    /// <summary>Registers a handler that runs whenever the state of one of the local user's habbicons changes.</summary>
+    /// <remarks>
+    /// No handle is returned, so the handler stays registered until the script stops.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the icon's id and its new state.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnHabbiconStatusChanged(Action<UserHabbiconStatusChanged> handler)
     {
         _ = Subscribe(
@@ -120,8 +177,14 @@ public partial class ScriptGlobals
             value => Game.Habbicons.StatusChanged -= value);
     }
 
-    /// <summary>Runs a callback whenever a habbicon is newly acquired.</summary>
-    /// <param name="handler">Receives the icon's identifier.</param>
+    /// <summary>Registers a handler that runs whenever the local user gains a habbicon.</summary>
+    /// <remarks>
+    /// It runs for an icon that is new to the inventory and for a claimable icon that became
+    /// owned, but not for the first inventory snapshot of a session. No handle is returned, so the
+    /// handler stays registered until the script stops.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the icon's id.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnHabbiconGained(Action<int> handler)
     {
         _ = Subscribe(
@@ -130,8 +193,12 @@ public partial class ScriptGlobals
             value => Game.Habbicons.IconGained -= value);
     }
 
-    /// <summary>Runs a callback whenever someone in the room uses a habbicon.</summary>
-    /// <param name="handler">Receives the room index of the user and the icon's identifier.</param>
+    /// <summary>Registers a handler that runs whenever an avatar in the room uses a habbicon.</summary>
+    /// <remarks>
+    /// No handle is returned, so the handler stays registered until the script stops.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the room index of the user and the icon's id.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public void OnHabbiconUsed(Action<RoomUseHabbicon> handler)
     {
         _ = Subscribe(

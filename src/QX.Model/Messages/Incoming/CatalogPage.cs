@@ -2,17 +2,22 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Contains the images and texts shown on a catalog page.</summary>
 public sealed record CatalogPageLocalization : IParserComposer<CatalogPageLocalization>
 {
     private IReadOnlyList<string> _images = Array.AsReadOnly(Array.Empty<string>());
     private IReadOnlyList<string> _texts = Array.AsReadOnly(Array.Empty<string>());
 
+    /// <summary>Initializes a new instance of the <see cref="CatalogPageLocalization"/> record.</summary>
+    /// <param name="Images">The image names of the page, copied into a read only list.</param>
+    /// <param name="Texts">The texts of the page, copied into a read only list.</param>
     public CatalogPageLocalization(IReadOnlyList<string> Images, IReadOnlyList<string> Texts)
     {
         this.Images = Images;
         this.Texts = Texts;
     }
 
+    /// <summary>Gets the image names of the page, as a read only copy.</summary>
     public IReadOnlyList<string> Images
     {
         get => _images;
@@ -22,6 +27,7 @@ public sealed record CatalogPageLocalization : IParserComposer<CatalogPageLocali
             nameof(Images));
     }
 
+    /// <summary>Gets the texts of the page, as a read only copy.</summary>
     public IReadOnlyList<string> Texts
     {
         get => _texts;
@@ -31,18 +37,25 @@ public sealed record CatalogPageLocalization : IParserComposer<CatalogPageLocali
             nameof(Texts));
     }
 
+    /// <summary>Parses the page localization from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CatalogPageLocalization Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static CatalogPageLocalization ParseFlash(in PacketReader p) =>
         CatalogPageWire.ParseStandaloneLocalization(in p);
 
+    /// <summary>Composes the page localization into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(CatalogPageLocalization value, in PacketWriter p) =>
         CatalogPageWire.ComposeLocalization(value, in p);
 
+    /// <summary>Deconstructs the localization into its images and texts.</summary>
+    /// <param name="Images">The image names of the page.</param>
+    /// <param name="Texts">The texts of the page.</param>
     public void Deconstruct(out IReadOnlyList<string> Images, out IReadOnlyList<string> Texts)
     {
         Images = this.Images;
@@ -50,12 +63,27 @@ public sealed record CatalogPageLocalization : IParserComposer<CatalogPageLocali
     }
 }
 
+/// <summary>Represents an offer on a catalog page.</summary>
 public sealed record CatalogPageOffer : IParserComposer<CatalogPageOffer>
 {
     private string _localization_id = "";
     private IReadOnlyList<CatalogProduct> _products = Array.AsReadOnly(Array.Empty<CatalogProduct>());
     private string _preview_image = "";
 
+    /// <summary>Initializes a new instance of the <see cref="CatalogPageOffer"/> record.</summary>
+    /// <param name="OfferId">The identifier of the offer.</param>
+    /// <param name="LocalizationId">The localization key of the offer.</param>
+    /// <param name="IsRent">Whether the offer is a rental.</param>
+    /// <param name="PriceInCredits">The price in credits.</param>
+    /// <param name="PriceInActivityPoints">The price in activity points.</param>
+    /// <param name="ActivityPointType">The activity point type of <paramref name="PriceInActivityPoints"/>.</param>
+    /// <param name="PriceInSilver">The price in silver.</param>
+    /// <param name="Giftable">Whether the offer can be bought as a gift.</param>
+    /// <param name="Products">The products the offer gives, copied into a read only list.</param>
+    /// <param name="ClubLevel">The club level the offer requires.</param>
+    /// <param name="BundlePurchaseAllowed">Whether the offer can be bought in bulk.</param>
+    /// <param name="IsPet">Whether the offer is a pet.</param>
+    /// <param name="PreviewImage">The preview image of the offer.</param>
     public CatalogPageOffer(
         int OfferId,
         string LocalizationId,
@@ -86,26 +114,35 @@ public sealed record CatalogPageOffer : IParserComposer<CatalogPageOffer>
         this.PreviewImage = PreviewImage;
     }
 
+    /// <summary>Gets the identifier of the offer.</summary>
     public int OfferId { get; init; }
 
+    /// <summary>Gets the localization key of the offer.</summary>
     public string LocalizationId
     {
         get => _localization_id;
         init => _localization_id = CatalogWire.RequireReference(value, nameof(LocalizationId));
     }
 
+    /// <summary>Gets whether the offer is a rental.</summary>
     public bool IsRent { get; init; }
 
+    /// <summary>Gets the price in credits.</summary>
     public int PriceInCredits { get; init; }
 
+    /// <summary>Gets the price in activity points.</summary>
     public int PriceInActivityPoints { get; init; }
 
+    /// <summary>Gets the activity point type of <see cref="PriceInActivityPoints"/>.</summary>
     public int ActivityPointType { get; init; }
 
+    /// <summary>Gets the price in silver.</summary>
     public int PriceInSilver { get; init; }
 
+    /// <summary>Gets whether the offer can be bought as a gift.</summary>
     public bool Giftable { get; init; }
 
+    /// <summary>Gets the products the offer gives, as a read only copy.</summary>
     public IReadOnlyList<CatalogProduct> Products
     {
         get => _products;
@@ -115,30 +152,52 @@ public sealed record CatalogPageOffer : IParserComposer<CatalogPageOffer>
             nameof(Products));
     }
 
+    /// <summary>Gets the club level the offer requires.</summary>
     public int ClubLevel { get; init; }
 
+    /// <summary>Gets whether the offer can be bought in bulk.</summary>
     public bool BundlePurchaseAllowed { get; init; }
 
+    /// <summary>Gets whether the offer is a pet.</summary>
     public bool IsPet { get; init; }
 
+    /// <summary>Gets the preview image of the offer.</summary>
     public string PreviewImage
     {
         get => _preview_image;
         init => _preview_image = CatalogWire.RequireReference(value, nameof(PreviewImage));
     }
 
+    /// <summary>Parses a catalog offer from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CatalogPageOffer Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static CatalogPageOffer ParseFlash(in PacketReader p) =>
         CatalogPageWire.ParseStandaloneOffer(in p);
 
+    /// <summary>Composes the catalog offer into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(CatalogPageOffer value, in PacketWriter p) =>
         CatalogPageWire.ComposeOffer(value, false, in p);
 
+    /// <summary>Deconstructs the offer into its parts.</summary>
+    /// <param name="OfferId">The identifier of the offer.</param>
+    /// <param name="LocalizationId">The localization key of the offer.</param>
+    /// <param name="IsRent">Whether the offer is a rental.</param>
+    /// <param name="PriceInCredits">The price in credits.</param>
+    /// <param name="PriceInActivityPoints">The price in activity points.</param>
+    /// <param name="ActivityPointType">The activity point type of the activity point price.</param>
+    /// <param name="PriceInSilver">The price in silver.</param>
+    /// <param name="Giftable">Whether the offer can be bought as a gift.</param>
+    /// <param name="Products">The products the offer gives.</param>
+    /// <param name="ClubLevel">The club level the offer requires.</param>
+    /// <param name="BundlePurchaseAllowed">Whether the offer can be bought in bulk.</param>
+    /// <param name="IsPet">Whether the offer is a pet.</param>
+    /// <param name="PreviewImage">The preview image of the offer.</param>
     public void Deconstruct(
         out int OfferId,
         out string LocalizationId,
@@ -170,6 +229,21 @@ public sealed record CatalogPageOffer : IParserComposer<CatalogPageOffer>
     }
 }
 
+/// <summary>Represents a promoted item on the catalog front page.</summary>
+/// <param name="Position">The position of the item on the front page.</param>
+/// <param name="ItemName">The name of the item.</param>
+/// <param name="ItemPromoImage">The promotional image of the item.</param>
+/// <param name="Type">
+/// The link type of the item: 0 for a catalog page location, 1 for a product offer, or 2 for a product code.
+/// </param>
+/// <param name="CataloguePageLocation">
+/// The catalog page location, or empty when <paramref name="Type"/> is not 0.
+/// </param>
+/// <param name="ProductOfferId">
+/// The identifier of the product offer, or 0 when <paramref name="Type"/> is not 1.
+/// </param>
+/// <param name="ProductCode">The product code, or empty when <paramref name="Type"/> is not 2.</param>
+/// <param name="ExpirationSeconds">The number of seconds until the item expires.</param>
 public sealed record CatalogFrontPageItem(
     int Position,
     string ItemName,
@@ -180,12 +254,16 @@ public sealed record CatalogFrontPageItem(
     string ProductCode,
     int ExpirationSeconds) : IParserComposer<CatalogFrontPageItem>
 {
+    /// <summary>Parses a front page item from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CatalogFrontPageItem Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static CatalogFrontPageItem ParseFlash(in PacketReader p) =>
         CatalogPageWire.ParseFrontPageItem(in p);
 
+    /// <summary>Composes the front page item into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -193,6 +271,7 @@ public sealed record CatalogFrontPageItem(
         CatalogPageWire.ComposeFrontPageItem(value, in p);
 }
 
+/// <summary>Represents the <c>CatalogPage</c> message, received with the contents of a catalog page.</summary>
 public sealed record CatalogPage : IParserComposer<CatalogPage>
 {
     private string _catalog_type = "";
@@ -201,6 +280,19 @@ public sealed record CatalogPage : IParserComposer<CatalogPage>
     private IReadOnlyList<CatalogPageOffer> _offers = Array.AsReadOnly(Array.Empty<CatalogPageOffer>());
     private IReadOnlyList<CatalogFrontPageItem>? _front_page_items;
 
+    /// <summary>Initializes a new instance of the <see cref="CatalogPage"/> record.</summary>
+    /// <param name="PageId">The identifier of the page.</param>
+    /// <param name="CatalogType">The type of the catalog, such as <c>NORMAL</c> or <c>BUILDERS_CLUB</c>.</param>
+    /// <param name="LayoutCode">The layout code of the page.</param>
+    /// <param name="Localization">The images and texts of the page.</param>
+    /// <param name="Offers">The offers on the page, copied into a read only list.</param>
+    /// <param name="OfferId">The identifier of the offer selected on the page.</param>
+    /// <param name="AcceptSeasonCurrencyAsCredits">
+    /// Whether the page accepts seasonal currency in place of credits.
+    /// </param>
+    /// <param name="FrontPageItems">
+    /// The front page items, or <see langword="null"/> when the message does not carry them.
+    /// </param>
     public CatalogPage(
         int PageId,
         string CatalogType,
@@ -221,26 +313,31 @@ public sealed record CatalogPage : IParserComposer<CatalogPage>
         this.FrontPageItems = FrontPageItems;
     }
 
+    /// <summary>Gets the identifier of the page.</summary>
     public int PageId { get; init; }
 
+    /// <summary>Gets the type of the catalog, such as <c>NORMAL</c> or <c>BUILDERS_CLUB</c>.</summary>
     public string CatalogType
     {
         get => _catalog_type;
         init => _catalog_type = CatalogWire.RequireReference(value, nameof(CatalogType));
     }
 
+    /// <summary>Gets the layout code of the page.</summary>
     public string LayoutCode
     {
         get => _layout_code;
         init => _layout_code = CatalogWire.RequireReference(value, nameof(LayoutCode));
     }
 
+    /// <summary>Gets the images and texts of the page.</summary>
     public CatalogPageLocalization Localization
     {
         get => _localization;
         init => _localization = CatalogWire.RequireReference(value, nameof(Localization));
     }
 
+    /// <summary>Gets the offers on the page, as a read only copy.</summary>
     public IReadOnlyList<CatalogPageOffer> Offers
     {
         get => _offers;
@@ -250,10 +347,15 @@ public sealed record CatalogPage : IParserComposer<CatalogPage>
             nameof(Offers));
     }
 
+    /// <summary>Gets the identifier of the offer selected on the page.</summary>
     public int OfferId { get; init; }
 
+    /// <summary>Gets whether the page accepts seasonal currency in place of credits.</summary>
     public bool AcceptSeasonCurrencyAsCredits { get; init; }
 
+    /// <summary>
+    /// Gets the front page items, or <see langword="null"/> when the message does not carry them.
+    /// </summary>
     public IReadOnlyList<CatalogFrontPageItem>? FrontPageItems
     {
         get => _front_page_items;
@@ -263,18 +365,33 @@ public sealed record CatalogPage : IParserComposer<CatalogPage>
             nameof(FrontPageItems));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CatalogPage Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static CatalogPage ParseFlash(in PacketReader p) =>
         CatalogPageWire.ParsePage(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(CatalogPage value, in PacketWriter p) =>
         CatalogPageWire.ComposePage(value, in p);
 
+    /// <summary>Deconstructs the message into its parts.</summary>
+    /// <param name="PageId">The identifier of the page.</param>
+    /// <param name="CatalogType">The type of the catalog.</param>
+    /// <param name="LayoutCode">The layout code of the page.</param>
+    /// <param name="Localization">The images and texts of the page.</param>
+    /// <param name="Offers">The offers on the page.</param>
+    /// <param name="OfferId">The identifier of the offer selected on the page.</param>
+    /// <param name="AcceptSeasonCurrencyAsCredits">
+    /// Whether the page accepts seasonal currency in place of credits.
+    /// </param>
+    /// <param name="FrontPageItems">The front page items, or <see langword="null"/>.</param>
     public void Deconstruct(
         out int PageId,
         out string CatalogType,

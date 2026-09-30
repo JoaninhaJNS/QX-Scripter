@@ -2,8 +2,12 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents the <c>ObjectAdd</c> message, received when a floor item is added to the room.</summary>
+/// <param name="Item">The added floor item, with its owner name read from the end of the message.</param>
 public sealed record FloorItemAdd(FloorItem Item) : IParserComposer<FloorItemAdd>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static FloorItemAdd Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -18,6 +22,8 @@ public sealed record FloorItemAdd(FloorItem Item) : IParserComposer<FloorItemAdd
         return new FloorItemAdd(item);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

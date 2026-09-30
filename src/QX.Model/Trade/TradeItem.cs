@@ -2,25 +2,47 @@ using Qx.Messages;
 
 namespace Qx.Model;
 
+/// <summary>Represents a furni offered in a trade.</summary>
 public sealed class TradeItem : IParserComposer<TradeItem>
 {
+    /// <summary>Gets or sets the inventory item identifier, which addresses the item within the trade.</summary>
     public Id ItemId { get; set; }
+    /// <summary>Gets or sets whether the item is a floor or a wall item.</summary>
     public ItemType Type { get; set; }
+    /// <summary>Gets or sets the room item identifier of the furni.</summary>
     public Id Id { get; set; }
+    /// <summary>Gets or sets the furni kind identifier.</summary>
     public int Kind { get; set; }
+    /// <summary>Gets or sets the item's category, which uses the <see cref="FurniCategory"/> numbering.</summary>
     public int Category { get; set; }
+    /// <summary>Gets or sets whether the client may group the item with others of the same kind.</summary>
     public bool IsGroupable { get; set; }
+    /// <summary>Gets or sets the item's payload.</summary>
     public ItemData Data { get; set; } = new LegacyData();
+    /// <summary>Gets or sets the day of the month the item was created.</summary>
     public int CreationDay { get; set; }
+    /// <summary>Gets or sets the month the item was created.</summary>
     public int CreationMonth { get; set; }
+    /// <summary>Gets or sets the year the item was created.</summary>
     public int CreationYear { get; set; }
+    /// <summary>Gets or sets the extra value of a floor item, or -1 for a wall item.</summary>
     public long Extra { get; set; } = -1;
 
+    /// <summary>Gets whether the item is a floor item.</summary>
     public bool IsFloorItem => Type is ItemType.Floor;
+    /// <summary>Gets whether the item is a wall item.</summary>
     public bool IsWallItem => Type is ItemType.Wall;
 
+    /// <summary>Initializes a new instance of the <see cref="TradeItem"/> class.</summary>
     public TradeItem() { }
 
+    /// <summary>Reads a trade item from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when the item type is unknown, <see cref="Id"/> is not positive or a floor item's extra
+    /// value is negative.
+    /// </exception>
     public static TradeItem Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -59,6 +81,13 @@ public sealed class TradeItem : IParserComposer<TradeItem>
         return value;
     }
 
+    /// <summary>Writes the trade item to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when the item type is neither floor nor wall, an identifier is out of range, or
+    /// <see cref="Extra"/> does not match the item type.
+    /// </exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -92,6 +121,8 @@ public sealed class TradeItem : IParserComposer<TradeItem>
             throw new InvalidDataException("Wall trade items cannot carry floor-item metadata.");
     }
 
+    /// <summary>Returns the inventory item identifier and kind.</summary>
+    /// <returns>A string in the form <c>TradeItem#ItemId/Kind</c>.</returns>
     public override string ToString() => $"{nameof(TradeItem)}#{ItemId}/{Kind}";
 }
 

@@ -7,91 +7,174 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// The hotel's gift wrapping options: whether wrapping is enabled, what it costs, and the
-    /// available box, ribbon and wrapping-paper type ids. <see langword="null"/> until the
-    /// configuration has been requested.
+    /// Gets the hotel's gift wrapping options, or <see langword="null"/> until the configuration
+    /// has been received.
     /// </summary>
+    /// <remarks>
+    /// The options hold whether wrapping is enabled, what it costs, and the available box, ribbon
+    /// and wrapping paper type ids.
+    /// </remarks>
     public GiftWrappingConfiguration? GiftWrapping =>
         Gifts.WrappingConfiguration;
 
     /// <summary>
-    /// The club gift catalogue: how many gifts are available now, how many days until the next
-    /// one, the offers that can be chosen and the per-offer eligibility. <see langword="null"/>
-    /// until it has been requested.
+    /// Gets the club gift catalogue, or <see langword="null"/> until it has been received.
     /// </summary>
+    /// <remarks>
+    /// It holds how many gifts are available now, how many days until the next one, the offers
+    /// that can be chosen and the eligibility of each offer.
+    /// </remarks>
     public ClubGiftInfo? ClubGifts => Gifts.ClubGifts;
 
     /// <summary>
-    /// The server's confirmation of the club gift chosen most recently, carrying the product code
-    /// and the products it granted. <see langword="null"/> when no club gift was selected this
-    /// session.
+    /// Gets the server's confirmation of the club gift chosen most recently, or
+    /// <see langword="null"/> when no club gift was selected this session.
     /// </summary>
+    /// <remarks>
+    /// The confirmation carries the product code and the products it granted.
+    /// </remarks>
     public ClubGiftSelected? LastSelectedClubGift => Gifts.LastClubGift;
 
     /// <summary>
-    /// What came out of the most recently opened present: the item type and class id, the product
-    /// code, whether it was placed straight into the room, and the pet figure when the present
-    /// held a pet. <see langword="null"/> when no present was opened this session.
+    /// Gets the contents of the most recently opened present, or <see langword="null"/> when no
+    /// present was opened this session.
     /// </summary>
+    /// <remarks>
+    /// The contents hold the item type and class id, the product code, whether it was placed
+    /// straight into the room, and the pet figure when the present held a pet.
+    /// </remarks>
     public PresentOpened? LastOpenedPresent => Gifts.LastOpenedPresent;
 
+    /// <summary>
+    /// Gets the last club gift notification, or <see langword="null"/> when none has arrived.
+    /// </summary>
+    /// <remarks>Only the Flash client receives this notification.</remarks>
     public ClubGiftNotification? LatestClubGiftNotification =>
     Gifts.LatestNotification;
 
+    /// <summary>
+    /// Gets the new user gift offer, or <see langword="null"/> when it has not been received.
+    /// </summary>
+    /// <remarks>Only the Flash client receives this offer.</remarks>
     public NuxGiftOffer? NewUserGiftOffer => Gifts.NewUserOffer;
 
+    /// <summary>
+    /// Gets whether each catalog offer can be sent as a gift, keyed by offer id.
+    /// </summary>
+    /// <remarks>
+    /// It holds the answers to <see cref="RequestOfferGiftability(int)"/> for up to 500 offers;
+    /// the oldest answer is dropped when a new offer would exceed the limit. Only the Flash client
+    /// receives these answers. Every read returns a new copy.
+    /// </remarks>
     public IReadOnlyDictionary<int, bool> OfferGiftability =>
         Gifts.OfferGiftability;
 
     /// <summary>
-    /// Asks for the gift wrapping options. Returns immediately; the answer lands in the wrapping
-    /// state and raises the wrapping event.
+    /// Asks for the gift wrapping options.
     /// </summary>
+    /// <remarks>
+    /// It returns immediately; the answer lands in <see cref="GiftWrapping"/> and runs the
+    /// <see cref="OnGiftWrappingChanged(Action{GiftWrappingConfiguration})"/> handlers.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active or there is no hotel session.</exception>
     public void RequestGiftWrappingConfiguration() =>
         Gifts.RequestWrappingConfiguration();
 
     /// <summary>
-    /// Opens a present standing in the room. Returns immediately; the contents arrive as a
-    /// present-opened message.
+    /// Opens a present standing in the current room.
     /// </summary>
+    /// <remarks>
+    /// It returns immediately. The user must be in a room that has finished loading; the contents
+    /// arrive through <see cref="OnPresentOpened(Action{PresentOpened})"/> and
+    /// <see cref="LastOpenedPresent"/>.
+    /// </remarks>
     /// <param name="furni_id">The floor item id of the present in the room.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="furni_id"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session or no ready room.</exception>
     public void OpenPresent(Id furni_id) => Gifts.OpenPresent(furni_id);
 
+    /// <summary>
+    /// Purchases a catalog offer as a gift for another user.
+    /// </summary>
+    /// <remarks>
+    /// It returns immediately. The catalog state must belong to the same hotel session as the
+    /// gift state. When the receiver does not exist, the
+    /// <see cref="OnGiftReceiverNotFound(Action)"/> handlers run.
+    /// </remarks>
+    /// <param name="request">The purchase, with the offer, the receiver, the gift message and the wrapping.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="request"/> or one of its texts is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session or the catalog state belongs to another session.</exception>
     public void PurchaseFromCatalogAsGift(
     PurchaseFromCatalogAsGift request) =>
     Gifts.Purchase(request);
 
+    /// <summary>
+    /// Asks for the club gift catalogue.
+    /// </summary>
+    /// <remarks>
+    /// It returns immediately; the answer lands in <see cref="ClubGifts"/> and runs the
+    /// <see cref="OnClubGiftsChanged(Action{ClubGiftInfo})"/> handlers.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active or there is no hotel session.</exception>
     public void RequestClubGifts() => Gifts.RequestClubGifts();
 
     /// <summary>
-    /// Claims one of the available club gifts. Returns immediately; the server confirms with the
-    /// club-gift-selected message.
+    /// Claims one of the available club gifts.
     /// </summary>
+    /// <remarks>
+    /// It returns immediately; the server confirms through
+    /// <see cref="OnClubGiftSelected(Action{ClubGiftSelected})"/> and
+    /// <see cref="LastSelectedClubGift"/>.
+    /// </remarks>
     /// <param name="product_code">The product code taken from a club gift offer.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="product_code"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="product_code"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active or there is no hotel session.</exception>
     public void SelectClubGift(string product_code) =>
         Gifts.SelectClubGift(product_code);
 
+    /// <summary>
+    /// Asks whether a catalog offer can be sent as a gift.
+    /// </summary>
+    /// <remarks>
+    /// It returns immediately; the answer lands in <see cref="OfferGiftability"/> and runs the
+    /// <see cref="OnOfferGiftabilityChanged(Action{IsOfferGiftable})"/> handlers. Only the Flash
+    /// client receives the answer.
+    /// </remarks>
+    /// <param name="offer_id">The id of the catalog offer.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active or there is no hotel session.</exception>
     public void RequestOfferGiftability(int offer_id) =>
     Gifts.RequestOfferGiftability(offer_id);
 
+    /// <summary>
+    /// Selects gifts from the new user gift offer.
+    /// </summary>
+    /// <remarks>
+    /// It returns immediately. A new user gift offer must have been received in the current
+    /// session.
+    /// </remarks>
+    /// <param name="selections">The chosen gift for each day and step.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="selections"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when there are more than 21845 selections.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when there is no hotel session or no new user gift offer.</exception>
     public void SelectNewUserGifts(
     params NuxGiftSelection[] selections) =>
     Gifts.SelectNewUserGifts(selections);
 
     /// <summary>
-    /// Whether the hotel has said the account still has the new-user flow to finish.
+    /// Gets whether the hotel has said the account still has the new user flow to finish.
     /// </summary>
     public bool NewUserFlowIsIncomplete => Gifts.NewUserFlowIsIncomplete;
 
     /// <summary>
-    /// Takes the first choice at every step of the new-user gift offer.
+    /// Takes the first choice at every step of the new user gift offer.
     /// </summary>
     /// <remarks>
     /// A convenience over <see cref="SelectNewUserGifts"/> for the common case of not caring which
     /// bundle arrives. Steps with no options are skipped rather than sent as a choice of nothing.
+    /// The selection is sent without waiting for an answer.
     /// </remarks>
-    /// <returns>How many choices were claimed; zero when no offer has arrived.</returns>
+    /// <returns>The number of choices claimed; zero when no offer has arrived or no step has options.</returns>
+    /// <exception cref="InvalidDataException">Thrown when the offer changed, or its pages were inconsistent, while the steps were being collected.</exception>
     public int SelectFirstNewUserGifts()
     {
         const int page_limit = 500;
@@ -226,6 +309,7 @@ public partial class ScriptGlobals
         return selections.Count;
     }
 
-    /// <summary>Tells the hotel to advance the new-user script to its next step.</summary>
+    /// <summary>Tells the hotel to advance the new user flow to its next step.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when the application runtime is not active or there is no hotel session.</exception>
     public void AdvanceNewUserFlow() => Gifts.AdvanceNewUserFlow();
 }

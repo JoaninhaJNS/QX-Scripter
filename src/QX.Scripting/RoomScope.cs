@@ -4,13 +4,18 @@ using Qx.Model;
 namespace Qx.Scripting;
 
 /// <summary>Thrown when work bound to a <see cref="RoomScope"/> finds that its room session has ended.</summary>
+/// <param name="message">The message that describes the error.</param>
 public sealed class RoomChangedException(string message) : InvalidOperationException(message);
 
 /// <summary>
-/// One visit to one room: the room session and the local user's avatar in it as they were when
-/// the scope was captured. It stays current until the room is left or entered again, or the own
-/// avatar leaves it, and lets a script bind its work to that one visit.
+/// Represents one visit to one room: the room session and the local user's avatar in it as they
+/// were when the scope was captured.
 /// </summary>
+/// <remarks>
+/// It stays current until the room is left or entered again, or the own avatar leaves it, and lets
+/// a script bind its work to that one visit. Scripts obtain one from
+/// <see cref="ScriptGlobals.CaptureRoom"/>.
+/// </remarks>
 public sealed class RoomScope
 {
     readonly RoomManager _room;
@@ -24,20 +29,24 @@ public sealed class RoomScope
         Token = token;
     }
 
-    /// <summary>The room the scope belongs to.</summary>
+    /// <summary>Gets the ID of the room the scope belongs to.</summary>
     public long RoomId { get; }
 
-    /// <summary>The room session generation the scope belongs to.</summary>
+    /// <summary>Gets the room session generation the scope belongs to.</summary>
     public long Generation { get; }
 
-    /// <summary>The room index of the local user's avatar during this visit.</summary>
+    /// <summary>Gets the room index of the local user's avatar during this visit.</summary>
     public int SelfIndex { get; }
 
-    /// <summary>Cancelled as soon as the room session ends, whether by leaving or by entering again.</summary>
+    /// <summary>
+    /// Gets a token that is canceled as soon as the room session ends, whether by leaving or by
+    /// entering again.
+    /// </summary>
+    /// <remarks>The token is not canceled when only the own avatar leaves the room; check <see cref="IsCurrent"/> for that.</remarks>
     public CancellationToken Token { get; }
 
     /// <summary>
-    /// Whether the visit is still going on: the same room session is still loaded and the own
+    /// Gets whether the visit is still going on: the same room session is still loaded and the own
     /// avatar is still in it under the same index.
     /// </summary>
     public bool IsCurrent => _room.Capture(room =>
@@ -48,6 +57,7 @@ public sealed class RoomScope
         self.Index == SelfIndex);
 
     /// <summary>Throws a <see cref="RoomChangedException"/> when the visit is over.</summary>
+    /// <exception cref="RoomChangedException">Thrown when the room was left, its session changed, or the own avatar is no longer in it under the same index.</exception>
     public void ThrowIfChanged()
     {
         if (!IsCurrent)

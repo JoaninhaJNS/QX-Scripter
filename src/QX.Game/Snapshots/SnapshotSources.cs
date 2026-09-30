@@ -1,10 +1,16 @@
 namespace Qx.Game.Snapshots;
 
+/// <summary>Thrown when a snapshot source holds more items than its source item limit.</summary>
 public sealed class SnapshotSourceLimitExceededException : InvalidOperationException
 {
+    /// <summary>Gets the name of the source that exceeded the limit.</summary>
     public string SourceName { get; }
+    /// <summary>Gets the item limit the source exceeded.</summary>
     public int SourceItemLimit { get; }
 
+    /// <summary>Initializes a new instance of the <see cref="SnapshotSourceLimitExceededException"/> class.</summary>
+    /// <param name="sourceName">The name of the source that exceeded the limit.</param>
+    /// <param name="sourceItemLimit">The item limit the source exceeded.</param>
     public SnapshotSourceLimitExceededException(string sourceName, int sourceItemLimit)
         : base($"Snapshot source '{sourceName}' exceeded its explicit limit of {sourceItemLimit} items.")
     {
@@ -15,6 +21,7 @@ public sealed class SnapshotSourceLimitExceededException : InvalidOperationExcep
 
 public static partial class SnapshotFactory
 {
+    /// <summary>The default maximum number of items a source may hold; a projection over a larger source throws.</summary>
     public const int DefaultSourceItemLimit = 100_000;
 
     private static CappedSource<T> SelectCapped<T>(

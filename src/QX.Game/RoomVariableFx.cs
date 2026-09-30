@@ -3,11 +3,9 @@ using Qx.Model.Messages.Incoming;
 
 namespace Qx.Game;
 
-/// <summary>
-/// One Fx bar value in the room: the value of one wired variable on one avatar or furni, together
-/// with the configuration the room draws it with.
-/// </summary>
-/// <param name="Slot">Which avatar or furni and which variable the value belongs to.</param>
+/// <summary>Represents one Fx bar value in the room, which is the value of a wired variable on an avatar or furni.</summary>
+/// <remarks>The value carries the configuration the room draws it with.</remarks>
+/// <param name="Slot">The avatar or furni and the variable the value belongs to.</param>
 /// <param name="Value">The current value.</param>
 /// <param name="MinOverride">The lower bound the server set for this value, if any.</param>
 /// <param name="MaxOverride">The upper bound the server set for this value, if any.</param>
@@ -27,37 +25,41 @@ public sealed record VariableFxValue(
     long Revision,
     long Timestamp)
 {
+    /// <summary>Gets the id of the configuration the value is drawn with.</summary>
     public int ConfigId => Slot.ConfigId;
 
+    /// <summary>Gets the id of the wired variable the value belongs to.</summary>
     public string VariableId => Slot.VariableId;
 
-    /// <summary>Whether the value belongs to an avatar; otherwise it belongs to a furni.</summary>
+    /// <summary>Gets whether the value belongs to an avatar rather than a furni.</summary>
     public bool IsUser => Slot.IsUserEntity;
 
-    /// <summary>The avatar's room index, or the furni's item id.</summary>
+    /// <summary>Gets the avatar's room index, or the furni's item id.</summary>
     public int EntityId => Slot.EntityId;
 
-    /// <summary>The icon of the configuration, such as <c>gold</c> or <c>ranch.tomato</c>.</summary>
+    /// <summary>Gets the icon of the configuration, such as <c>gold</c> or <c>ranch.tomato</c>, or <see langword="null"/> while the configuration has not arrived.</summary>
     public string? Icon => Config?.Icon;
 
-    /// <summary>The lower bound: the server's override, else the configuration's default.</summary>
+    /// <summary>Gets the lower bound, which is the server's override, else the configuration's default, else 0.</summary>
     public long MinValue => MinOverride ?? Config?.DefaultMinValue ?? 0;
 
-    /// <summary>The upper bound: the server's override, else the configuration's default.</summary>
+    /// <summary>Gets the upper bound, which is the server's override, else the configuration's default, else 0.</summary>
     public long MaxValue => MaxOverride ?? Config?.DefaultMaxValue ?? 0;
 
-    /// <summary>The level a levelling variable has reached, or <see langword="null"/> when the value has no level.</summary>
+    /// <summary>Gets the level a leveling variable has reached, or <see langword="null"/> when the value has no level.</summary>
     public double? Level => ExtraNumber("current_level");
 
-    /// <summary>The highest level a levelling variable can reach, or <see langword="null"/> when the value has no level.</summary>
+    /// <summary>Gets the highest level a leveling variable can reach, or <see langword="null"/> when the value has no level.</summary>
     public double? MaxLevel => ExtraNumber("max_level");
 
-    /// <summary>Whether a levelling variable has reached its highest level, read like the client: only <c>true</c> counts.</summary>
+    /// <summary>Gets whether a leveling variable has reached its highest level.</summary>
+    /// <remarks>As in the client, only an <c>is_maxed</c> value of <c>true</c>, ignoring case, counts.</remarks>
     public bool IsMaxed =>
         Extra.TryGetValue("is_maxed", out string? text) &&
         string.Equals(text.Trim(), "true", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Whether the value belongs to the variable with this id or is drawn with this icon.</summary>
+    /// <summary>Gets whether the value belongs to the variable with the specified id or is drawn with the specified icon.</summary>
+    /// <param name="variable">The variable id or icon to match, compared case sensitively.</param>
     public bool Matches(string variable) =>
         string.Equals(VariableId, variable, StringComparison.Ordinal) ||
         string.Equals(Icon, variable, StringComparison.Ordinal);

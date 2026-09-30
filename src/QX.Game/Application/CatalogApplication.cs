@@ -2121,6 +2121,15 @@ internal sealed class CatalogApplication : IApplicationFeature, ICatalogBrowseOp
     }
 }
 
+/// <summary>Thrown when the catalog generation changes while a catalog operation is running.</summary>
+/// <remarks>
+/// The catalog generation changes when a new index is received, the hotel publishes a catalog
+/// update or the catalog cache is cleared.
+/// </remarks>
+/// <param name="expected_session_generation">The hotel session generation the operation started in.</param>
+/// <param name="expected_catalog_generation">The catalog generation the operation started in.</param>
+/// <param name="current_session_generation">The hotel session generation when the change was detected.</param>
+/// <param name="current_catalog_generation">The catalog generation when the change was detected.</param>
 public sealed class CatalogInvalidatedException(
     long expected_session_generation,
     long expected_catalog_generation,
@@ -2128,8 +2137,12 @@ public sealed class CatalogInvalidatedException(
     long current_catalog_generation) : InvalidOperationException(
         "The catalog generation changed during the operation.")
 {
+    /// <summary>Gets the hotel session generation the operation started in.</summary>
     public long ExpectedSessionGeneration { get; } = expected_session_generation;
+    /// <summary>Gets the catalog generation the operation started in.</summary>
     public long ExpectedCatalogGeneration { get; } = expected_catalog_generation;
+    /// <summary>Gets the hotel session generation when the change was detected.</summary>
     public long CurrentSessionGeneration { get; } = current_session_generation;
+    /// <summary>Gets the catalog generation when the change was detected.</summary>
     public long CurrentCatalogGeneration { get; } = current_catalog_generation;
 }

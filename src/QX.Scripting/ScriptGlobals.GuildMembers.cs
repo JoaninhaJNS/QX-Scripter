@@ -5,6 +5,23 @@ namespace Qx.Scripting;
 
 public partial class ScriptGlobals
 {
+    /// <summary>
+    /// Requests one page of a group's members from the server.
+    /// </summary>
+    /// <remarks>
+    /// The page size is decided by the server. The reply also reaches the game client, and pages
+    /// are only accepted from the Flash client.
+    /// </remarks>
+    /// <param name="groupId">The id of the group.</param>
+    /// <param name="pageIndex">The zero-based page index.</param>
+    /// <param name="userNameFilter">The user name filter sent with the request; empty for no filter.</param>
+    /// <param name="searchType">The member category to list.</param>
+    /// <param name="timeoutMs">The total timeout in milliseconds, across one automatic retry.</param>
+    /// <returns>The requested page with the group's name, badge, base room and total member count.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="pageIndex"/> is negative.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="userNameFilter"/> is <see langword="null"/>.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when no matching page arrived in time.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the reply does not match the request or has invalid page metadata.</exception>
     public Task<GuildMembers> GetGuildMembers(
     Id groupId,
     int pageIndex = 0,
@@ -23,6 +40,21 @@ public partial class ScriptGlobals
             null);
     }
 
+    /// <summary>
+    /// Requests every page of a group's members and returns them as one query.
+    /// </summary>
+    /// <remarks>
+    /// Pages are requested one after another. The collection fails when the pages overlap, the
+    /// member count or page layout changes while collecting, or the hotel session changes.
+    /// </remarks>
+    /// <param name="groupId">The id of the group.</param>
+    /// <param name="userNameFilter">The user name filter sent with every page request; empty for no filter.</param>
+    /// <param name="searchType">The member category to list.</param>
+    /// <param name="timeoutMs">The total timeout in milliseconds for each page, across one automatic retry.</param>
+    /// <returns>A query over all matching members.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="userNameFilter"/> is <see langword="null"/>.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when a page did not arrive in time.</exception>
+    /// <exception cref="InvalidDataException">Thrown when a reply does not match the request, the pages are inconsistent, or the result is incomplete.</exception>
     public async Task<GuildMemberQuery> GetAllGuildMembers(
     Id groupId,
     string userNameFilter = "",
@@ -75,9 +107,11 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Starts a filter/sort/projection query over a caller-supplied member sequence. Nothing is
-    /// requested — this only wraps members that were already fetched.
+    /// Starts a filter, sort and projection query over a caller-supplied member sequence.
     /// </summary>
+    /// <remarks>
+    /// Nothing is requested; it only wraps members that were already fetched.
+    /// </remarks>
     /// <param name="members">The members to query.</param>
     /// <returns>A query over the given members.</returns>
     public GuildMemberQuery QueryGuildMembers(IEnumerable<GuildMember> members) =>

@@ -2,7 +2,7 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
-/// <summary>How far a daily task has got.</summary>
+/// <summary>Specifies how far a daily task has got.</summary>
 public enum DailyTaskStatus
 {
     /// <summary>Still being worked on; the repeat counter has not reached the requirement.</summary>
@@ -13,12 +13,13 @@ public enum DailyTaskStatus
     Claimed = 2
 }
 
-/// <summary>One item handed out for finishing a daily task.</summary>
+/// <summary>Represents one item handed out for finishing a daily task.</summary>
 public sealed record DailyTaskReward : IParserComposer<DailyTaskReward>
 {
     private string _reward_type_id = "";
     private string _extra_params = "";
 
+    /// <summary>Initializes a new instance of the <see cref="DailyTaskReward"/> record.</summary>
     /// <param name="ProductItemTypeId">The product's item type.</param>
     /// <param name="RewardTypeId">The reward category, which decides how the client draws it.</param>
     /// <param name="ExtraParams">Reward specific detail, such as a badge code or a furni class.</param>
@@ -35,8 +36,10 @@ public sealed record DailyTaskReward : IParserComposer<DailyTaskReward>
         this.Amount = Amount;
     }
 
+    /// <summary>Gets the product's item type.</summary>
     public short ProductItemTypeId { get; init; }
 
+    /// <summary>Gets the reward category, which decides how the client draws it.</summary>
     public string RewardTypeId
     {
         get => _reward_type_id;
@@ -47,6 +50,7 @@ public sealed record DailyTaskReward : IParserComposer<DailyTaskReward>
         }
     }
 
+    /// <summary>Gets reward specific detail, such as a badge code or a furni class.</summary>
     public string ExtraParams
     {
         get => _extra_params;
@@ -57,8 +61,14 @@ public sealed record DailyTaskReward : IParserComposer<DailyTaskReward>
         }
     }
 
+    /// <summary>Gets how many are given.</summary>
     public int Amount { get; init; }
 
+    /// <summary>Deconstructs the reward into its parts.</summary>
+    /// <param name="ProductItemTypeId">The product's item type.</param>
+    /// <param name="RewardTypeId">The reward category.</param>
+    /// <param name="ExtraParams">Reward specific detail, such as a badge code or a furni class.</param>
+    /// <param name="Amount">How many are given.</param>
     public void Deconstruct(
         out short ProductItemTypeId,
         out string RewardTypeId,
@@ -71,6 +81,8 @@ public sealed record DailyTaskReward : IParserComposer<DailyTaskReward>
         Amount = this.Amount;
     }
 
+    /// <summary>Parses a daily task reward from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static DailyTaskReward Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -82,6 +94,8 @@ public sealed record DailyTaskReward : IParserComposer<DailyTaskReward>
         return value;
     }
 
+    /// <summary>Composes the daily task reward into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -151,7 +165,7 @@ internal readonly record struct DailyTaskRewardWireSnapshot(
     int Amount);
 
 /// <summary>
-/// A single daily task: what to do, how far along it is, and what finishing it pays.
+/// Represents a single daily task: what to do, how far along it is, and what finishing it pays.
 /// </summary>
 public sealed record DailyTask : IParserComposer<DailyTask>
 {
@@ -162,8 +176,9 @@ public sealed record DailyTask : IParserComposer<DailyTask>
     private IReadOnlyList<DailyTaskReward> _rewards =
         Array.AsReadOnly(Array.Empty<DailyTaskReward>());
 
+    /// <summary>Initializes a new instance of the <see cref="DailyTask"/> record.</summary>
     /// <param name="TaskId">The task's identifier.</param>
-    /// <param name="TaskCode">The task's code, which keys its localised name.</param>
+    /// <param name="TaskCode">The task's code, which keys its localized name.</param>
     /// <param name="QuestTypeCode">The underlying quest type, shared with the quest system.</param>
     /// <param name="IsBonus">Whether this is the bonus task, which the client styles differently.</param>
     /// <param name="ImageVersion">Cache-busting suffix for the task's artwork.</param>
@@ -205,8 +220,10 @@ public sealed record DailyTask : IParserComposer<DailyTask>
         this.Rewards = Rewards;
     }
 
+    /// <summary>Gets the task's identifier.</summary>
     public long TaskId { get; init; }
 
+    /// <summary>Gets the task's code, which keys its localized name.</summary>
     public string TaskCode
     {
         get => _task_code;
@@ -217,6 +234,7 @@ public sealed record DailyTask : IParserComposer<DailyTask>
         }
     }
 
+    /// <summary>Gets the underlying quest type, shared with the quest system.</summary>
     public string QuestTypeCode
     {
         get => _quest_type_code;
@@ -227,8 +245,10 @@ public sealed record DailyTask : IParserComposer<DailyTask>
         }
     }
 
+    /// <summary>Gets whether this is the bonus task, which the client styles differently.</summary>
     public bool IsBonus { get; init; }
 
+    /// <summary>Gets the cache busting suffix for the task's artwork.</summary>
     public string ImageVersion
     {
         get => _image_version;
@@ -239,6 +259,7 @@ public sealed record DailyTask : IParserComposer<DailyTask>
         }
     }
 
+    /// <summary>Gets the catalog page the task points at, empty when it points nowhere.</summary>
     public string CatalogName
     {
         get => _catalog_name;
@@ -249,22 +270,45 @@ public sealed record DailyTask : IParserComposer<DailyTask>
         }
     }
 
+    /// <summary>Gets how many repeats finish the task.</summary>
     public int RequiredRepeats { get; init; }
 
+    /// <summary>Gets how many repeats are done.</summary>
     public int Repeats { get; init; }
 
+    /// <summary>Gets whether the task is running, finished or claimed.</summary>
     public DailyTaskStatus Status { get; init; }
 
+    /// <summary>Gets the lifetime left when the hotel sent the task, in seconds.</summary>
+    /// <remarks>
+    /// Negative means the hotel considers it expired. The value does not tick down, so use
+    /// <see cref="SecondsLeft"/> for the current countdown.
+    /// </remarks>
     public int SecondsLeftAtArrival { get; init; }
 
+    /// <summary>Gets when the task arrived, used to age <see cref="SecondsLeftAtArrival"/>.</summary>
     public DateTimeOffset ReceivedAt { get; init; }
 
+    /// <summary>Gets what finishing the task pays out, as a read only copy.</summary>
     public IReadOnlyList<DailyTaskReward> Rewards
     {
         get => _rewards;
         init => _rewards = DailyTaskWire.FreezeReferences(value, nameof(Rewards));
     }
 
+    /// <summary>Deconstructs the task into its parts.</summary>
+    /// <param name="TaskId">The task's identifier.</param>
+    /// <param name="TaskCode">The task's code.</param>
+    /// <param name="QuestTypeCode">The underlying quest type.</param>
+    /// <param name="IsBonus">Whether this is the bonus task.</param>
+    /// <param name="ImageVersion">The cache busting suffix for the task's artwork.</param>
+    /// <param name="CatalogName">The catalog page the task points at.</param>
+    /// <param name="RequiredRepeats">How many repeats finish the task.</param>
+    /// <param name="Repeats">How many repeats are done.</param>
+    /// <param name="Status">Whether the task is running, finished or claimed.</param>
+    /// <param name="SecondsLeftAtArrival">The lifetime left when the hotel sent the task, in seconds.</param>
+    /// <param name="ReceivedAt">When the task arrived.</param>
+    /// <param name="Rewards">What finishing the task pays out.</param>
     public void Deconstruct(
         out long TaskId,
         out string TaskCode,
@@ -313,7 +357,7 @@ public sealed record DailyTask : IParserComposer<DailyTask>
     }
 
     /// <summary>
-    /// Whether the hotel already regarded the task as expired when it sent it.
+    /// Gets whether the hotel already regarded the task as expired when it sent it.
     /// </summary>
     /// <remarks>
     /// This is the arrival-time lifetime, not the ticking one: a task whose countdown has merely
@@ -321,9 +365,12 @@ public sealed record DailyTask : IParserComposer<DailyTask>
     /// </remarks>
     public bool IsExpired => SecondsLeftAtArrival < 0 && Status != DailyTaskStatus.InProgress;
 
-    /// <summary>Whether the task is finished and the reward has not been taken yet.</summary>
+    /// <summary>Gets whether the task is finished and the reward has not been taken yet.</summary>
     public bool IsClaimable => Status == DailyTaskStatus.Completed;
 
+    /// <summary>Parses a daily task from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
+    /// <remarks>The parser stamps <see cref="ReceivedAt"/> with the current UTC time.</remarks>
     public static DailyTask Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -336,6 +383,8 @@ public sealed record DailyTask : IParserComposer<DailyTask>
         return value;
     }
 
+    /// <summary>Composes the daily task into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -477,7 +526,10 @@ internal readonly record struct DailyTaskWireSnapshot(
     int SecondsLeftAtArrival,
     DailyTaskRewardWireSnapshot[] Rewards);
 
-/// <summary>The daily tasks currently running, sent in answer to a request.</summary>
+/// <summary>
+/// Represents the <c>DailyTasksActiveList</c> message, received with the daily tasks currently running in answer to
+/// a request.
+/// </summary>
 /// <remarks>
 /// The count is a plain <c>int</c> here rather than the usual client-dependent length, because the
 /// daily task messages exist on Flash only.
@@ -486,29 +538,37 @@ public sealed record DailyTasksActiveList : IParserComposer<DailyTasksActiveList
 {
     private IReadOnlyList<DailyTask> _tasks = Array.AsReadOnly(Array.Empty<DailyTask>());
 
+    /// <summary>Initializes a new instance of the <see cref="DailyTasksActiveList"/> record.</summary>
     /// <param name="Tasks">The active tasks.</param>
     public DailyTasksActiveList(IReadOnlyList<DailyTask> Tasks)
     {
         this.Tasks = Tasks;
     }
 
+    /// <summary>Gets the active tasks, as a read only copy.</summary>
     public IReadOnlyList<DailyTask> Tasks
     {
         get => _tasks;
         init => _tasks = DailyTaskWire.FreezeReferences(value, nameof(Tasks));
     }
 
+    /// <summary>Deconstructs the message into its tasks.</summary>
+    /// <param name="Tasks">The active tasks.</param>
     public void Deconstruct(out IReadOnlyList<DailyTask> Tasks)
     {
         Tasks = this.Tasks;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static DailyTasksActiveList Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static DailyTasksActiveList ParseFlash(in PacketReader p) =>
         new(DailyTaskListWire.Parse(in p, nameof(DailyTasksActiveList)));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -520,34 +580,45 @@ public sealed record DailyTasksActiveList : IParserComposer<DailyTasksActiveList
     }
 }
 
-/// <summary>Tasks the hotel added to the running set without being asked.</summary>
+/// <summary>
+/// Represents the <c>DailyTasksTasksAdded</c> message, received when the hotel adds tasks to the running set without
+/// being asked.
+/// </summary>
 public sealed record DailyTasksTasksAdded : IParserComposer<DailyTasksTasksAdded>
 {
     private IReadOnlyList<DailyTask> _tasks = Array.AsReadOnly(Array.Empty<DailyTask>());
 
+    /// <summary>Initializes a new instance of the <see cref="DailyTasksTasksAdded"/> record.</summary>
     /// <param name="Tasks">The added tasks.</param>
     public DailyTasksTasksAdded(IReadOnlyList<DailyTask> Tasks)
     {
         this.Tasks = Tasks;
     }
 
+    /// <summary>Gets the added tasks, as a read only copy.</summary>
     public IReadOnlyList<DailyTask> Tasks
     {
         get => _tasks;
         init => _tasks = DailyTaskWire.FreezeReferences(value, nameof(Tasks));
     }
 
+    /// <summary>Deconstructs the message into its tasks.</summary>
+    /// <param name="Tasks">The added tasks.</param>
     public void Deconstruct(out IReadOnlyList<DailyTask> Tasks)
     {
         Tasks = this.Tasks;
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static DailyTasksTasksAdded Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static DailyTasksTasksAdded ParseFlash(in PacketReader p) =>
         new(DailyTaskListWire.Parse(in p, nameof(DailyTasksTasksAdded)));
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -612,7 +683,9 @@ internal static class DailyTaskListWire
     }
 }
 
-/// <summary>Progress on one running task.</summary>
+/// <summary>
+/// Represents the <c>DailyTasksTaskUpdate</c> message, received with progress on one running task.
+/// </summary>
 /// <remarks>
 /// Carries only the mutable fields, so it is an update to an already known task rather than a
 /// replacement for it.
@@ -627,6 +700,8 @@ public sealed record DailyTasksTaskUpdate(
     DailyTaskStatus Status,
     int SecondsLeftAtArrival) : IParserComposer<DailyTasksTaskUpdate>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static DailyTasksTaskUpdate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -646,6 +721,8 @@ public sealed record DailyTasksTaskUpdate(
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

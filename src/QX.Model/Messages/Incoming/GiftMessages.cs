@@ -2,6 +2,9 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>
+/// Represents the <c>GiftWrappingConfiguration</c> message, received with the gift wrapping options.
+/// </summary>
 public sealed record GiftWrappingConfiguration : IParserComposer<GiftWrappingConfiguration>
 {
     private IReadOnlyList<int> _stuff_types = Array.AsReadOnly(Array.Empty<int>());
@@ -9,6 +12,13 @@ public sealed record GiftWrappingConfiguration : IParserComposer<GiftWrappingCon
     private IReadOnlyList<int> _ribbon_types = Array.AsReadOnly(Array.Empty<int>());
     private IReadOnlyList<int> _default_stuff_types = Array.AsReadOnly(Array.Empty<int>());
 
+    /// <summary>Initializes a new instance of the <see cref="GiftWrappingConfiguration"/> record.</summary>
+    /// <param name="IsWrappingEnabled">Whether gift wrapping is enabled.</param>
+    /// <param name="WrappingPrice">The price of gift wrapping.</param>
+    /// <param name="StuffTypes">The gift furni sprite identifiers offered as wrapping.</param>
+    /// <param name="BoxTypes">The box types offered for wrapping.</param>
+    /// <param name="RibbonTypes">The ribbon types offered for wrapping.</param>
+    /// <param name="DefaultStuffTypes">The default gift furni sprite identifiers.</param>
     public GiftWrappingConfiguration(
         bool IsWrappingEnabled,
         int WrappingPrice,
@@ -25,46 +35,69 @@ public sealed record GiftWrappingConfiguration : IParserComposer<GiftWrappingCon
         this.DefaultStuffTypes = DefaultStuffTypes;
     }
 
+    /// <summary>Gets whether gift wrapping is enabled.</summary>
     public bool IsWrappingEnabled { get; init; }
 
+    /// <summary>Gets the price of gift wrapping.</summary>
     public int WrappingPrice { get; init; }
 
+    /// <summary>
+    /// Gets the gift furni sprite identifiers offered as wrapping, as a read only copy.
+    /// </summary>
+    /// <remarks>The list may hold at most 65535 entries.</remarks>
     public IReadOnlyList<int> StuffTypes
     {
         get => _stuff_types;
         init => _stuff_types = GiftWire.FreezeValues(value, nameof(StuffTypes));
     }
 
+    /// <summary>Gets the box types offered for wrapping, as a read only copy.</summary>
+    /// <remarks>The list may hold at most 65535 entries.</remarks>
     public IReadOnlyList<int> BoxTypes
     {
         get => _box_types;
         init => _box_types = GiftWire.FreezeValues(value, nameof(BoxTypes));
     }
 
+    /// <summary>Gets the ribbon types offered for wrapping, as a read only copy.</summary>
+    /// <remarks>The list may hold at most 65535 entries.</remarks>
     public IReadOnlyList<int> RibbonTypes
     {
         get => _ribbon_types;
         init => _ribbon_types = GiftWire.FreezeValues(value, nameof(RibbonTypes));
     }
 
+    /// <summary>Gets the default gift furni sprite identifiers, as a read only copy.</summary>
+    /// <remarks>The list may hold at most 65535 entries.</remarks>
     public IReadOnlyList<int> DefaultStuffTypes
     {
         get => _default_stuff_types;
         init => _default_stuff_types = GiftWire.FreezeValues(value, nameof(DefaultStuffTypes));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GiftWrappingConfiguration Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static GiftWrappingConfiguration ParseFlash(in PacketReader p) =>
         GiftWire.ParseWrappingConfiguration(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(GiftWrappingConfiguration value, in PacketWriter p) =>
         GiftWire.ComposeWrappingConfiguration(value, in p);
 
+    /// <summary>Deconstructs the configuration into its values.</summary>
+    /// <param name="IsWrappingEnabled">Whether gift wrapping is enabled.</param>
+    /// <param name="WrappingPrice">The price of gift wrapping.</param>
+    /// <param name="StuffTypes">The gift furni sprite identifiers offered as wrapping.</param>
+    /// <param name="BoxTypes">The box types offered for wrapping.</param>
+    /// <param name="RibbonTypes">The ribbon types offered for wrapping.</param>
+    /// <param name="DefaultStuffTypes">The default gift furni sprite identifiers.</param>
     public void Deconstruct(
         out bool IsWrappingEnabled,
         out int WrappingPrice,
@@ -82,6 +115,17 @@ public sealed record GiftWrappingConfiguration : IParserComposer<GiftWrappingCon
     }
 }
 
+/// <summary>
+/// Represents the <c>PresentOpened</c> message, received when a present has been opened and its contents
+/// are revealed.
+/// </summary>
+/// <param name="ItemType">The type of the item inside the present.</param>
+/// <param name="ClassId">The class identifier of the item inside the present.</param>
+/// <param name="ProductCode">The product code of the present's contents.</param>
+/// <param name="PlacedItemId">The identifier of the item that was placed, sent by Flash as a 32 bit integer.</param>
+/// <param name="PlacedItemType">The type of the item that was placed.</param>
+/// <param name="PlacedInRoom">Whether the item was placed straight into the room.</param>
+/// <param name="PetFigureString">The pet figure when the present held a pet.</param>
 public sealed record PresentOpened(
     string ItemType,
     int ClassId,
@@ -91,12 +135,16 @@ public sealed record PresentOpened(
     bool PlacedInRoom,
     string PetFigureString) : IParserComposer<PresentOpened>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PresentOpened Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static PresentOpened ParseFlash(in PacketReader p) =>
         GiftWire.ParsePresentOpened(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -104,18 +152,30 @@ public sealed record PresentOpened(
         GiftWire.ComposePresentOpened(value, in p);
 }
 
+/// <summary>Represents the eligibility of a club gift offer.</summary>
+/// <param name="OfferId">The identifier of the catalog offer the entry applies to.</param>
+/// <param name="IsVip">
+/// Whether the gift is a VIP club gift. Flash always sends it, and composing throws when it is
+/// <see langword="null"/>.
+/// </param>
+/// <param name="DaysRequired">The number of club days the gift requires.</param>
+/// <param name="IsSelectable">Whether the gift can be selected.</param>
 public sealed record ClubGiftEligibility(
     int OfferId,
     bool? IsVip,
     int DaysRequired,
     bool IsSelectable) : IParserComposer<ClubGiftEligibility>
 {
+    /// <summary>Parses a club gift eligibility entry from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ClubGiftEligibility Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static ClubGiftEligibility ParseFlash(in PacketReader p) =>
         GiftWire.ParseEligibility(in p);
 
+    /// <summary>Composes the club gift eligibility entry into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -123,12 +183,18 @@ public sealed record ClubGiftEligibility(
         GiftWire.ComposeEligibility(value, in p);
 }
 
+/// <summary>Represents the <c>ClubGiftInfo</c> message, received with the club gifts that can be selected.</summary>
 public sealed record ClubGiftInfo : IParserComposer<ClubGiftInfo>
 {
     private IReadOnlyList<CatalogPageOffer> _offers = Array.AsReadOnly(Array.Empty<CatalogPageOffer>());
     private IReadOnlyList<ClubGiftEligibility> _gift_eligibility =
         Array.AsReadOnly(Array.Empty<ClubGiftEligibility>());
 
+    /// <summary>Initializes a new instance of the <see cref="ClubGiftInfo"/> record.</summary>
+    /// <param name="DaysUntilNextGift">The number of days until the next club gift.</param>
+    /// <param name="GiftsAvailable">The number of club gifts that can be selected now.</param>
+    /// <param name="Offers">The catalog offers that can be chosen as a club gift.</param>
+    /// <param name="GiftEligibility">The eligibility of each club gift offer.</param>
     public ClubGiftInfo(
         int DaysUntilNextGift,
         int GiftsAvailable,
@@ -141,10 +207,16 @@ public sealed record ClubGiftInfo : IParserComposer<ClubGiftInfo>
         this.GiftEligibility = GiftEligibility;
     }
 
+    /// <summary>Gets the number of days until the next club gift.</summary>
     public int DaysUntilNextGift { get; init; }
 
+    /// <summary>Gets the number of club gifts that can be selected now.</summary>
     public int GiftsAvailable { get; init; }
 
+    /// <summary>
+    /// Gets the catalog offers that can be chosen as a club gift, as a read only copy.
+    /// </summary>
+    /// <remarks>The list may hold at most 4096 entries.</remarks>
     public IReadOnlyList<CatalogPageOffer> Offers
     {
         get => _offers;
@@ -154,6 +226,8 @@ public sealed record ClubGiftInfo : IParserComposer<ClubGiftInfo>
             nameof(Offers));
     }
 
+    /// <summary>Gets the eligibility of each club gift offer, as a read only copy.</summary>
+    /// <remarks>The list may hold at most 65535 entries.</remarks>
     public IReadOnlyList<ClubGiftEligibility> GiftEligibility
     {
         get => _gift_eligibility;
@@ -163,18 +237,27 @@ public sealed record ClubGiftInfo : IParserComposer<ClubGiftInfo>
             nameof(GiftEligibility));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ClubGiftInfo Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static ClubGiftInfo ParseFlash(in PacketReader p) =>
         GiftWire.ParseClubGiftInfo(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(ClubGiftInfo value, in PacketWriter p) =>
         GiftWire.ComposeClubGiftInfo(value, in p);
 
+    /// <summary>Deconstructs the club gift information into its values.</summary>
+    /// <param name="DaysUntilNextGift">The number of days until the next club gift.</param>
+    /// <param name="GiftsAvailable">The number of club gifts that can be selected now.</param>
+    /// <param name="Offers">The catalog offers that can be chosen as a club gift.</param>
+    /// <param name="GiftEligibility">The eligibility of each club gift offer.</param>
     public void Deconstruct(
         out int DaysUntilNextGift,
         out int GiftsAvailable,
@@ -188,11 +271,17 @@ public sealed record ClubGiftInfo : IParserComposer<ClubGiftInfo>
     }
 }
 
+/// <summary>
+/// Represents the <c>ClubGiftSelected</c> message, received when the server confirms a selected club gift.
+/// </summary>
 public sealed record ClubGiftSelected : IParserComposer<ClubGiftSelected>
 {
     private string _product_code = "";
     private IReadOnlyList<CatalogProduct> _products = Array.AsReadOnly(Array.Empty<CatalogProduct>());
 
+    /// <summary>Initializes a new instance of the <see cref="ClubGiftSelected"/> record.</summary>
+    /// <param name="ProductCode">The product code of the selected club gift.</param>
+    /// <param name="Products">The products the club gift granted.</param>
     public ClubGiftSelected(
         string ProductCode,
         IReadOnlyList<CatalogProduct> Products)
@@ -201,12 +290,15 @@ public sealed record ClubGiftSelected : IParserComposer<ClubGiftSelected>
         this.Products = Products;
     }
 
+    /// <summary>Gets the product code of the selected club gift.</summary>
     public string ProductCode
     {
         get => _product_code;
         init => _product_code = CatalogWire.RequireReference(value, nameof(ProductCode));
     }
 
+    /// <summary>Gets the products the club gift granted, as a read only copy.</summary>
+    /// <remarks>The list may hold at most 65535 entries.</remarks>
     public IReadOnlyList<CatalogProduct> Products
     {
         get => _products;
@@ -216,18 +308,25 @@ public sealed record ClubGiftSelected : IParserComposer<ClubGiftSelected>
             nameof(Products));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ClubGiftSelected Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static ClubGiftSelected ParseFlash(in PacketReader p) =>
         GiftWire.ParseClubGiftSelected(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(ClubGiftSelected value, in PacketWriter p) =>
         GiftWire.ComposeClubGiftSelected(value, in p);
 
+    /// <summary>Deconstructs the selection into its product code and products.</summary>
+    /// <param name="ProductCode">The product code of the selected club gift.</param>
+    /// <param name="Products">The products the club gift granted.</param>
     public void Deconstruct(
         out string ProductCode,
         out IReadOnlyList<CatalogProduct> Products)
@@ -237,8 +336,13 @@ public sealed record ClubGiftSelected : IParserComposer<ClubGiftSelected>
     }
 }
 
+/// <summary>
+/// Represents the <c>GiftReceiverNotFound</c> message, received when the receiver of a gift purchase does not exist.
+/// </summary>
 public sealed record GiftReceiverNotFound : IParserComposer<GiftReceiverNotFound>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GiftReceiverNotFound Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -248,14 +352,20 @@ public sealed record GiftReceiverNotFound : IParserComposer<GiftReceiverNotFound
         return new GiftReceiverNotFound();
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(GiftReceiverNotFound value, in PacketWriter p) { }
 }
 
+/// <summary>Represents the <c>ClubGiftNotification</c> message, received when club gifts can be selected.</summary>
+/// <param name="NumGifts">The number of club gifts that can be selected.</param>
 public sealed record ClubGiftNotification(int NumGifts) : IParserComposer<ClubGiftNotification>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static ClubGiftNotification Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -266,6 +376,8 @@ public sealed record ClubGiftNotification(int NumGifts) : IParserComposer<ClubGi
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -273,10 +385,17 @@ public sealed record ClubGiftNotification(int NumGifts) : IParserComposer<ClubGi
         p.WriteInt(value.NumGifts);
 }
 
+/// <summary>
+/// Represents the <c>IsOfferGiftable</c> message, received with whether a catalog offer can be sent as a gift.
+/// </summary>
+/// <param name="OfferId">The identifier of the catalog offer.</param>
+/// <param name="IsGiftable">Whether the offer can be sent as a gift.</param>
 public sealed record IsOfferGiftable(
     int OfferId,
     bool IsGiftable) : IParserComposer<IsOfferGiftable>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static IsOfferGiftable Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -287,6 +406,8 @@ public sealed record IsOfferGiftable(
         return value;
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -297,16 +418,25 @@ public sealed record IsOfferGiftable(
     }
 }
 
+/// <summary>Represents a product inside a new user gift option.</summary>
+/// <param name="ProductCode">The product code.</param>
+/// <param name="LocalizationKey">
+/// The localization key of the product, or <see langword="null"/> when the server sends an empty string.
+/// </param>
 public sealed record NuxGiftProduct(
     string ProductCode,
     string? LocalizationKey) : IParserComposer<NuxGiftProduct>
 {
+    /// <summary>Parses a new user gift product from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NuxGiftProduct Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NuxGiftProduct ParseFlash(in PacketReader p) =>
         GiftWire.ParseNuxProduct(in p);
 
+    /// <summary>Composes the new user gift product into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -314,18 +444,27 @@ public sealed record NuxGiftProduct(
         GiftWire.ComposeNuxProduct(value, in p);
 }
 
+/// <summary>Represents one choice in a step of the new user gift offer.</summary>
 public sealed record NuxGiftOption : IParserComposer<NuxGiftOption>
 {
     private IReadOnlyList<NuxGiftProduct> _products = Array.AsReadOnly(Array.Empty<NuxGiftProduct>());
 
+    /// <summary>Initializes a new instance of the <see cref="NuxGiftOption"/> record.</summary>
+    /// <param name="ThumbnailUrl">The thumbnail image URL, or <see langword="null"/> when there is none.</param>
+    /// <param name="Products">The products the option grants.</param>
     public NuxGiftOption(string? ThumbnailUrl, IReadOnlyList<NuxGiftProduct> Products)
     {
         this.ThumbnailUrl = ThumbnailUrl;
         this.Products = Products;
     }
 
+    /// <summary>
+    /// Gets the thumbnail image URL, or <see langword="null"/> when the server sends an empty string.
+    /// </summary>
     public string? ThumbnailUrl { get; init; }
 
+    /// <summary>Gets the products the option grants, as a read only copy.</summary>
+    /// <remarks>The list may hold at most 65535 entries.</remarks>
     public IReadOnlyList<NuxGiftProduct> Products
     {
         get => _products;
@@ -335,18 +474,25 @@ public sealed record NuxGiftOption : IParserComposer<NuxGiftOption>
             nameof(Products));
     }
 
+    /// <summary>Parses a new user gift option from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NuxGiftOption Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NuxGiftOption ParseFlash(in PacketReader p) =>
         GiftWire.ParseNuxOption(in p);
 
+    /// <summary>Composes the new user gift option into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(NuxGiftOption value, in PacketWriter p) =>
         GiftWire.ComposeNuxOption(value, in p);
 
+    /// <summary>Deconstructs the option into its thumbnail and products.</summary>
+    /// <param name="ThumbnailUrl">The thumbnail image URL, or <see langword="null"/> when there is none.</param>
+    /// <param name="Products">The products the option grants.</param>
     public void Deconstruct(out string? ThumbnailUrl, out IReadOnlyList<NuxGiftProduct> Products)
     {
         ThumbnailUrl = this.ThumbnailUrl;
@@ -354,10 +500,15 @@ public sealed record NuxGiftOption : IParserComposer<NuxGiftOption>
     }
 }
 
+/// <summary>Represents one step of the new user gift offer, with the options to choose from.</summary>
 public sealed record NuxGiftStep : IParserComposer<NuxGiftStep>
 {
     private IReadOnlyList<NuxGiftOption> _options = Array.AsReadOnly(Array.Empty<NuxGiftOption>());
 
+    /// <summary>Initializes a new instance of the <see cref="NuxGiftStep"/> record.</summary>
+    /// <param name="DayIndex">The day index of the step.</param>
+    /// <param name="StepIndex">The step index.</param>
+    /// <param name="Options">The options to choose from.</param>
     public NuxGiftStep(int DayIndex, int StepIndex, IReadOnlyList<NuxGiftOption> Options)
     {
         this.DayIndex = DayIndex;
@@ -365,10 +516,14 @@ public sealed record NuxGiftStep : IParserComposer<NuxGiftStep>
         this.Options = Options;
     }
 
+    /// <summary>Gets the day index of the step.</summary>
     public int DayIndex { get; init; }
 
+    /// <summary>Gets the step index.</summary>
     public int StepIndex { get; init; }
 
+    /// <summary>Gets the options to choose from, as a read only copy.</summary>
+    /// <remarks>The list may hold at most 65535 entries.</remarks>
     public IReadOnlyList<NuxGiftOption> Options
     {
         get => _options;
@@ -378,18 +533,26 @@ public sealed record NuxGiftStep : IParserComposer<NuxGiftStep>
             nameof(Options));
     }
 
+    /// <summary>Parses a new user gift step from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NuxGiftStep Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NuxGiftStep ParseFlash(in PacketReader p) =>
         GiftWire.ParseNuxStep(in p);
 
+    /// <summary>Composes the new user gift step into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(NuxGiftStep value, in PacketWriter p) =>
         GiftWire.ComposeNuxStep(value, in p);
 
+    /// <summary>Deconstructs the step into its indexes and options.</summary>
+    /// <param name="DayIndex">The day index of the step.</param>
+    /// <param name="StepIndex">The step index.</param>
+    /// <param name="Options">The options to choose from.</param>
     public void Deconstruct(
         out int DayIndex,
         out int StepIndex,
@@ -401,12 +564,19 @@ public sealed record NuxGiftStep : IParserComposer<NuxGiftStep>
     }
 }
 
+/// <summary>
+/// Represents the <c>NewUserExperienceGiftOffer</c> message, received with the gifts offered to a new user.
+/// </summary>
 public sealed record NuxGiftOffer : IParserComposer<NuxGiftOffer>
 {
     private IReadOnlyList<NuxGiftStep> _steps = Array.AsReadOnly(Array.Empty<NuxGiftStep>());
 
+    /// <summary>Initializes a new instance of the <see cref="NuxGiftOffer"/> record.</summary>
+    /// <param name="Steps">The steps of the offer.</param>
     public NuxGiftOffer(IReadOnlyList<NuxGiftStep> Steps) => this.Steps = Steps;
 
+    /// <summary>Gets the steps of the offer, as a read only copy.</summary>
+    /// <remarks>The list may hold at most 4096 entries.</remarks>
     public IReadOnlyList<NuxGiftStep> Steps
     {
         get => _steps;
@@ -416,32 +586,46 @@ public sealed record NuxGiftOffer : IParserComposer<NuxGiftOffer>
             nameof(Steps));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NuxGiftOffer Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NuxGiftOffer ParseFlash(in PacketReader p) =>
         GiftWire.ParseNuxOffer(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(NuxGiftOffer value, in PacketWriter p) =>
         GiftWire.ComposeNuxOffer(value, in p);
 
+    /// <summary>Deconstructs the offer into its steps.</summary>
+    /// <param name="Steps">The steps of the offer.</param>
     public void Deconstruct(out IReadOnlyList<NuxGiftStep> Steps) => Steps = this.Steps;
 }
 
+/// <summary>Represents the gift chosen at one step of the new user gift offer.</summary>
+/// <param name="DayIndex">The day index of the step.</param>
+/// <param name="StepIndex">The step index.</param>
+/// <param name="GiftIndex">The zero based index of the chosen option within the step.</param>
 public readonly record struct NuxGiftSelection(
     int DayIndex,
     int StepIndex,
     int GiftIndex) : IParserComposer<NuxGiftSelection>
 {
+    /// <summary>Parses a new user gift selection from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NuxGiftSelection Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NuxGiftSelection ParseFlash(in PacketReader p) =>
         new(p.ReadInt(), p.ReadInt(), p.ReadInt());
 
+    /// <summary>Composes the new user gift selection into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -449,27 +633,46 @@ public readonly record struct NuxGiftSelection(
         GiftWire.WriteSelection(value, in p);
 }
 
+/// <summary>
+/// Represents the <c>NewUserExperienceNotComplete</c> message, received when the account has not finished
+/// the new user flow.
+/// </summary>
 public sealed record NuxNotComplete : IParserComposer<NuxNotComplete>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NuxNotComplete Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NuxNotComplete ParseFlash(in PacketReader p) =>
         GiftWire.ParseEmpty<NuxNotComplete>(in p, static () => new NuxNotComplete());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(NuxNotComplete value, in PacketWriter p) { }
 }
 
+/// <summary>
+/// Represents the <c>NewUserExperienceGetGifts</c> message, sent to claim gifts from the new user gift offer.
+/// </summary>
+/// <remarks>
+/// The wire count covers every value, three per selection, so parsing fails when it is not a multiple of
+/// three.
+/// </remarks>
 public sealed record NuxGetGifts : IParserComposer<NuxGetGifts>
 {
     private IReadOnlyList<NuxGiftSelection> _selections =
         Array.AsReadOnly(Array.Empty<NuxGiftSelection>());
 
+    /// <summary>Initializes a new instance of the <see cref="NuxGetGifts"/> record.</summary>
+    /// <param name="Selections">The chosen gifts, one per step.</param>
     public NuxGetGifts(IReadOnlyList<NuxGiftSelection> Selections) => this.Selections = Selections;
 
+    /// <summary>Gets the chosen gifts, as a read only copy.</summary>
+    /// <remarks>The list may hold at most 21845 entries.</remarks>
     public IReadOnlyList<NuxGiftSelection> Selections
     {
         get => _selections;
@@ -479,29 +682,44 @@ public sealed record NuxGetGifts : IParserComposer<NuxGetGifts>
             nameof(Selections));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static NuxGetGifts Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static NuxGetGifts ParseFlash(in PacketReader p) => GiftWire.ParseNuxGetGifts(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(NuxGetGifts value, in PacketWriter p) =>
         GiftWire.ComposeNuxGetGifts(value, in p);
 
+    /// <summary>Deconstructs the request into its selections.</summary>
+    /// <param name="Selections">The chosen gifts, one per step.</param>
     public void Deconstruct(out IReadOnlyList<NuxGiftSelection> Selections) =>
         Selections = this.Selections;
 }
 
+/// <summary>Represents the <c>PresentOpen</c> message, sent to open a present in the room.</summary>
+/// <param name="FurniId">
+/// The room item identifier of the present. Flash sends it as a 32 bit integer, and composing throws
+/// when it does not fit.
+/// </param>
 public sealed record PresentOpen(Id FurniId) : IParserComposer<PresentOpen>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PresentOpen Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static PresentOpen ParseFlash(in PacketReader p) =>
         GiftWire.ParsePresentOpen(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -509,23 +727,39 @@ public sealed record PresentOpen(Id FurniId) : IParserComposer<PresentOpen>
         GiftWire.ComposePresentOpen(value, in p);
 }
 
+/// <summary>
+/// Represents the <c>PurchaseFromCatalogAsGift</c> message, sent to buy a catalog offer as a gift for another user.
+/// </summary>
+/// <param name="PageId">The catalog page identifier.</param>
+/// <param name="OfferId">The catalog offer identifier.</param>
+/// <param name="ExtraData">The extra data the offer expects, sent unchanged.</param>
+/// <param name="ReceiverName">The name of the user who receives the gift.</param>
+/// <param name="GiftMessage">The message attached to the gift.</param>
+/// <param name="SpriteId">The sprite identifier of the gift box furni.</param>
+/// <param name="BoxType">The gift box type, or 0 with the default box.</param>
+/// <param name="RibbonType">The ribbon type, or 0 with the default box.</param>
+/// <param name="ShowPurchaserName">Whether the receiver sees who sent the gift.</param>
 public sealed record PurchaseFromCatalogAsGift(
     int PageId,
     int OfferId,
     string ExtraData,
     string ReceiverName,
     string GiftMessage,
+    int SpriteId,
     int BoxType,
     int RibbonType,
-    int Color,
-    bool IsIncognito) : IParserComposer<PurchaseFromCatalogAsGift>
+    bool ShowPurchaserName) : IParserComposer<PurchaseFromCatalogAsGift>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static PurchaseFromCatalogAsGift Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static PurchaseFromCatalogAsGift ParseFlash(in PacketReader p) =>
         GiftWire.ParsePurchase(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -533,8 +767,13 @@ public sealed record PurchaseFromCatalogAsGift(
         GiftWire.ComposePurchase(value, in p);
 }
 
+/// <summary>
+/// Represents the <c>GetGiftWrappingConfiguration</c> message, sent to request the gift wrapping options.
+/// </summary>
 public sealed record GetGiftWrappingConfiguration : IParserComposer<GetGiftWrappingConfiguration>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetGiftWrappingConfiguration Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -543,33 +782,46 @@ public sealed record GetGiftWrappingConfiguration : IParserComposer<GetGiftWrapp
             in p,
             static () => new GetGiftWrappingConfiguration());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(GetGiftWrappingConfiguration value, in PacketWriter p) { }
 }
 
+/// <summary>Represents the <c>GetClubGift</c> message, sent to request the club gifts that can be selected.</summary>
 public sealed record GetClubGift : IParserComposer<GetClubGift>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetClubGift Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static GetClubGift ParseFlash(in PacketReader p) =>
         GiftWire.ParseEmpty<GetClubGift>(in p, static () => new GetClubGift());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(GetClubGift value, in PacketWriter p) { }
 }
 
+/// <summary>Represents the <c>SelectClubGift</c> message, sent to select a club gift.</summary>
+/// <param name="ProductCode">The product code of the club gift to select.</param>
 public sealed record SelectClubGift(string ProductCode) : IParserComposer<SelectClubGift>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static SelectClubGift Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static SelectClubGift ParseFlash(in PacketReader p) => GiftWire.ParseSelectClubGift(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -577,14 +829,22 @@ public sealed record SelectClubGift(string ProductCode) : IParserComposer<Select
         GiftWire.ComposeSelectClubGift(value, in p);
 }
 
+/// <summary>
+/// Represents the <c>GetIsOfferGiftable</c> message, sent to request whether a catalog offer can be sent as a gift.
+/// </summary>
+/// <param name="OfferId">The identifier of the catalog offer.</param>
 public sealed record GetIsOfferGiftable(int OfferId) : IParserComposer<GetIsOfferGiftable>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static GetIsOfferGiftable Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static GetIsOfferGiftable ParseFlash(in PacketReader p) =>
         GiftWire.ParseOfferGiftabilityRequest(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -592,8 +852,13 @@ public sealed record GetIsOfferGiftable(int OfferId) : IParserComposer<GetIsOffe
         p.WriteInt(value.OfferId);
 }
 
+/// <summary>
+/// Represents the <c>NewUserExperienceScriptProceed</c> message, sent to advance the new user flow to its next step.
+/// </summary>
 public sealed record AdvanceNewUserFlowRequest : IParserComposer<AdvanceNewUserFlowRequest>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static AdvanceNewUserFlowRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -602,6 +867,8 @@ public sealed record AdvanceNewUserFlowRequest : IParserComposer<AdvanceNewUserF
             in p,
             static () => new AdvanceNewUserFlowRequest());
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -1047,10 +1314,10 @@ internal static class GiftWire
         p.WriteString(value.ExtraData);
         p.WriteString(value.ReceiverName);
         p.WriteString(value.GiftMessage);
+        p.WriteInt(value.SpriteId);
         p.WriteInt(value.BoxType);
         p.WriteInt(value.RibbonType);
-        p.WriteInt(value.Color);
-        p.WriteBool(value.IsIncognito);
+        p.WriteBool(value.ShowPurchaserName);
     }
 
     public static SelectClubGift ParseSelectClubGift(in PacketReader p)

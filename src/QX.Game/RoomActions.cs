@@ -10,23 +10,36 @@ using Qx.Protocol;
 
 namespace Qx.Game;
 
-/// <summary>What a run of <see cref="RoomActions"/> is doing, for the line that reports it.</summary>
+/// <summary>Specifies the operation a <see cref="RoomActions"/> run performs.</summary>
 public enum FurniOperation
 {
+    /// <summary>No active run.</summary>
     None,
+    /// <summary>A run that picks up the user's own furni.</summary>
     Pickup,
+    /// <summary>A run that ejects furni owned by other users.</summary>
     Eject,
+    /// <summary>A run that uses each item in turn.</summary>
     Toggle,
+    /// <summary>A run that rotates floor items.</summary>
     Rotate,
+    /// <summary>A run that moves floor items to clicked tiles.</summary>
     Move,
+    /// <summary>A selection of an area by two tile clicks.</summary>
     SelectArea
 }
 
-/// <summary>How far along a run is.</summary>
+/// <summary>Represents the progress of a <see cref="RoomActions"/> run.</summary>
+/// <param name="Operation">The operation the run performs, or <see cref="FurniOperation.None"/> when no run is active.</param>
+/// <param name="Done">The number of steps started so far, or the number of clicks received for an area selection.</param>
+/// <param name="Total">The total number of steps in the run.</param>
 public readonly record struct FurniProgress(FurniOperation Operation, int Done, int Total)
 {
+    /// <summary>Gets whether a run is active.</summary>
     public bool IsRunning => Operation is not FurniOperation.None;
 
+    /// <summary>Returns a status line for the run, such as a click prompt or the step count.</summary>
+    /// <returns>The status line, or an empty string when no run is active.</returns>
     public override string ToString() => Operation switch
     {
         FurniOperation.None => "",
@@ -39,25 +52,25 @@ public readonly record struct FurniProgress(FurniOperation Operation, int Done, 
 }
 
 /// <summary>
-/// Doing things to the furni in the room, one at a time and at a pace the hotel tolerates.
+/// Provides actions on the current room, the user's avatar and room furni, including paced runs over many items.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Every one of these could be a line in a script. They are here because a list you are already
-/// looking at is the natural place to act on what you selected, and because all of them share the
-/// same two problems: a hotel that disconnects you for sending three hundred messages at once, and
-/// a run that has to be abandonable halfway. Solving those twice, once for scripts and once for
-/// the list, would be solving them twice.
+/// Single item methods send one message and do not wait for a response.
 /// </para>
 /// <para>
-/// Hiding is the odd one. Nothing is sent to the hotel — the removal is written to the client, so
-/// the client stops drawing something that is still standing in the room. That is why what is
-/// hidden is tracked here and not read back from anywhere: the hotel was never told, and neither
-/// was the room state we mirror.
+/// A run (<see cref="ToggleAsync"/>, <see cref="RotateAsync"/>, <see cref="MoveAsync"/>,
+/// <see cref="PickupAsync"/>, <see cref="EjectAsync"/> and <see cref="SelectAreaAsync"/>) acts on
+/// one item at a time with a delay between steps, and reports through <see cref="Progressed"/>.
+/// Only one run can be active at a time. Items are processed from the back of the room forwards,
+/// and the top of a stack before the items below it.
 /// </para>
 /// <para>
-/// Message names are resolved rather than hard-coded, and each typed request writes the Flash
-/// layout before anything reaches the transport.
+/// Hiding furni is written to the local client only. The hotel is not told and the mirrored room
+/// state keeps the item, so hidden items are tracked through <see cref="Furni.IsHidden"/>.
+/// </para>
+/// <para>
+/// An active run is canceled and <see cref="Progress"/> is cleared when the hotel connection closes.
 /// </para>
 /// </remarks>
 public sealed class RoomActions : GameStateManager
@@ -77,39 +90,69 @@ public sealed class RoomActions : GameStateManager
     private IRoomPlacementOperations? _placement_operations;
     private int _disposed;
 
-    /// <summary>The room being acted on, handed over by the game state.</summary>
+    /// <summary>Gets or sets the room manager that runs read the room and its furni from.</summary>
     public RoomManager? Room { get; set; }
 
-    /// <summary>Used to tell your own furni from someone else's, which decides pickup from eject.</summary>
+    /// <summary>Gets or sets the function that returns the local user's id.</summary>
+    /// <remarks>
+    /// <see cref="PickupAsync"/> only picks up items owned by this id, and <see cref="EjectAsync"/>
+    /// only ejects items owned by someone else.
+    /// </remarks>
     public Func<Id?>? OwnUserId { get; set; }
 
-    /// <summary>Raised when a run starts, steps or finishes.</summary>
+    /// <summary>Occurs when a run starts, starts a step or finishes, with the new <see cref="FurniProgress"/>.</summary>
+    /// <remarks>
+    /// Raised on the thread that runs the step. A finished or canceled run reports
+    /// <see cref="FurniOperation.None"/>.
+    /// </remarks>
     public event Action<FurniProgress>? Progressed;
 
-    /// <summary>Raised when a piece of furni has been hidden or shown again.</summary>
+    /// <summary>Occurs when a furni item is hidden or shown again, with the item.</summary>
     public event Action<Furni>? VisibilityChanged;
 
+    /// <summary>Gets the progress of the active run.</summary>
+    /// <remarks>
+    /// The operation is <see cref="FurniOperation.None"/> when no run is active.
+    /// </remarks>
     public FurniProgress Progress { get; private set; }
 
+    /// <summary>Gets whether a run is active.</summary>
     public bool IsBusy => Progress.IsRunning;
 
     /// <summary>
-    /// How long to wait between messages of a run.
+    /// Gets or sets the delay between steps of <see cref="ToggleAsync"/>.
     /// </summary>
     /// <remarks>
-    /// Toggling is the one the hotel watches most closely, so it is the slowest. These are
-    /// deliberately not zero: a run with no gap at all is indistinguishable from a flood.
+    /// Defaults to 250 milliseconds. The delay between two steps is the larger interval of the two
+    /// steps. The value is read when the run starts.
     /// </remarks>
     public TimeSpan ToggleInterval { get; set; } = TimeSpan.FromMilliseconds(250);
 
+    /// <summary>Gets or sets the delay used for post-it notes in <see cref="ToggleAsync"/>.</summary>
+    /// <remarks>
+    /// Defaults to 750 milliseconds. The value is read when the run starts.
+    /// </remarks>
     public TimeSpan TogglePostItInterval { get; set; } = TimeSpan.FromMilliseconds(750);
 
+    /// <summary>Gets or sets the delay between steps of <see cref="PickupAsync"/> and <see cref="EjectAsync"/>.</summary>
+    /// <remarks>
+    /// Defaults to 150 milliseconds. The value is read when the run starts.
+    /// </remarks>
     public TimeSpan PickupInterval { get; set; } = TimeSpan.FromMilliseconds(150);
 
+    /// <summary>Gets or sets the delay used for post-it notes in <see cref="PickupAsync"/> and <see cref="EjectAsync"/>.</summary>
+    /// <remarks>
+    /// Defaults to 750 milliseconds. The value is read when the run starts.
+    /// </remarks>
     public TimeSpan PickupPostItInterval { get; set; } = TimeSpan.FromMilliseconds(750);
 
+    /// <summary>Gets or sets the delay between steps of <see cref="RotateAsync"/>.</summary>
+    /// <remarks>
+    /// Defaults to 150 milliseconds. <see cref="MoveAsync"/> is paced by clicks and does not use it.
+    /// </remarks>
     public TimeSpan MoveInterval { get; set; } = TimeSpan.FromMilliseconds(150);
 
+    /// <inheritdoc/>
     protected override void OnAttach()
     {
     }
@@ -130,7 +173,7 @@ public sealed class RoomActions : GameStateManager
     internal void UnbindPlacementOperations(IRoomPlacementOperations operations) =>
         Interlocked.CompareExchange(ref _placement_operations, null, operations);
 
-    /// <summary>Stops whatever run is going on. Safe to call when there is none.</summary>
+    /// <summary>Cancels the active run, if there is one.</summary>
     public void Cancel()
     {
         try
@@ -143,6 +186,11 @@ public sealed class RoomActions : GameStateManager
     }
 
 
+    /// <summary>Sends a request to enter a room.</summary>
+    /// <param name="room_id">The id of the room.</param>
+    /// <param name="password">The room password, or an empty string when the room has none.</param>
+    /// <param name="entry_point">The entry point sent with the request, or -1 for none.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="password"/> is <see langword="null"/>.</exception>
     public void Enter(Id room_id, string password = "", long entry_point = -1)
     {
         ArgumentNullException.ThrowIfNull(password);
@@ -166,6 +214,7 @@ public sealed class RoomActions : GameStateManager
             cancellation_token);
     }
 
+    /// <summary>Sends a request to leave the current room.</summary>
     public void Leave() =>
         SendMessage(
             MessageContracts.Room.Lifecycle.Quit,
@@ -182,6 +231,9 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Answers a user who is ringing the doorbell of the current room.</summary>
+    /// <param name="user_name">The name of the user at the door.</param>
+    /// <param name="allow"><see langword="true"/> to let the user in, <see langword="false"/> to turn them away.</param>
     public void AnswerDoorbell(string user_name, bool allow) =>
         SendMessage(
             MessageContracts.Room.Access.DoorbellAnswer,
@@ -203,6 +255,9 @@ public sealed class RoomActions : GameStateManager
             cancellation_token);
     }
 
+    /// <summary>Sends a request to walk the user's avatar to a tile.</summary>
+    /// <param name="x">The tile x coordinate.</param>
+    /// <param name="y">The tile y coordinate.</param>
     public void Walk(int x, int y) =>
         SendMessage(
             MessageContracts.Room.Movement.Walk,
@@ -221,6 +276,9 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Turns the user's avatar to face a tile.</summary>
+    /// <param name="x">The tile x coordinate.</param>
+    /// <param name="y">The tile y coordinate.</param>
     public void LookTo(int x, int y) =>
         SendMessage(
             MessageContracts.Room.Movement.LookTo,
@@ -239,6 +297,8 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Starts or stops a dance.</summary>
+    /// <param name="style">The dance style, or 0 to stop dancing.</param>
     public void Dance(int style) =>
         SendMessage(
             MessageContracts.Room.Occupants.Action.DanceRequest,
@@ -256,6 +316,8 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Performs an avatar expression, such as a wave.</summary>
+    /// <param name="expression">The expression id.</param>
     public void Expression(int expression) =>
         SendMessage(
             MessageContracts.Room.Occupants.Action.ExpressionRequest,
@@ -273,6 +335,8 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Holds up a sign over the user's avatar.</summary>
+    /// <param name="sign">The sign id.</param>
     public void Sign(int sign) =>
         SendMessage(
             MessageContracts.Room.Occupants.Action.SignRequest,
@@ -290,6 +354,8 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Selects the avatar effect the user's avatar wears.</summary>
+    /// <param name="effect">The effect id.</param>
     public void SelectEffect(int effect) =>
         SendMessage(
             MessageContracts.Room.Occupants.Action.EffectSelectionRequest,
@@ -307,6 +373,8 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Sets the posture of the user's avatar.</summary>
+    /// <param name="posture">The posture id.</param>
     public void SetPosture(int posture) =>
         SendMessage(
             MessageContracts.Room.Occupants.Action.PostureRequest,
@@ -324,6 +392,8 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Rates the current room.</summary>
+    /// <param name="rating">The rating value.</param>
     public void Rate(int rating) =>
         SendMessage(
             MessageContracts.Room.RatingRequest,
@@ -341,6 +411,13 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Sets whether a room is a staff pick.</summary>
+    /// <remarks>
+    /// The hotel toggles the staff pick, so the request states the current value as the opposite
+    /// of <paramref name="pick"/>.
+    /// </remarks>
+    /// <param name="room_id">The id of the room.</param>
+    /// <param name="pick"><see langword="true"/> to make the room a staff pick, <see langword="false"/> to remove it.</param>
     public void SetStaffPick(Id room_id, bool pick) =>
         SendMessage(
             MessageContracts.Room.StaffPickUpdateRequest,
@@ -357,6 +434,10 @@ public sealed class RoomActions : GameStateManager
             expected_session,
             cancellation_token);
 
+    /// <summary>Sends a chat message to the room.</summary>
+    /// <param name="message">The message text.</param>
+    /// <param name="bubble">The chat bubble style.</param>
+    /// <param name="tracking_id">The tracking id sent with the message, or -1 for none.</param>
     public void Talk(string message, int bubble = 0, int tracking_id = -1) =>
         SendMessage(
             MessageContracts.Room.Chat.TalkSend,
@@ -375,6 +456,9 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Shouts a chat message to the room.</summary>
+    /// <param name="message">The message text.</param>
+    /// <param name="bubble">The chat bubble style.</param>
     public void Shout(string message, int bubble = 0) =>
         SendMessage(
             MessageContracts.Room.Chat.ShoutSend,
@@ -393,6 +477,10 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Whispers a chat message to a user in the room.</summary>
+    /// <param name="recipient">The name of the user to whisper to.</param>
+    /// <param name="message">The message text.</param>
+    /// <param name="bubble">The chat bubble style.</param>
     public void Whisper(string recipient, string message, int bubble = 0) =>
         SendMessage(
             MessageContracts.Room.Chat.WhisperSend,
@@ -414,11 +502,13 @@ public sealed class RoomActions : GameStateManager
             cancellation_token);
     }
 
+    /// <summary>Shows the typing indicator over the user's avatar.</summary>
     public void StartTyping() =>
         SendMessage(
             MessageContracts.Room.Typing.Start,
             new StartTypingRequest());
 
+    /// <summary>Hides the typing indicator over the user's avatar.</summary>
     public void CancelTyping() =>
         SendMessage(
             MessageContracts.Room.Typing.Cancel,
@@ -448,6 +538,7 @@ public sealed class RoomActions : GameStateManager
             cancellation_token);
     }
 
+    /// <summary>Drops the item the user's avatar is holding.</summary>
     public void DropHandItem() =>
         SendMessage(
             MessageContracts.Room.HandItem.Drop,
@@ -464,6 +555,8 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Gives the item the user's avatar is holding to another user.</summary>
+    /// <param name="user_id">The id of the user who receives the item.</param>
     public void PassHandItem(Id user_id) =>
         SendMessage(
             MessageContracts.Room.HandItem.Pass,
@@ -535,7 +628,13 @@ public sealed class RoomActions : GameStateManager
         SendMessage(contract, message, expected_session, cancellation_token, ValidateDispatch);
     }
 
-    /// <summary>Takes one piece of furni off the screen without touching the room.</summary>
+    /// <summary>Removes a furni item from the local client's view without changing the room.</summary>
+    /// <remarks>
+    /// A removal is written to the client only. The item is marked with <see cref="Furni.IsHidden"/>
+    /// and <see cref="VisibilityChanged"/> is raised. Nothing happens when the item is already hidden.
+    /// </remarks>
+    /// <param name="item">The item to hide.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void Hide(Furni item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -547,7 +646,13 @@ public sealed class RoomActions : GameStateManager
         VisibilityChanged?.Invoke(item);
     }
 
-    /// <summary>Puts a hidden piece of furni back on the screen.</summary>
+    /// <summary>Draws a hidden furni item in the local client again.</summary>
+    /// <remarks>
+    /// The item is written back to the client only, <see cref="Furni.IsHidden"/> is cleared and
+    /// <see cref="VisibilityChanged"/> is raised. Nothing happens when the item is not hidden.
+    /// </remarks>
+    /// <param name="item">The item to show.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void Show(Furni item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -559,6 +664,9 @@ public sealed class RoomActions : GameStateManager
         VisibilityChanged?.Invoke(item);
     }
 
+    /// <summary>Hides a visible furni item, or shows a hidden one.</summary>
+    /// <param name="item">The item to hide or show.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void ToggleHidden(Furni item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -568,7 +676,8 @@ public sealed class RoomActions : GameStateManager
             Hide(item);
     }
 
-    /// <summary>Shows everything that was hidden, in one pass.</summary>
+    /// <summary>Shows every hidden floor and wall item in the room.</summary>
+    /// <returns>The number of items shown, or 0 when <see cref="Room"/> is not set.</returns>
     public int ShowAll()
     {
         if (Room is not { } room)
@@ -583,7 +692,9 @@ public sealed class RoomActions : GameStateManager
         return shown;
     }
 
-    /// <summary>Presses one piece of furni, as clicking it would.</summary>
+    /// <summary>Uses a floor or wall item with state 0.</summary>
+    /// <param name="item">The item to use.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void Use(Furni item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -593,6 +704,9 @@ public sealed class RoomActions : GameStateManager
             UseWallItem(item.Id);
     }
 
+    /// <summary>Uses a floor item.</summary>
+    /// <param name="item_id">The id of the floor item.</param>
+    /// <param name="state">The state value sent with the request.</param>
     public void UseFloorItem(Id item_id, int state = 0) =>
         SendMessage(
             MessageContracts.Room.FloorItemUse,
@@ -612,10 +726,14 @@ public sealed class RoomActions : GameStateManager
             cancellation_token);
 
     /// <summary>
-    /// Clicks one piece of furni the way the client does when it is clicked in the room. Unlike
-    /// <see cref="Use"/> this does not trigger the furni; the server answers with what a click
-    /// means for it, such as walking up to a teleporter.
+    /// Sends a click on a furni item, as the client does when the item is clicked in the room.
     /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="Use"/>, the item is not triggered. The server answers with what a click
+    /// means for the item, such as walking up to a teleporter.
+    /// </remarks>
+    /// <param name="item">The item to click.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
     public void Click(Furni item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -637,6 +755,8 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Sends a request to enter a one-way door.</summary>
+    /// <param name="item_id">The id of the one-way door.</param>
     public void EnterOneWayDoor(Id item_id) =>
         SendMessage(
             MessageContracts.Room.FloorItem.OneWayDoorEnter,
@@ -654,6 +774,8 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Throws a dice.</summary>
+    /// <param name="item_id">The id of the dice.</param>
     public void ThrowDice(Id item_id) =>
         SendMessage(
             MessageContracts.Room.FloorItem.ThrowDice,
@@ -671,6 +793,8 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Turns a dice off.</summary>
+    /// <param name="item_id">The id of the dice.</param>
     public void DiceOff(Id item_id) =>
         SendMessage(
             MessageContracts.Room.FloorItem.DiceOff,
@@ -688,6 +812,9 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Uses a wall item.</summary>
+    /// <param name="item_id">The id of the wall item.</param>
+    /// <param name="state">The state value sent with the request.</param>
     public void UseWallItem(Id item_id, int state = 0) =>
         SendMessage(
             MessageContracts.Room.WallItemUse,
@@ -718,6 +845,11 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Removes a wall item from the room.</summary>
+    /// <remarks>
+    /// Post-it notes are removed with this request, which deletes them.
+    /// </remarks>
+    /// <param name="item_id">The id of the wall item.</param>
     public void RemoveWallItem(Id item_id) =>
         SendMessage(
             MessageContracts.Room.WallItemRemove,
@@ -735,6 +867,11 @@ public sealed class RoomActions : GameStateManager
             expected_room_generation,
             cancellation_token);
 
+    /// <summary>Sets the color and text of a post-it note.</summary>
+    /// <param name="item_id">The id of the post-it note.</param>
+    /// <param name="color">The note color.</param>
+    /// <param name="text">The note text.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="color"/> or <paramref name="text"/> is <see langword="null"/>.</exception>
     public void SetStickyData(Id item_id, string color, string text)
     {
         ArgumentNullException.ThrowIfNull(color);
@@ -762,6 +899,9 @@ public sealed class RoomActions : GameStateManager
             cancellation_token);
     }
 
+    /// <summary>Places a post-it note on a wall.</summary>
+    /// <param name="item_id">The id of the post-it note item.</param>
+    /// <param name="wall_location">The wall location string of the target position.</param>
     public void PlacePostIt(Id item_id, string wall_location) =>
         SendMessage(
             MessageContracts.Room.WallItem.PostItPlace,
@@ -783,6 +923,11 @@ public sealed class RoomActions : GameStateManager
             cancellation_token);
     }
 
+    /// <summary>Places a post-it note on a wall with its color and text in one request.</summary>
+    /// <param name="item_id">The id of the post-it note item.</param>
+    /// <param name="wall_location">The wall location string of the target position.</param>
+    /// <param name="color">The note color.</param>
+    /// <param name="text">The note text.</param>
     public void AddSpamWallPostIt(
         Id item_id,
         string wall_location,
@@ -812,13 +957,36 @@ public sealed class RoomActions : GameStateManager
             cancellation_token);
     }
 
-    /// <summary>Puts one floor item down somewhere else, facing a given way.</summary>
+    /// <summary>Moves a floor item to a tile and direction.</summary>
+    /// <remarks>
+    /// The move is sent through the room placement operations, which check that the item is still
+    /// in the active room at the position <paramref name="item"/> holds.
+    /// </remarks>
+    /// <param name="item">The floor item to move.</param>
+    /// <param name="tile">The target tile.</param>
+    /// <param name="direction">The target direction.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the placement operations are unavailable, or the item is not in the active room or has moved.
+    /// </exception>
     public void MoveTo(FloorItem item, Point tile, int direction)
     {
         ArgumentNullException.ThrowIfNull(item);
         MoveFloorItem(item.Id, tile.X, tile.Y, direction, item, null, default);
     }
 
+    /// <summary>Moves a floor item to a tile and direction.</summary>
+    /// <remarks>
+    /// The move is sent through the room placement operations, which check that the item is in the
+    /// active room.
+    /// </remarks>
+    /// <param name="item_id">The id of the floor item.</param>
+    /// <param name="x">The target tile x coordinate.</param>
+    /// <param name="y">The target tile y coordinate.</param>
+    /// <param name="direction">The target direction.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the placement operations are unavailable, or the item is not in the active room.
+    /// </exception>
     public void MoveFloorItem(Id item_id, int x, int y, int direction) =>
         MoveFloorItem(item_id, x, y, direction, null, null, default);
 
@@ -843,6 +1011,12 @@ public sealed class RoomActions : GameStateManager
             cancellation_token);
     }
 
+    /// <summary>Picks up a floor or wall item from the room.</summary>
+    /// <param name="item">The item to pick up.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the placement operations are unavailable, or the item is not in the active room.
+    /// </exception>
     public void Pickup(Furni item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -851,6 +1025,14 @@ public sealed class RoomActions : GameStateManager
         Pickup(category, item.Id);
     }
 
+    /// <summary>Picks up an item from the room by category and id.</summary>
+    /// <param name="category">The item category, 1 for a wall item or 2 for a floor item.</param>
+    /// <param name="item_id">The id of the item.</param>
+    /// <param name="confirmed">The confirmation flag sent with the pickup request.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="category"/> is not 1 or 2.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the placement operations are unavailable, or the item is not in the active room.
+    /// </exception>
     public void Pickup(int category, Id item_id, bool confirmed = false)
     {
         if (category is not (1 or 2))
@@ -878,6 +1060,20 @@ public sealed class RoomActions : GameStateManager
             cancellation_token);
 
 
+    /// <summary>Uses each item in turn, paced by <see cref="ToggleInterval"/>.</summary>
+    /// <remarks>
+    /// Floor and wall items are used with state 0. Post-it notes have their note data requested
+    /// instead and are paced by <see cref="TogglePostItInterval"/>. Canceling ends the run without
+    /// faulting the task.
+    /// </remarks>
+    /// <param name="items">The items to use.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes when the run finishes or is canceled.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when there is no active hotel session, <see cref="Room"/> is not set or the room is not ready. The
+    /// returned task faults with this exception when another run is active or the furni data for a
+    /// wall item is unavailable.
+    /// </exception>
     public Task ToggleAsync(IEnumerable<Furni> items, CancellationToken cancellationToken = default)
     {
         RoomRunScope scope = CaptureReadyRoomScope(cancellationToken);
@@ -895,6 +1091,19 @@ public sealed class RoomActions : GameStateManager
             cancellationToken: cancellationToken);
     }
 
+    /// <summary>Rotates each floor item in turn to a direction, paced by <see cref="MoveInterval"/>.</summary>
+    /// <remarks>
+    /// Wall items and floor items that already face the direction are skipped. Canceling ends the
+    /// run without faulting the task.
+    /// </remarks>
+    /// <param name="items">The items to rotate.</param>
+    /// <param name="direction">The target direction.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes when the run finishes or is canceled.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <see cref="Room"/> is not set or the room is not ready. The returned task faults with this
+    /// exception when another run is active.
+    /// </exception>
     public Task RotateAsync(
         IEnumerable<Furni> items,
         int direction,
@@ -923,12 +1132,20 @@ public sealed class RoomActions : GameStateManager
     }
 
     /// <summary>
-    /// Moves each selected item to wherever you click next.
+    /// Moves each floor item in turn to the next tile the user clicks in the room.
     /// </summary>
     /// <remarks>
-    /// One click per item, in the order they are listed. The click is swallowed rather than passed
-    /// on, so you do not walk to every tile you are placing furni on.
+    /// One click is taken per item, in run order. Each click is blocked before it reaches the hotel,
+    /// so the avatar does not walk to the clicked tile. Wall items are skipped. Canceling ends the
+    /// run without faulting the task.
     /// </remarks>
+    /// <param name="items">The items to move.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes when the run finishes or is canceled.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <see cref="Room"/> is not set or the room is not ready. The returned task faults with this
+    /// exception when another run is active.
+    /// </exception>
     public Task MoveAsync(IEnumerable<Furni> items, CancellationToken cancellationToken = default)
     {
         long room_generation = CaptureReadyRoomGeneration(cancellationToken);
@@ -953,7 +1170,21 @@ public sealed class RoomActions : GameStateManager
             cancellationToken);
     }
 
-    /// <summary>Takes your own furni back into your inventory.</summary>
+    /// <summary>Picks up each of the user's own items in turn, paced by <see cref="PickupInterval"/>.</summary>
+    /// <remarks>
+    /// Items not owned by the id from <see cref="OwnUserId"/> are skipped, and nothing is picked up
+    /// when it is not set. Post-it notes cannot be picked up, so they are removed with
+    /// <see cref="RemoveWallItem(Id)"/>, which deletes them, and paced by <see cref="PickupPostItInterval"/>.
+    /// Canceling ends the run without faulting the task.
+    /// </remarks>
+    /// <param name="items">The items to pick up.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes when the run finishes or is canceled.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when there is no active hotel session, <see cref="Room"/> is not set or the room is not ready. The
+    /// returned task faults with this exception when another run is active or the furni data for a
+    /// wall item is unavailable.
+    /// </exception>
     public Task PickupAsync(IEnumerable<Furni> items, CancellationToken cancellationToken = default)
     {
         RoomRunScope scope = CaptureReadyRoomScope(cancellationToken);
@@ -973,12 +1204,22 @@ public sealed class RoomActions : GameStateManager
     }
 
     /// <summary>
-    /// Sends other people's furni back to them.
+    /// Ejects each item owned by another user in turn, paced by <see cref="PickupInterval"/>.
     /// </summary>
     /// <remarks>
-    /// The same message as a pickup. What separates them is whose furni it is: yours comes back to
-    /// you, theirs goes back to them, and only the room's owner may do the second.
+    /// An eject is the same request as a pickup, sent for an item owned by someone else, which
+    /// returns it to its owner. Items are only ejected when the user owns the room and
+    /// <see cref="OwnUserId"/> is set, and items owned by that id are skipped. Canceling ends the
+    /// run without faulting the task.
     /// </remarks>
+    /// <param name="items">The items to eject.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes when the run finishes or is canceled.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when there is no active hotel session, <see cref="Room"/> is not set or the room is not ready. The
+    /// returned task faults with this exception when another run is active, the furni data for a
+    /// wall item is unavailable, or the items include a post-it note, since removing one deletes it.
+    /// </exception>
     public Task EjectAsync(IEnumerable<Furni> items, CancellationToken cancellationToken = default)
     {
         RoomRunScope scope = CaptureReadyRoomScope(cancellationToken);
@@ -1087,13 +1328,17 @@ public sealed class RoomActions : GameStateManager
     }
 
     /// <summary>
-    /// Waits for two clicks in the room and returns the rectangle between them.
+    /// Waits for two tile clicks in the room and returns the area between them.
     /// </summary>
     /// <remarks>
-    /// Both clicks are swallowed, so picking an area does not walk you across the room. Answering
-    /// "which of these is over there" by pointing at the floor beats typing coordinates that you
-    /// would have to read off the room first.
+    /// Both clicks are blocked before they reach the hotel, so the avatar does not walk. The
+    /// selection counts as a run and reports <see cref="FurniOperation.SelectArea"/> progress.
     /// </remarks>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task that completes with the selected area, or <see langword="null"/> when the selection is canceled.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">Thrown when another run is active. The returned task faults with this exception.</exception>
     public async Task<Area?> SelectAreaAsync(CancellationToken cancellationToken = default)
     {
         CancellationTokenSource run = BeginRun(cancellationToken);
@@ -1122,11 +1367,11 @@ public sealed class RoomActions : GameStateManager
 
 
     /// <summary>
-    /// Whether a pickup would be allowed, so a run does not spend a minute being ignored.
+    /// Gets whether a pickup of the item would be allowed.
     /// </summary>
     /// <remarks>
-    /// Your own furni comes back to you wherever it is standing. Someone else's does not — that is
-    /// an eject, and the hotel drops a pickup aimed at it without saying so.
+    /// Only the user's own furni can be picked up. Furni owned by someone else needs an eject, and
+    /// the hotel drops a pickup aimed at it without a response.
     /// </remarks>
     private bool CanPickup(Furni item) =>
         OwnUserId?.Invoke() is { } self && item.OwnerId == self;
@@ -1347,12 +1592,14 @@ public sealed class RoomActions : GameStateManager
         }
     }
 
+    /// <inheritdoc/>
     protected override void Reset()
     {
         Cancel();
         Progress = new FurniProgress(FurniOperation.None, 0, 0);
     }
 
+    /// <inheritdoc/>
     public override void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)

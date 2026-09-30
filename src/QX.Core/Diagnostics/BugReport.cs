@@ -4,6 +4,15 @@ using System.Text.RegularExpressions;
 
 namespace Qx.Diagnostics;
 
+/// <summary>Represents the environment facts written into the diagnostics section of a bug report.</summary>
+/// <remarks>Each value is collapsed to a single line and shortened before it is written.</remarks>
+/// <param name="Version">The application version.</param>
+/// <param name="OperatingSystem">The operating system description.</param>
+/// <param name="Architecture">The process architecture.</param>
+/// <param name="Runtime">The .NET runtime description.</param>
+/// <param name="GEarth">The G-Earth connection state.</param>
+/// <param name="Client">The game client description.</param>
+/// <param name="Mcp">The MCP server state.</param>
 public sealed record BugReportContext(
     string Version,
     string OperatingSystem,
@@ -13,20 +22,29 @@ public sealed record BugReportContext(
     string Client,
     string Mcp);
 
+/// <summary>Represents the log entries selected for a bug report.</summary>
+/// <param name="Entries">The selected entries after redaction, warnings and errors first, then newest first.</param>
+/// <param name="Found">The number of entries found in the collection window, including those left out.</param>
+/// <param name="Truncated">Whether entries were shortened or left out, or a log file could not be read completely.</param>
 public sealed record BugReportLogs(
     IReadOnlyList<string> Entries,
     int Found,
     bool Truncated)
 {
+    /// <summary>Gets the number of entries included in <see cref="Entries"/>.</summary>
     public int Included => Entries.Count;
 
+    /// <summary>Gets the included entries joined with blank lines.</summary>
     public string Text => string.Join(Environment.NewLine + Environment.NewLine, Entries);
 
+    /// <summary>Gets an empty result with no entries and nothing truncated.</summary>
     public static BugReportLogs Empty { get; } = new(Array.Empty<string>(), 0, false);
 }
 
+/// <summary>Provides log collection, secret redaction and GitHub issue links for bug reports.</summary>
 public static class BugReport
 {
+    /// <summary>The maximum length in characters of an issue URL built by <see cref="CreateIssueUri"/>.</summary>
     public const int MaxIssueUrlLength = 5900;
 
     private const int MaxLogCharacters = 3000;
@@ -65,6 +83,17 @@ public static class BugReport
         """(?<prefix>(?:^|\s)-c\s+)(?:"[^"\r\n]*"|'[^'\r\n]*'|\S+)""",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
+    /// <summary>Collects the application log entries of the last 24 hours for a bug report.</summary>
+    /// <remarks>
+    /// Reads the rotated <c>.1</c> file, the current log file and the crash log when it was written inside
+    /// the window. Warnings and errors come first, then newer entries. The result is redacted and limited to
+    /// about 3000 characters, with at most 1200 characters per warning or error and 500 per other entry.
+    /// Files that cannot be read are skipped and mark the result as truncated.
+    /// </remarks>
+    /// <param name="logPath">The path of the current application log file.</param>
+    /// <param name="crashLogPath">The path of the crash log, or <see langword="null"/> when there is none.</param>
+    /// <param name="now">The current local time, which is compared with the local timestamps in the logs.</param>
+    /// <returns>The selected entries, with no entries when nothing matched.</returns>
     public static BugReportLogs Collect(string logPath, string? crashLogPath, DateTime now)
     {
         DateTime cutoff = now.AddHours(-24);
@@ -114,6 +143,19 @@ public static class BugReport
             shortened || selected.Count < collector.Found);
     }
 
+    /// <summary>Builds a prefilled GitHub new-issue URL that uses the bug report template.</summary>
+    /// <remarks>
+    /// The title gets a <c>[Bug]</c> prefix and all text is redacted. When the URL is longer than
+    /// <see cref="MaxIssueUrlLength"/>, log entries are dropped from the end, then the diagnostics
+    /// section is replaced by a short note.
+    /// </remarks>
+    /// <param name="title">The issue summary.</param>
+    /// <param name="description">The issue description.</param>
+    /// <param name="context">The environment facts for the diagnostics section.</param>
+    /// <param name="logs">The log entries to include, or <see langword="null"/> to leave logs out.</param>
+    /// <returns>The issue URL.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="title"/> or <paramref name="description"/> is blank.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the summary and description alone exceed the URL limit.</exception>
     public static Uri CreateIssueUri(
         string title,
         string description,
@@ -160,6 +202,14 @@ public static class BugReport
         }
     }
 
+    /// <summary>Replaces secrets and local profile paths in text with placeholders.</summary>
+    /// <remarks>
+    /// Tokens, passwords, cookies, authorization headers and bearer tokens become <c>[redacted]</c>. The
+    /// local application data, roaming application data, temp and user profile folders become
+    /// <c>%LOCALAPPDATA%</c>, <c>%APPDATA%</c>, <c>%TEMP%</c> and <c>%USERPROFILE%</c>.
+    /// </remarks>
+    /// <param name="value">The text to redact.</param>
+    /// <returns>The redacted text.</returns>
     public static string Redact(string value)
     {
         string redacted = QuerySecret.Replace(value, match => match.Groups["prefix"].Value + "[redacted]");

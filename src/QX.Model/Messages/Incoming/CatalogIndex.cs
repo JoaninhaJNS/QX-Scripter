@@ -2,6 +2,7 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Incoming;
 
+/// <summary>Represents a node in the catalog index tree.</summary>
 public sealed record CatalogNode : IParserComposer<CatalogNode>
 {
     private string _page_name = "";
@@ -9,6 +10,14 @@ public sealed record CatalogNode : IParserComposer<CatalogNode>
     private IReadOnlyList<int> _offer_ids = Array.AsReadOnly(Array.Empty<int>());
     private IReadOnlyList<CatalogNode> _children = Array.AsReadOnly(Array.Empty<CatalogNode>());
 
+    /// <summary>Initializes a new instance of the <see cref="CatalogNode"/> record.</summary>
+    /// <param name="Visible">Whether the node is visible in the catalog.</param>
+    /// <param name="Icon">The icon identifier of the node.</param>
+    /// <param name="PageId">The identifier of the catalog page.</param>
+    /// <param name="PageName">The internal name of the page.</param>
+    /// <param name="Localization">The localized caption of the page.</param>
+    /// <param name="OfferIds">The identifiers of the offers on the page, copied into a read only list.</param>
+    /// <param name="Children">The child nodes, copied into a read only list.</param>
     public CatalogNode(
         bool Visible,
         int Icon,
@@ -45,24 +54,30 @@ public sealed record CatalogNode : IParserComposer<CatalogNode>
         _children = Array.AsReadOnly(children);
     }
 
+    /// <summary>Gets whether the node is visible in the catalog.</summary>
     public bool Visible { get; init; }
 
+    /// <summary>Gets the icon identifier of the node.</summary>
     public int Icon { get; init; }
 
+    /// <summary>Gets the identifier of the catalog page.</summary>
     public int PageId { get; init; }
 
+    /// <summary>Gets the internal name of the page.</summary>
     public string PageName
     {
         get => _page_name;
         init => _page_name = CatalogWire.RequireReference(value, nameof(PageName));
     }
 
+    /// <summary>Gets the localized caption of the page.</summary>
     public string Localization
     {
         get => _localization;
         init => _localization = CatalogWire.RequireReference(value, nameof(Localization));
     }
 
+    /// <summary>Gets the identifiers of the offers on the page, as a read only copy.</summary>
     public IReadOnlyList<int> OfferIds
     {
         get => _offer_ids;
@@ -72,6 +87,7 @@ public sealed record CatalogNode : IParserComposer<CatalogNode>
             nameof(OfferIds));
     }
 
+    /// <summary>Gets the child nodes, as a read only copy.</summary>
     public IReadOnlyList<CatalogNode> Children
     {
         get => _children;
@@ -81,12 +97,16 @@ public sealed record CatalogNode : IParserComposer<CatalogNode>
             nameof(Children));
     }
 
+    /// <summary>Parses a catalog node and its children from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static CatalogNode Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static CatalogNode ParseFlash(in PacketReader p) =>
         CatalogIndexWire.ParseStandaloneNode(in p);
 
+    /// <summary>Composes the catalog node and its children into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -103,6 +123,14 @@ public sealed record CatalogNode : IParserComposer<CatalogNode>
         CatalogNode[] children) =>
         new(visible, icon, page_id, page_name, localization, offer_ids, children);
 
+    /// <summary>Deconstructs the node into its parts.</summary>
+    /// <param name="Visible">Whether the node is visible in the catalog.</param>
+    /// <param name="Icon">The icon identifier of the node.</param>
+    /// <param name="PageId">The identifier of the catalog page.</param>
+    /// <param name="PageName">The internal name of the page.</param>
+    /// <param name="Localization">The localized caption of the page.</param>
+    /// <param name="OfferIds">The identifiers of the offers on the page.</param>
+    /// <param name="Children">The child nodes.</param>
     public void Deconstruct(
         out bool Visible,
         out int Icon,
@@ -122,11 +150,19 @@ public sealed record CatalogNode : IParserComposer<CatalogNode>
     }
 }
 
+/// <summary>Represents the <c>CatalogIndex</c> message, received with the page tree of the catalog.</summary>
 public sealed record CatalogIndex : IParserComposer<CatalogIndex>
 {
     private CatalogNode _root;
     private string _catalog_type = "";
 
+    /// <summary>Initializes a new instance of the <see cref="CatalogIndex"/> record.</summary>
+    /// <param name="Root">The root node of the page tree.</param>
+    /// <param name="NewAdditionsAvailable">Whether the catalog has new additions.</param>
+    /// <param name="CatalogType">The type of the catalog, such as <c>NORMAL</c> or <c>BUILDERS_CLUB</c>.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="Root"/> or <paramref name="CatalogType"/> is <see langword="null"/>.
+    /// </exception>
     public CatalogIndex(CatalogNode Root, bool NewAdditionsAvailable, string CatalogType)
     {
         _root = CatalogWire.RequireReference(Root, nameof(Root));
@@ -134,32 +170,46 @@ public sealed record CatalogIndex : IParserComposer<CatalogIndex>
         _catalog_type = CatalogWire.RequireReference(CatalogType, nameof(CatalogType));
     }
 
+    /// <summary>Gets the root node of the page tree.</summary>
     public CatalogNode Root
     {
         get => _root;
         init => _root = CatalogWire.RequireReference(value, nameof(Root));
     }
 
+    /// <summary>Gets whether the catalog has new additions.</summary>
     public bool NewAdditionsAvailable { get; init; }
 
+    /// <summary>
+    /// Gets the type of the catalog, such as <c>NORMAL</c> or <c>BUILDERS_CLUB</c>.
+    /// </summary>
     public string CatalogType
     {
         get => _catalog_type;
         init => _catalog_type = CatalogWire.RequireReference(value, nameof(CatalogType));
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
+    /// <remarks>The parser accepts at most 64 levels of nesting and 16384 nodes.</remarks>
     public static CatalogIndex Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
     private static CatalogIndex ParseFlash(in PacketReader p) =>
         CatalogIndexWire.ParseIndex(in p);
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(CatalogIndex value, in PacketWriter p) =>
         CatalogIndexWire.ComposeIndex(value, in p);
 
+    /// <summary>Deconstructs the message into its parts.</summary>
+    /// <param name="Root">The root node of the page tree.</param>
+    /// <param name="NewAdditionsAvailable">Whether the catalog has new additions.</param>
+    /// <param name="CatalogType">The type of the catalog.</param>
     public void Deconstruct(
         out CatalogNode Root,
         out bool NewAdditionsAvailable,

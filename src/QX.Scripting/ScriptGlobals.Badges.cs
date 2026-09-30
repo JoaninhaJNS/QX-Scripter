@@ -6,58 +6,79 @@ namespace Qx.Scripting;
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// Every badge the local user owns, as far as the inventory has been loaded. Empty until the
-    /// inventory is loaded, and possibly incomplete while a load is in progress.
+    /// Gets every badge the local user owns, as far as the inventory has been loaded.
     /// </summary>
-    /// <returns>A snapshot copy, not a live view.</returns>
+    /// <remarks>
+    /// Before the inventory is loaded it holds only the badges received during the session, and
+    /// it can be incomplete while a load is in progress. Check <see cref="IsBadgeInventoryLoaded"/>
+    /// and <see cref="IsBadgeInventoryStale"/> to tell a complete list from a partial one. Every
+    /// read returns a snapshot copy, not a live view.
+    /// </remarks>
     public IEnumerable<OwnedBadge> OwnedBadges => BadgeInventory.OwnedBadges;
 
     /// <summary>
-    /// The equipped badge sets cached so far, one entry per user the server has reported badges
-    /// for. Empty until the server pushes some.
+    /// Gets the equipped badge sets cached so far, one entry per user the server has reported
+    /// badges for.
     /// </summary>
-    /// <returns>A snapshot copy, not a live view.</returns>
+    /// <remarks>
+    /// It is empty until the server pushes some. Every read returns a snapshot copy, not a live
+    /// view.
+    /// </remarks>
     public IEnumerable<UserBadges> SelectedBadgeSets => BadgeInventory.SelectedBadgeSets;
 
     /// <summary>
-    /// Whether every fragment of the badge inventory has arrived, so the owned-badge collection is
-    /// complete.
+    /// Gets whether every fragment of the badge inventory has arrived in the current session.
     /// </summary>
     public bool IsBadgeInventoryLoaded => BadgeInventory.IsLoaded;
 
     /// <summary>
-    /// Whether a badge inventory load is in flight right now. It is possible for the inventory to
-    /// be both loaded and loading, when a reload has been started over an existing collection.
+    /// Gets whether a badge inventory request is pending or its fragments are still arriving.
     /// </summary>
+    /// <remarks>
+    /// The inventory can be both loaded and loading, when a reload has been started over an
+    /// existing collection.
+    /// </remarks>
     public bool IsBadgeInventoryLoading => BadgeInventory.IsLoading;
 
     /// <summary>
-    /// Whether the currently held badges are left over from a previous, now-superseded load. The
-    /// entries can still be read, but a badge added since then may be missing.
+    /// Gets whether <see cref="OwnedBadges"/> holds badges that a completed load has not yet
+    /// confirmed.
     /// </summary>
+    /// <remarks>
+    /// The entries can still be read, but they may be incomplete or out of date until the next
+    /// load completes.
+    /// </remarks>
     public bool IsBadgeInventoryStale => BadgeInventory.IsStale;
 
-    /// <summary>Finds an owned badge by its badge code, case-insensitively.</summary>
+    /// <summary>Finds an owned badge by its badge code, ignoring case.</summary>
     /// <param name="code">The badge code, for example <c>ACH_BasicClub1</c>.</param>
     /// <returns>The badge, or <see langword="null"/> when the user does not own it.</returns>
-    /// <exception cref="ArgumentException"><paramref name="code"/> is null, empty or whitespace.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="code"/> is empty or white space.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="code"/> is <see langword="null"/>.</exception>
     public OwnedBadge? GetOwnedBadge(string code) => BadgeInventory.Badge(code);
 
     /// <summary>
-    /// Finds an owned badge by its 32-bit badge id. Badges whose native id does not fit in 32 bits
-    /// are skipped by this overload.
+    /// Finds an owned badge by its 32-bit badge id.
     /// </summary>
+    /// <remarks>
+    /// Badges whose native id does not fit in 32 bits are never matched by this overload.
+    /// </remarks>
     /// <param name="badge_id">The badge id.</param>
     /// <returns>The badge, or <see langword="null"/> when the user does not own it.</returns>
     public OwnedBadge? GetOwnedBadge(int badge_id) => BadgeInventory.Badge(badge_id);
 
+    /// <summary>Finds an owned badge by its badge id.</summary>
+    /// <param name="badge_id">The badge id.</param>
+    /// <returns>The badge, or <see langword="null"/> when the user does not own it.</returns>
     public OwnedBadge? GetOwnedBadge(Id badge_id) => BadgeInventory.Badge(badge_id);
 
     /// <summary>
-    /// The cached badge set one user has equipped on their profile, exactly as the server last
-    /// pushed it. Nothing is requested — this only answers for users whose badges have already
-    /// been seen.
+    /// Gets the cached badge set one user has equipped on their profile, exactly as the server last
+    /// pushed it.
     /// </summary>
+    /// <remarks>
+    /// Nothing is requested, so it only answers for users whose badges have already been seen.
+    /// </remarks>
     /// <param name="user_id">The user's account id.</param>
     /// <returns>
     /// The badge set, or <see langword="null"/> when no badges have been seen for this user.
@@ -66,8 +87,9 @@ public partial class ScriptGlobals
         BadgeInventory.SelectedBadgeSet(user_id);
 
     /// <summary>
-    /// The cached badges one user has equipped, as a plain list. Nothing is requested.
+    /// Gets the cached badges one user has equipped, as a plain list.
     /// </summary>
+    /// <remarks>Nothing is requested.</remarks>
     /// <param name="user_id">The user's account id.</param>
     /// <returns>
     /// A snapshot copy of the badges, or an empty list when none have been seen for this user.
@@ -79,20 +101,22 @@ public partial class ScriptGlobals
     /// Loads the local user's badge inventory, requesting it if necessary, and waits until every
     /// fragment has arrived.
     /// </summary>
+    /// <remarks>
+    /// When the inventory is already loaded it returns the cached collection without touching the
+    /// network. Concurrent callers share one request rather than each sending their own.
+    /// </remarks>
     /// <param name="timeout_ms">
-    /// How long to wait for the load to finish, in milliseconds. Must be positive.
+    /// The time to wait for the load to finish, in milliseconds. It must be positive.
     /// </param>
     /// <returns>
-    /// The complete owned-badge collection. When the inventory is already loaded this returns the
-    /// cached collection without touching the network. Concurrent callers share one request rather
-    /// than each sending their own.
+    /// The complete owned badge collection.
     /// </returns>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="timeout_ms"/> is zero or negative.</exception>
-    /// <exception cref="TimeoutException">The fragments did not all arrive within the timeout.</exception>
-    /// <exception cref="OperationCanceledException">The script was stopped while waiting.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeout_ms"/> is zero or negative.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when the fragments did not all arrive within the timeout.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while waiting.</exception>
     /// <exception cref="InvalidOperationException">
-    /// The connection closed mid-load, or the fragment stream can no longer be correlated to a
-    /// request — the latter is a
+    /// Thrown when the application runtime is not active, the connection closed during the load, or the
+    /// fragment stream can no longer be correlated to a request. The last case is a
     /// <see cref="Qx.Game.FragmentedLoadCorrelationException"/>, which resolves once the next
     /// complete inventory arrives or the session reconnects.
     /// </exception>
@@ -101,20 +125,27 @@ public partial class ScriptGlobals
         BadgeInventory.EnsureLoadedAsync(timeout_ms, Ct);
 
     /// <summary>
-    /// The local user's badge collection, loading it first if it is not loaded yet. Identical to
-    /// <see cref="EnsureBadgeInventoryLoaded(int)"/>; kept as the more discoverable name.
+    /// Gets the local user's badge collection, loading it first when it is not loaded yet.
     /// </summary>
-    /// <param name="timeout_ms">How long to wait for the load to finish, in milliseconds.</param>
-    /// <returns>The complete owned-badge collection.</returns>
-    /// <exception cref="TimeoutException">The fragments did not all arrive within the timeout.</exception>
-    /// <exception cref="OperationCanceledException">The script was stopped while waiting.</exception>
+    /// <remarks>
+    /// Identical to <see cref="EnsureBadgeInventoryLoaded(int)"/>; kept as the more discoverable
+    /// name.
+    /// </remarks>
+    /// <param name="timeout_ms">The time to wait for the load to finish, in milliseconds.</param>
+    /// <returns>The complete owned badge collection.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeout_ms"/> is zero or negative.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when the fragments did not all arrive within the timeout.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while waiting.</exception>
     public Task<IReadOnlyCollection<OwnedBadge>> GetUserBadges(int timeout_ms = 10000) =>
         EnsureBadgeInventoryLoaded(timeout_ms);
 
     /// <summary>
-    /// Starts a filter/sort/projection query over the badges currently cached as owned. This does
-    /// not load anything: query an unloaded inventory and the result is empty.
+    /// Starts a filter, sort and projection query over the badges currently cached as owned.
     /// </summary>
+    /// <remarks>
+    /// Nothing is loaded: a query over an inventory that has not been loaded holds only the badges
+    /// received during the session.
+    /// </remarks>
     /// <returns>A query over a snapshot of the owned badges.</returns>
     public BadgeQuery QueryOwnedBadges() =>
         new(BadgeInventory.OwnedBadges);
@@ -126,9 +157,11 @@ public partial class ScriptGlobals
         new(badges);
 
     /// <summary>
-    /// Starts a query over the badges one user has equipped, taken from the cache. Nothing is
-    /// requested: for a user whose badges have not been seen the query is empty.
+    /// Starts a query over the badges one user has equipped, taken from the cache.
     /// </summary>
+    /// <remarks>
+    /// Nothing is requested: for a user whose badges have not been seen the query is empty.
+    /// </remarks>
     /// <param name="user_id">The user's account id.</param>
     /// <returns>A query over a snapshot of that user's equipped badges.</returns>
     public SelectedBadgeQuery QuerySelectedBadges(Id user_id) =>
@@ -143,15 +176,17 @@ public partial class ScriptGlobals
         new(badges);
 
     /// <summary>
-    /// Raised each time a badge inventory load completes, which includes reloads, so it can fire
-    /// more than once per session.
+    /// Registers a handler that runs each time a badge inventory load completes.
     /// </summary>
-    /// <param name="handler">Invoked with no arguments; read the owned badges afterwards.</param>
+    /// <remarks>
+    /// Reloads count too, so it can fire more than once per session.
+    /// </remarks>
+    /// <param name="handler">The handler to call with no arguments; read the owned badges afterwards.</param>
     /// <returns>
-    /// A handle that removes the handler when disposed. The subscription is also torn down when
+    /// A handle that removes the handler when disposed. The subscription is also removed when
     /// the script stops, so the handle only has to be kept to unsubscribe earlier.
     /// </returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnBadgeInventoryLoaded(Action handler)
         => Subscribe(
             handler,
@@ -159,12 +194,17 @@ public partial class ScriptGlobals
             value => BadgeInventory.Loaded -= value);
 
     /// <summary>
-    /// Raised when a badge the user did not have appears — a newly earned badge, or one seen for
-    /// the first time while the inventory loads.
+    /// Registers a handler that runs when a badge that is not yet in <see cref="OwnedBadges"/> is
+    /// received.
     /// </summary>
-    /// <param name="handler">Receives the badge.</param>
+    /// <remarks>
+    /// It fires for badges the server hands out and for badges granted by achievements, not for
+    /// badges read from an inventory load. Before the inventory has loaded, a badge the user already
+    /// owned can also count as added.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the badge.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnOwnedBadgeAdded(Action<OwnedBadge> handler)
         => Subscribe(
             handler,
@@ -172,12 +212,14 @@ public partial class ScriptGlobals
             value => BadgeInventory.BadgeAdded -= value);
 
     /// <summary>
-    /// Raised when an already-known badge is re-reported with different data, for example a new
-    /// owner count or rarity.
+    /// Registers a handler that runs when an already known badge is received again.
     /// </summary>
-    /// <param name="handler">Receives the updated badge.</param>
+    /// <remarks>
+    /// The badge usually carries different data, for example a new owner count or rarity.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the updated badge.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnOwnedBadgeUpdated(Action<OwnedBadge> handler)
         => Subscribe(
             handler,
@@ -185,12 +227,15 @@ public partial class ScriptGlobals
             value => BadgeInventory.BadgeUpdated -= value);
 
     /// <summary>
-    /// Raised when the server reports the badges a user has equipped — for any user, not only the
-    /// local one. This is the hook for watching badge sets of avatars in the room.
+    /// Registers a handler that runs when the server reports the badges a user has equipped.
     /// </summary>
-    /// <param name="handler">Receives the badge set, which carries its own user id.</param>
+    /// <remarks>
+    /// It fires for any user, not only the local one, so it is the hook for watching the badge
+    /// sets of avatars in the room.
+    /// </remarks>
+    /// <param name="handler">The handler to call with the badge set, which carries its own user id.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
-    /// <exception cref="ObjectDisposedException">The script globals have already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the script globals have already been disposed.</exception>
     public IDisposable OnSelectedBadgesUpdated(Action<UserBadges> handler)
         => Subscribe(
             handler,

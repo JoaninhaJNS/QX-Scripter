@@ -4,10 +4,22 @@ using Qx.Model.Wired;
 
 namespace Qx.Model.Messages.Incoming;
 
-/// <summary>
-/// How one wired variable is drawn above avatars or furni, as the Fx bar configuration of the room
-/// defines it. <see cref="Extra"/> carries the renderer settings, among them <c>icon</c>.
-/// </summary>
+/// <summary>Represents how one wired variable is drawn above avatars or furni, as the Fx bar configuration of the room defines it.</summary>
+/// <remarks><see cref="Extra"/> carries the renderer settings, among them <c>icon</c>.</remarks>
+/// <param name="ConfigId">The ID of the configuration.</param>
+/// <param name="IsUserFx">Whether the configuration applies to avatars rather than furni.</param>
+/// <param name="ShowMode">The show mode code as sent by the server.</param>
+/// <param name="VisibilityMask">The visibility mask as sent by the server.</param>
+/// <param name="ShowOnMouseHover">Whether the value is shown when the mouse hovers over the object.</param>
+/// <param name="ShowDuration">The show duration as sent by the server.</param>
+/// <param name="CategoryId">The category ID as sent by the server.</param>
+/// <param name="StyleId">The style ID as sent by the server.</param>
+/// <param name="ColorId">The color ID as sent by the server.</param>
+/// <param name="WidthId">The width ID as sent by the server.</param>
+/// <param name="RendererId">The renderer ID as sent by the server.</param>
+/// <param name="DefaultMinValue">The default lower bound of the value, used when a status sends none.</param>
+/// <param name="DefaultMaxValue">The default upper bound of the value, used when a status sends none.</param>
+/// <param name="Extra">Additional renderer settings as key and value pairs, such as <c>icon</c>.</param>
 public sealed record VariableFxConfigEntry(
     int ConfigId,
     bool IsUserFx,
@@ -24,7 +36,7 @@ public sealed record VariableFxConfigEntry(
     long DefaultMaxValue,
     IReadOnlyDictionary<string, string> Extra)
 {
-    /// <summary>The icon the room gave this variable, such as <c>gold</c> or <c>ranch.tomato</c>.</summary>
+    /// <summary>Gets the icon the room gave this variable, such as <c>gold</c> or <c>ranch.tomato</c>, or <see langword="null"/> when <see cref="Extra"/> has no <c>icon</c> entry.</summary>
     public string? Icon => Extra.GetValueOrDefault("icon");
 
     internal static VariableFxConfigEntry Parse(in PacketReader p) => new(
@@ -62,10 +74,20 @@ public sealed record VariableFxConfigEntry(
     }
 }
 
-/// <summary>
-/// The value of one wired variable on one avatar or furni, as shown in the Fx bar. The key reads
-/// <c>{configId}|{variableId}</c>; users are identified by their room index, furni by their item id.
-/// </summary>
+/// <summary>Represents the value of one wired variable on one avatar or furni, as shown in the Fx bar.</summary>
+/// <remarks>
+/// The key reads <c>{configId}|{variableId}</c>. Users are identified by their room index, furni by
+/// their item id. When only one of <see cref="MinValue"/> and <see cref="MaxValue"/> is set, composing
+/// writes the other as 0.
+/// </remarks>
+/// <param name="Key">The status key, <c>{configId}|{variableId}</c>.</param>
+/// <param name="IsInitialize">Whether the value is restated on entry rather than changed.</param>
+/// <param name="IsUserEntity">Whether the value belongs to an avatar rather than a furni.</param>
+/// <param name="EntityId">The avatar's room index, or the furni's item id.</param>
+/// <param name="Value">The current value.</param>
+/// <param name="MinValue">The lower bound the server set for this value, or <see langword="null"/> when none was sent.</param>
+/// <param name="MaxValue">The upper bound the server set for this value, or <see langword="null"/> when none was sent.</param>
+/// <param name="Extra">Additional renderer data sent with the value, such as <c>current_level</c>.</param>
 public sealed record VariableFxStatusEntry(
     string Key,
     bool IsInitialize,
@@ -76,13 +98,13 @@ public sealed record VariableFxStatusEntry(
     long? MaxValue,
     IReadOnlyDictionary<string, string> Extra)
 {
-    /// <summary>The Fx configuration the value is drawn with.</summary>
+    /// <summary>Gets the ID of the Fx configuration the value is drawn with, read from <see cref="Key"/>.</summary>
     public int ConfigId => VariableFxSlot.ConfigIdOf(Key);
 
-    /// <summary>The wired variable the value belongs to.</summary>
+    /// <summary>Gets the ID of the wired variable the value belongs to, read from <see cref="Key"/>.</summary>
     public string VariableId => VariableFxSlot.VariableIdOf(Key);
 
-    /// <summary>Which avatar or furni and which variable the value belongs to.</summary>
+    /// <summary>Gets the avatar or furni and the variable the value belongs to.</summary>
     public VariableFxSlot Slot => new(IsUserEntity, EntityId, ConfigId, VariableId);
 
     internal static VariableFxStatusEntry Parse(in PacketReader p)
@@ -120,10 +142,13 @@ public sealed record VariableFxStatusEntry(
     }
 }
 
-/// <summary>The Fx bar configurations a room adds or replaces.</summary>
+/// <summary>Represents the <c>VariableFxConfigs</c> message, received with the Fx bar configurations a room adds or replaces.</summary>
+/// <param name="Configs">The added or replaced configurations.</param>
 public sealed record VariableFxConfigUpdate(IReadOnlyList<VariableFxConfigEntry> Configs)
     : IParserComposer<VariableFxConfigUpdate>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static VariableFxConfigUpdate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -135,6 +160,8 @@ public sealed record VariableFxConfigUpdate(IReadOnlyList<VariableFxConfigEntry>
         return new(configs);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -146,10 +173,13 @@ public sealed record VariableFxConfigUpdate(IReadOnlyList<VariableFxConfigEntry>
     }
 }
 
-/// <summary>The Fx bar configurations a room removes.</summary>
+/// <summary>Represents the <c>VariableFxConfigsRemoved</c> message, received with the Fx bar configurations a room removes.</summary>
+/// <param name="ConfigIds">The IDs of the removed configurations.</param>
 public sealed record VariableFxConfigRemoval(IReadOnlyList<int> ConfigIds)
     : IParserComposer<VariableFxConfigRemoval>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static VariableFxConfigRemoval Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -161,6 +191,8 @@ public sealed record VariableFxConfigRemoval(IReadOnlyList<int> ConfigIds)
         return new(ids);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -172,13 +204,18 @@ public sealed record VariableFxConfigRemoval(IReadOnlyList<int> ConfigIds)
     }
 }
 
-/// <summary>
-/// Fx bar values that changed. A message marked <see cref="IsInitialize"/> restates values on entry
-/// rather than reporting a change, which the client shows without animation.
-/// </summary>
+/// <summary>Represents the <c>VariableFxStatus</c> message, received with Fx bar values that changed.</summary>
+/// <remarks>
+/// A message marked <see cref="IsInitialize"/> restates values on entry rather than reporting a change,
+/// which the client shows without animation.
+/// </remarks>
+/// <param name="IsInitialize">Whether the values are restated on entry rather than changed.</param>
+/// <param name="Statuses">The values.</param>
 public sealed record VariableFxStatusUpdate(bool IsInitialize, IReadOnlyList<VariableFxStatusEntry> Statuses)
     : IParserComposer<VariableFxStatusUpdate>
 {
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static VariableFxStatusUpdate Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -191,6 +228,8 @@ public sealed record VariableFxStatusUpdate(bool IsInitialize, IReadOnlyList<Var
         return new(is_initialize, statuses);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -203,13 +242,14 @@ public sealed record VariableFxStatusUpdate(bool IsInitialize, IReadOnlyList<Var
     }
 }
 
-/// <summary>
-/// Fx bar values that were removed. Each key reads <c>{configId}|{variableId}|{u or f}|{entityId}</c>.
-/// </summary>
+/// <summary>Represents the <c>VariableFxStatusRemoved</c> message, received with Fx bar values that were removed.</summary>
+/// <remarks>Each key reads <c>{configId}|{variableId}|{u or f}|{entityId}</c>.</remarks>
+/// <param name="Keys">The removal keys.</param>
 public sealed record VariableFxStatusRemoval(IReadOnlyList<string> Keys)
     : IParserComposer<VariableFxStatusRemoval>
 {
-    /// <summary>The removed values, read from the keys the way the client reads them.</summary>
+    /// <summary>Gets the removed values, read from the keys the way the client reads them.</summary>
+    /// <remarks>Keys that do not have four parts are skipped.</remarks>
     public IEnumerable<VariableFxSlot> Slots
     {
         get
@@ -222,6 +262,8 @@ public sealed record VariableFxStatusRemoval(IReadOnlyList<string> Keys)
         }
     }
 
+    /// <summary>Parses the message from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static VariableFxStatusRemoval Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -233,6 +275,8 @@ public sealed record VariableFxStatusRemoval(IReadOnlyList<string> Keys)
         return new(keys);
     }
 
+    /// <summary>Composes the message into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
@@ -244,13 +288,18 @@ public sealed record VariableFxStatusRemoval(IReadOnlyList<string> Keys)
     }
 }
 
-/// <summary>
-/// Which avatar or furni and which wired variable one Fx bar value belongs to, which is how the
-/// client files the values of every room object.
-/// </summary>
+/// <summary>Represents which avatar or furni and which wired variable one Fx bar value belongs to.</summary>
+/// <remarks>This is how the client files the values of every room object.</remarks>
+/// <param name="IsUserEntity">Whether the value belongs to an avatar rather than a furni.</param>
+/// <param name="EntityId">The avatar's room index, or the furni's item id.</param>
+/// <param name="ConfigId">The ID of the Fx configuration.</param>
+/// <param name="VariableId">The ID of the wired variable.</param>
 public readonly record struct VariableFxSlot(bool IsUserEntity, int EntityId, int ConfigId, string VariableId)
 {
-    /// <summary>The config id in a status key: everything before the first separator.</summary>
+    /// <summary>Gets the config id in a status key, which is everything before the first separator.</summary>
+    /// <param name="key">The status key.</param>
+    /// <returns>The config id, or 0 when that part is not an integer.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="key"/> is <see langword="null"/>.</exception>
     public static int ConfigIdOf(string key)
     {
         ArgumentNullException.ThrowIfNull(key);
@@ -259,7 +308,10 @@ public readonly record struct VariableFxSlot(bool IsUserEntity, int EntityId, in
         return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int id) ? id : 0;
     }
 
-    /// <summary>The variable id in a status key: everything after the first separator.</summary>
+    /// <summary>Gets the variable id in a status key, which is everything after the first separator.</summary>
+    /// <param name="key">The status key.</param>
+    /// <returns>The variable id, or an empty string when the key has no separator.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="key"/> is <see langword="null"/>.</exception>
     public static string VariableIdOf(string key)
     {
         ArgumentNullException.ThrowIfNull(key);
@@ -267,11 +319,16 @@ public readonly record struct VariableFxSlot(bool IsUserEntity, int EntityId, in
         return separator < 0 ? "" : key[(separator + 1)..];
     }
 
-    /// <summary>
-    /// Reads a removal key: the config id before the first separator, the entity kind and id after
-    /// the last two, and the variable id between them.
-    /// </summary>
-    /// <returns><see langword="false"/> when the key does not have those four parts.</returns>
+    /// <summary>Attempts to read a removal key into a slot.</summary>
+    /// <remarks>
+    /// The config id is the part before the first separator, the entity kind and id are the parts after
+    /// the last two separators, and the variable id is between them. The kind <c>u</c> marks an avatar,
+    /// and an entity id that is not an integer reads as 0.
+    /// </remarks>
+    /// <param name="key">The removal key.</param>
+    /// <param name="slot">The slot read from the key, or the default value when the key is not valid.</param>
+    /// <returns><see langword="true"/> when the key has those four parts; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="key"/> is <see langword="null"/>.</exception>
     public static bool TryFromRemovalKey(string key, out VariableFxSlot slot)
     {
         ArgumentNullException.ThrowIfNull(key);

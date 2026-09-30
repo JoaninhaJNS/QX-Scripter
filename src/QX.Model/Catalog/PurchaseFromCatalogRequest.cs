@@ -2,9 +2,7 @@ using Qx.Messages;
 
 namespace Qx.Model.Messages.Outgoing;
 
-/// <summary>
-/// Buys an offer from a catalog page.
-/// </summary>
+/// <summary>Represents the request that buys an offer from a catalog page.</summary>
 /// <param name="PageId">The catalog page the offer sits on.</param>
 /// <param name="OfferId">The offer to buy.</param>
 /// <param name="ExtraData">The offer's selection data, empty when it takes none.</param>
@@ -15,6 +13,9 @@ public sealed record PurchaseFromCatalogRequest(
     string ExtraData,
     int Quantity) : IParserComposer<PurchaseFromCatalogRequest>
 {
+    /// <summary>Reads the request from a packet.</summary>
+    /// <param name="p">The packet to read from.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
     public static PurchaseFromCatalogRequest Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -34,6 +35,9 @@ public sealed record PurchaseFromCatalogRequest(
         return value;
     }
 
+    /// <summary>Writes the request to a packet.</summary>
+    /// <param name="p">The packet to write to.</param>
+    /// <exception cref="UnsupportedClientException">Thrown when the packet is not for the Flash client.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

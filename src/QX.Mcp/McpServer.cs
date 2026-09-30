@@ -56,8 +56,9 @@ public sealed class McpServer
         SCRIPTS
         Scripts are C# (Roslyn scripting, top-level statements). Every public member of ScriptGlobals is
         in scope as a top-level symbol: Room, Users, FloorItems, Send, OnIn/OnOut, Delay, Log and more.
-        get_scripting_guide is the canonical overview, list_api lists that surface, and search_types,
-        get_type and search_members expose the exact model types and signatures behind it. A script
+        get_scripting_guide lists the guide's topics and returns any page, or every page with "all";
+        list_api lists that surface, and search_types, get_type and search_members expose the exact
+        model types and signatures behind it, with their documentation. A script
         compile_check compiles without running. run_code and run_script take timeout_ms and are
         abandoned when it expires, so never loop without checking Ct.
 
@@ -1451,10 +1452,12 @@ public sealed class McpServer
         new McpTool
         {
             Name = "get_scripting_guide",
-            Description = "Get a concise guide to the QX scripting API, including the //@ui: panel UI grammar, for writing scripts.",
-            InputSchema = Schema(),
+            Description =
+                "Read the QX scripting guide, the same pages as the documentation site. Without a topic it lists " +
+                "every topic with its summary; with a topic it returns that page, and \"all\" returns every page.",
+            InputSchema = OptionalSchema(("topic", "string", "page to read, or \"all\"", null, null, null)),
             Annotations = ClosedReadOnly,
-            Handler = (args, ct) => Task.FromResult(_host.GetScriptingGuide())
+            Handler = (args, ct) => Task.FromResult(_host.GetScriptingGuide(Str(args, "topic")))
         },
         new McpTool
         {
@@ -2115,7 +2118,7 @@ public sealed class McpServer
         JsonSerializer.Serialize(new Dictionary<string, object?> { ["jsonrpc"] = "2.0", ["id"] = IdValue(id), ["result"] = result });
 
     /// <summary>
-    /// Serialises a result, stamping it the way the request's era expects.
+    /// Serializes a result, stamping it the way the request's era expects.
     /// </summary>
     /// <remarks>
     /// A modern result says what kind it is and who answered, because the client is holding no

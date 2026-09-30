@@ -6,18 +6,22 @@ using Qx.Model.Wired;
 namespace Qx.Scripting;
 
 /// <summary>
-/// The wired variables defined in a room, in the order the server first reported them, with
-/// name-based lookup on top. A point-in-time snapshot: it does not update as the room changes.
+/// Represents the wired variables defined in a room, in the order the server first reported them,
+/// with name based lookup on top.
 /// </summary>
+/// <remarks>
+/// It is a point-in-time snapshot and does not update as the room changes. Names and ids are
+/// compared case sensitively.
+/// </remarks>
 /// <param name="All">Every variable definition, in server order.</param>
 public sealed record RoomVariables(IReadOnlyList<WiredVariableSnapshot> All) :
     IEnumerable<WiredVariableSnapshot>
 {
     /// <summary>
-    /// Finds a variable by display name, falling back to its id when no name matches.
+    /// Gets a variable by display name, falling back to its id when no name matches.
     /// </summary>
     /// <param name="name">The variable's display name, or its id string.</param>
-    /// <returns>The variable, or <see langword="null"/> when neither matches.</returns>
+    /// <value>The variable, or <see langword="null"/> when neither matches.</value>
     public WiredVariableSnapshot? this[string name] => WiredLookup.Find(All, name);
 
     /// <summary>Finds a variable by its id string only, ignoring display names.</summary>
@@ -27,8 +31,8 @@ public sealed record RoomVariables(IReadOnlyList<WiredVariableSnapshot> All) :
 
     /// <summary>Tries to find a variable by display name, falling back to its id.</summary>
     /// <param name="name">The variable's display name, or its id string.</param>
-    /// <param name="variable">Receives the variable, or <see langword="null"/> when not found.</param>
-    /// <returns><see langword="true"/> when a variable was found.</returns>
+    /// <param name="variable">The variable that was found, or <see langword="null"/> when not found.</param>
+    /// <returns><see langword="true"/> when a variable was found; otherwise, <see langword="false"/>.</returns>
     public bool TryGet(string name, out WiredVariableSnapshot? variable) =>
         (variable = this[name]) is not null;
 
@@ -38,16 +42,16 @@ public sealed record RoomVariables(IReadOnlyList<WiredVariableSnapshot> All) :
     public IEnumerable<WiredVariableSnapshot> OfTarget(WiredTarget target) =>
         All.Where(variable => variable.VariableTarget == (int)target);
 
-    /// <summary>How many variable definitions the snapshot holds.</summary>
+    /// <summary>Gets the number of variable definitions the snapshot holds.</summary>
     public int Count => All.Count;
 
-    /// <summary>Enumerates every variable definition in server order.</summary>
+    /// <summary>Returns an enumerator over every variable definition in server order.</summary>
     /// <returns>An enumerator over the snapshot.</returns>
     public IEnumerator<WiredVariableSnapshot> GetEnumerator() => All.GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
 
-/// <summary>One wired variable's value on a specific holder, paired with its definition.</summary>
+/// <summary>Represents one wired variable's value on a specific holder, paired with its definition.</summary>
 /// <param name="Variable">
 /// The variable's definition. When the room's definition list did not contain it, this is a
 /// placeholder whose id and name are both the raw variable id from the wire.
@@ -55,14 +59,17 @@ public sealed record RoomVariables(IReadOnlyList<WiredVariableSnapshot> All) :
 /// <param name="Value">The integer value stored on the holder.</param>
 public sealed record WiredValue(WiredVariableSnapshot Variable, int Value)
 {
-    /// <summary>The variable's display name, taken from its definition.</summary>
+    /// <summary>Gets the variable's display name, taken from its definition.</summary>
     public string Name => Variable.VariableName;
 }
 
 /// <summary>
-/// A snapshot of every wired variable value held by one object, user or the global scope, resolved
+/// Represents every wired variable value held by one furni, user or the global scope, resolved
 /// against the room's variable definitions.
 /// </summary>
+/// <remarks>
+/// It is a point-in-time snapshot and does not update as the values change.
+/// </remarks>
 /// <param name="Target">The holder kind that was inspected.</param>
 /// <param name="ObjectId">
 /// The holder's identifier as the server reported it: the furni id for a furni, the room index for
@@ -80,19 +87,19 @@ public sealed record WiredObjectValues(
     IReadOnlyList<int> ConfiguredInWireds) : IEnumerable<WiredValue>
 {
     /// <summary>
-    /// Looks up a value by variable display name, falling back to the variable id.
+    /// Gets a value by variable display name, falling back to the variable id.
     /// </summary>
     /// <param name="name">The variable's display name, or its id string.</param>
-    /// <returns>The value, or <see langword="null"/> when the holder carries no such variable.</returns>
+    /// <value>The value, or <see langword="null"/> when the holder carries no such variable.</value>
     public int? this[string name] => WiredLookup.FindValue(Values, name)?.Value;
 
-    /// <summary>How many values the holder carries.</summary>
+    /// <summary>Gets the number of values the holder carries.</summary>
     public int Count => Values.Count;
 
     /// <summary>Tries to look up a value by variable display name, falling back to the id.</summary>
     /// <param name="name">The variable's display name, or its id string.</param>
-    /// <param name="value">Receives the value, or 0 when the variable is absent.</param>
-    /// <returns><see langword="true"/> when the holder carries the variable.</returns>
+    /// <param name="value">The value that was found, or 0 when the variable is absent.</param>
+    /// <returns><see langword="true"/> when the holder carries the variable; otherwise, <see langword="false"/>.</returns>
     public bool TryGet(string name, out int value)
     {
         int? found = this[name];
@@ -100,7 +107,7 @@ public sealed record WiredObjectValues(
         return found.HasValue;
     }
 
-    /// <summary>Enumerates every value the holder carries.</summary>
+    /// <summary>Returns an enumerator over every value the holder carries.</summary>
     /// <returns>An enumerator over the snapshot.</returns>
     public IEnumerator<WiredValue> GetEnumerator() => Values.GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -139,35 +146,45 @@ internal static class WiredLookup
 }
 
 /// <content>
-/// The friendly layer over the raw wired variable protocol: it runs the hash/diff exchange to
+/// The friendly layer over the raw wired variable protocol: it runs the hash and diff exchange to
 /// completion, resolves variable ids to display names, and lets values be read and written by name.
 /// <para>
-/// Everything here is a live request, not cached state. Each call re-fetches the room's variable
-/// definitions, so a loop that reads many values one by one is expensive — prefer fetching a
+/// Everything here is a live request, not cached state. Each call fetches the room's variable
+/// definitions again, so a loop that reads many values one by one is expensive. Prefer fetching a
 /// holder's values once and indexing into the result.
 /// </para>
 /// </content>
 public partial class ScriptGlobals
 {
     /// <summary>
-    /// Fetches the room's complete wired variable definitions by running the diff exchange until
-    /// the server marks the last chunk.
+    /// Requests the room's complete wired variable definitions.
     /// </summary>
+    /// <remarks>
+    /// The diff exchange runs from an empty cache until the server marks the last chunk, for at
+    /// most 64 chunks. Concurrent fetches are served one at a time.
+    /// </remarks>
+    /// <param name="timeoutMs">The total timeout in milliseconds for the whole exchange, from 1 to 120000.</param>
     /// <returns>
     /// Every variable definition, in the order the server first reported it. Empty when the room
     /// has no wired variables.
     /// </returns>
-    /// <exception cref="OperationCanceledException">The script was stopped while waiting.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when the definitions did not arrive in time.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the server sent more than 64 chunks.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while waiting.</exception>
     public async Task<RoomVariables> GetRoomVariables(int timeoutMs = 10000) =>
         room_variables(await get_room_variables(timeoutMs));
 
     /// <summary>
-    /// Fetches the room's variable definitions and returns the one matching a name. This is a
-    /// definition, not a value — it says what the variable is, not what any holder has stored.
+    /// Requests the room's variable definitions and returns the one matching a name.
     /// </summary>
+    /// <remarks>
+    /// This is a definition, not a value: it says what the variable is, not what any holder has
+    /// stored.
+    /// </remarks>
     /// <param name="name">The variable's display name, or its id string.</param>
-    /// <param name="timeoutMs">How long to wait for the definitions, in milliseconds.</param>
+    /// <param name="timeoutMs">The total timeout in milliseconds for fetching the definitions.</param>
     /// <returns>The definition, or <see langword="null"/> when the room has no such variable.</returns>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when the definitions did not arrive in time.</exception>
     public async Task<WiredVariableSnapshot?> GetRoomVariable(
         string name,
         int timeoutMs = 10000) =>
@@ -178,25 +195,32 @@ public partial class ScriptGlobals
     /// </summary>
     /// <param name="target">The holder kind: furni, user or global.</param>
     /// <param name="objectId">The furni id, the user's room index, or 0 for global.</param>
-    /// <param name="timeoutMs">How long to wait for each underlying reply, in milliseconds.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for each of the two underlying requests.</param>
     /// <returns>The holder's values, resolved against the room's variable definitions.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">A reply did not arrive in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when a reply did not arrive in time.</exception>
     public Task<WiredObjectValues> GetVariableValues(WiredTarget target, int objectId, int timeoutMs = 10000) =>
         GetVariableValues(target, (Id)(long)objectId, timeoutMs);
 
     /// <summary>
     /// Reads every wired variable value held by one object and resolves each id to its definition.
-    /// This makes two round trips: one for the room's definitions and one for the holder's values.
     /// </summary>
+    /// <remarks>
+    /// This makes two round trips: one for the room's definitions and one for the holder's values.
+    /// </remarks>
     /// <param name="target">The holder kind: furni, user or global.</param>
     /// <param name="objectId">The furni id, the user's room index, or 0 for global.</param>
-    /// <param name="timeoutMs">How long to wait for each underlying reply, in milliseconds.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for each of the two underlying requests.</param>
     /// <returns>
     /// The holder's values. A value whose variable is not in the room's definition list still
     /// appears, carrying a placeholder definition whose name equals its id.
     /// </returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">A reply did not arrive in time.</exception>
-    /// <exception cref="OperationCanceledException">The script was stopped while waiting.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="target"/> is not furni, user or global, or <paramref name="objectId"/> is not
+    /// 0 for the global scope.
+    /// </exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when a reply did not arrive in time.</exception>
+    /// <exception cref="Qx.Game.RequestDisconnectedException">Thrown when the room or wired state changed between the two requests.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the script was stopped while waiting.</exception>
     public async Task<WiredObjectValues> GetVariableValues(WiredTarget target, Id objectId, int timeoutMs = 10000)
     {
         WiredVariableCollectionSnapshot definitions = await get_room_variables(timeoutMs);
@@ -229,7 +253,7 @@ public partial class ScriptGlobals
     /// <param name="furniId">The floor item id of the furni.</param>
     /// <param name="timeoutMs">How long to wait for each underlying reply, in milliseconds.</param>
     /// <returns>The furni's values, plus the ids of the wireds that reference them.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">A reply did not arrive in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when a reply did not arrive in time.</exception>
     public Task<WiredObjectValues> GetFurniValues(Id furniId, int timeoutMs = 10000) =>
         GetVariableValues(WiredTarget.Furni, furniId, timeoutMs);
 
@@ -237,14 +261,14 @@ public partial class ScriptGlobals
     /// <param name="userIndex">The user's room index, not their account id.</param>
     /// <param name="timeoutMs">How long to wait for each underlying reply, in milliseconds.</param>
     /// <returns>The user's values.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">A reply did not arrive in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when a reply did not arrive in time.</exception>
     public Task<WiredObjectValues> GetUserValues(int userIndex, int timeoutMs = 10000) =>
         GetVariableValues(WiredTarget.User, userIndex, timeoutMs);
 
     /// <summary>Reads the room's global wired variable values.</summary>
     /// <param name="timeoutMs">How long to wait for each underlying reply, in milliseconds.</param>
     /// <returns>The global values.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">A reply did not arrive in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when a reply did not arrive in time.</exception>
     public Task<WiredObjectValues> GetGlobalValues(int timeoutMs = 10000) =>
         GetVariableValues(WiredTarget.Global, 0, timeoutMs);
 
@@ -253,7 +277,7 @@ public partial class ScriptGlobals
     /// <param name="name">The variable's display name, or its id string.</param>
     /// <param name="timeoutMs">How long to wait for each underlying reply, in milliseconds.</param>
     /// <returns>The value, or <see langword="null"/> when the furni carries no such variable.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">A reply did not arrive in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when a reply did not arrive in time.</exception>
     /// <remarks>
     /// This re-fetches the room's definitions and the furni's whole value set. Reading several
     /// values from the same furni is much cheaper through the values snapshot.
@@ -266,7 +290,7 @@ public partial class ScriptGlobals
     /// <param name="name">The variable's display name, or its id string.</param>
     /// <param name="timeoutMs">How long to wait for each underlying reply, in milliseconds.</param>
     /// <returns>The value, or <see langword="null"/> when the user carries no such variable.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">A reply did not arrive in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when a reply did not arrive in time.</exception>
     public async Task<int?> GetUserValue(int userIndex, string name, int timeoutMs = 10000) =>
         (await GetUserValues(userIndex, timeoutMs))[name];
 
@@ -274,24 +298,27 @@ public partial class ScriptGlobals
     /// <param name="name">The variable's display name, or its id string.</param>
     /// <param name="timeoutMs">How long to wait for each underlying reply, in milliseconds.</param>
     /// <returns>The value, or <see langword="null"/> when the room has no such global variable.</returns>
-    /// <exception cref="Qx.Game.RequestTimeoutException">A reply did not arrive in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when a reply did not arrive in time.</exception>
     public async Task<int?> GetGlobalValue(string name, int timeoutMs = 10000) =>
         (await GetGlobalValues(timeoutMs))[name];
 
     /// <summary>
     /// Writes a wired variable value on a furni, naming the variable rather than passing its id.
-    /// The definitions are fetched first to resolve the name; the write itself is
-    /// fire-and-forget, so the returned task completes as soon as the message is sent and says
-    /// nothing about whether the server accepted it.
     /// </summary>
+    /// <remarks>
+    /// The definitions are fetched first to resolve the name, which must belong to a furni variable
+    /// that holds a value and can be written. The write itself is fire-and-forget, so the returned
+    /// task completes as soon as the message is sent and says nothing about whether the server
+    /// accepted it.
+    /// </remarks>
     /// <param name="furniId">The floor item id of the furni.</param>
     /// <param name="name">The variable's display name, or its id string.</param>
     /// <param name="value">The integer value to store.</param>
-    /// <param name="timeoutMs">How long to wait for the definitions used to resolve the name.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for fetching the definitions used to resolve the name.</param>
     /// <exception cref="InvalidOperationException">
-    /// The room has no writable furni-target wired variable with that name or id.
+    /// Thrown when the room has no writable furni-target wired variable with that name or id.
     /// </exception>
-    /// <exception cref="Qx.Game.RequestTimeoutException">The definitions did not arrive in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when the definitions did not arrive in time.</exception>
     public async Task SetFurniValue(Id furniId, string name, int value, int timeoutMs = 10000)
     {
         WiredVariableSnapshot v =
@@ -300,17 +327,20 @@ public partial class ScriptGlobals
     }
 
     /// <summary>
-    /// Writes a global wired variable value, naming the variable rather than passing its id. The
-    /// write is fire-and-forget: the returned task completes once the message is sent, not once
-    /// the server has applied it.
+    /// Writes a global wired variable value, naming the variable rather than passing its id.
     /// </summary>
+    /// <remarks>
+    /// The definitions are fetched first to resolve the name, which must belong to a global variable
+    /// that holds a value and can be written. The write is fire-and-forget: the returned task
+    /// completes once the message is sent, not once the server has applied it.
+    /// </remarks>
     /// <param name="name">The variable's display name, or its id string.</param>
     /// <param name="value">The integer value to store.</param>
-    /// <param name="timeoutMs">How long to wait for the definitions used to resolve the name.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for fetching the definitions used to resolve the name.</param>
     /// <exception cref="InvalidOperationException">
-    /// The room has no writable global-target wired variable with that name or id.
+    /// Thrown when the room has no writable global-target wired variable with that name or id.
     /// </exception>
-    /// <exception cref="Qx.Game.RequestTimeoutException">The definitions did not arrive in time.</exception>
+    /// <exception cref="Qx.Game.RequestTimeoutException">Thrown when the definitions did not arrive in time.</exception>
     public async Task SetGlobalValue(string name, int value, int timeoutMs = 10000)
     {
         WiredVariableSnapshot v =
@@ -333,6 +363,29 @@ public partial class ScriptGlobals
     private static bool writable(WiredVariableSnapshot variable, WiredTarget target) =>
         variable.VariableTarget == (int)target && variable.HasValue && variable.CanWriteValue;
 
+    /// <summary>
+    /// Polls the room's wired variable definitions in the background and calls a handler whenever
+    /// they change.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Every <paramref name="intervalMs"/> milliseconds, while the room is ready, the cheap
+    /// all-variables hash is requested; the full definitions are fetched only when the hash or the
+    /// room changed since the last poll. The handler runs on the polling task, first with the
+    /// initial definitions and then after each change.
+    /// </para>
+    /// <para>
+    /// Timeouts, disconnects and leaving the room are skipped over and polling continues. An
+    /// exception thrown by <paramref name="onChange"/>, or any other request error, ends the watch
+    /// and is reported as a background error. Same as
+    /// <see cref="WatchRoomVariables(Action{WiredVariableCollectionSnapshot}, int)"/>.
+    /// </para>
+    /// </remarks>
+    /// <param name="onChange">The handler to call with the complete definitions after each change.</param>
+    /// <param name="intervalMs">The delay between polls in milliseconds.</param>
+    /// <returns>A handle that stops the polling when disposed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="onChange"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="intervalMs"/> is zero or negative.</exception>
     public IDisposable WatchVariables(
         Action<WiredVariableCollectionSnapshot> onChange,
         int intervalMs = 1000) =>

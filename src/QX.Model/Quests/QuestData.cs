@@ -2,6 +2,7 @@ using Qx.Messages;
 
 namespace Qx.Model.Quests;
 
+/// <summary>Represents a quest with its campaign, progress and reward.</summary>
 public sealed record QuestData : IParserComposer<QuestData>
 {
     private string campaign_code = "";
@@ -11,6 +12,25 @@ public sealed record QuestData : IParserComposer<QuestData>
     private string catalog_page_name = "";
     private string chain_code = "";
 
+    /// <summary>Initializes a new instance of the <see cref="QuestData"/> record.</summary>
+    /// <param name="CampaignCode">The code of the campaign the quest belongs to.</param>
+    /// <param name="CompletedQuestsInCampaign">The number of quests completed in the campaign.</param>
+    /// <param name="QuestCountInCampaign">The number of quests in the campaign.</param>
+    /// <param name="ActivityPointType">The activity point type the reward is paid in, 0 for duckets.</param>
+    /// <param name="Id">The quest id, less than 1 when the campaign is completed.</param>
+    /// <param name="IsAccepted">Whether the local user has accepted the quest.</param>
+    /// <param name="Type">The quest type code.</param>
+    /// <param name="ImageVersion">The image version of the quest.</param>
+    /// <param name="RewardCurrencyAmount">The amount of activity points the quest rewards.</param>
+    /// <param name="LocalizationCode">The localization code of the quest texts.</param>
+    /// <param name="CompletedSteps">The number of steps completed.</param>
+    /// <param name="TotalSteps">The number of steps the quest has.</param>
+    /// <param name="SortOrder">The sort order of the quest.</param>
+    /// <param name="CatalogPageName">The name of the catalog page linked to the quest.</param>
+    /// <param name="ChainCode">The code of the quest chain.</param>
+    /// <param name="IsEasy">Whether the quest is an easy quest.</param>
+    /// <param name="IsSeasonal">Whether the quest belongs to a seasonal campaign.</param>
+    /// <param name="SeasonalSecondsLeft">The seconds left before the seasonal campaign closes, or <see langword="null"/> for a quest that is not seasonal.</param>
     public QuestData(
         string CampaignCode,
         int CompletedQuestsInCampaign,
@@ -51,6 +71,7 @@ public sealed record QuestData : IParserComposer<QuestData>
         this.SeasonalSecondsLeft = SeasonalSecondsLeft;
     }
 
+    /// <summary>Gets the code of the campaign the quest belongs to.</summary>
     public string CampaignCode
     {
         get => campaign_code;
@@ -61,12 +82,18 @@ public sealed record QuestData : IParserComposer<QuestData>
         }
     }
 
+    /// <summary>Gets the number of quests completed in the campaign.</summary>
     public int CompletedQuestsInCampaign { get; init; }
+    /// <summary>Gets the number of quests in the campaign.</summary>
     public int QuestCountInCampaign { get; init; }
+    /// <summary>Gets the activity point type the reward is paid in, 0 for duckets.</summary>
     public int ActivityPointType { get; init; }
+    /// <summary>Gets the quest id, less than 1 when the campaign is completed.</summary>
     public int Id { get; init; }
+    /// <summary>Gets whether the local user has accepted the quest.</summary>
     public bool IsAccepted { get; init; }
 
+    /// <summary>Gets the quest type code.</summary>
     public string Type
     {
         get => type;
@@ -77,6 +104,7 @@ public sealed record QuestData : IParserComposer<QuestData>
         }
     }
 
+    /// <summary>Gets the image version of the quest.</summary>
     public string ImageVersion
     {
         get => image_version;
@@ -87,8 +115,10 @@ public sealed record QuestData : IParserComposer<QuestData>
         }
     }
 
+    /// <summary>Gets the amount of activity points the quest rewards.</summary>
     public int RewardCurrencyAmount { get; init; }
 
+    /// <summary>Gets the localization code of the quest texts.</summary>
     public string LocalizationCode
     {
         get => localization_code;
@@ -99,10 +129,14 @@ public sealed record QuestData : IParserComposer<QuestData>
         }
     }
 
+    /// <summary>Gets the number of steps completed.</summary>
     public int CompletedSteps { get; init; }
+    /// <summary>Gets the number of steps the quest has.</summary>
     public int TotalSteps { get; init; }
+    /// <summary>Gets the sort order of the quest.</summary>
     public int SortOrder { get; init; }
 
+    /// <summary>Gets the name of the catalog page linked to the quest.</summary>
     public string CatalogPageName
     {
         get => catalog_page_name;
@@ -113,6 +147,7 @@ public sealed record QuestData : IParserComposer<QuestData>
         }
     }
 
+    /// <summary>Gets the code of the quest chain.</summary>
     public string ChainCode
     {
         get => chain_code;
@@ -123,17 +158,43 @@ public sealed record QuestData : IParserComposer<QuestData>
         }
     }
 
+    /// <summary>Gets whether the quest is an easy quest.</summary>
     public bool IsEasy { get; init; }
+    /// <summary>Gets whether the quest belongs to a seasonal campaign.</summary>
     public bool IsSeasonal { get; init; }
+    /// <summary>Gets the seconds left before the seasonal campaign closes, or <see langword="null"/> for a quest that is not seasonal.</summary>
     public int? SeasonalSecondsLeft { get; init; }
 
+    /// <summary>Gets whether every step is completed, which is when <see cref="CompletedSteps"/> equals <see cref="TotalSteps"/>.</summary>
     public bool IsCompleted => CompletedSteps == TotalSteps;
+    /// <summary>Gets whether the whole campaign is completed, which is when <see cref="QuestData.Id"/> is less than 1.</summary>
     public bool IsCampaignCompleted => Id < 1;
+    /// <summary>Gets whether the quest is the last one of its campaign, which is when <see cref="CompletedQuestsInCampaign"/> reaches <see cref="QuestCountInCampaign"/>.</summary>
     public bool IsLastQuestInCampaign => CompletedQuestsInCampaign >= QuestCountInCampaign;
+    /// <summary>Gets the campaign code, followed by <c>.</c> and <see cref="ChainCode"/> for seasonal quests.</summary>
     public string CampaignChainCode => IsSeasonal
         ? $"{CampaignCode}.{ChainCode}"
         : CampaignCode;
 
+    /// <summary>Deconstructs the quest into its fields.</summary>
+    /// <param name="CampaignCode">The code of the campaign the quest belongs to.</param>
+    /// <param name="CompletedQuestsInCampaign">The number of quests completed in the campaign.</param>
+    /// <param name="QuestCountInCampaign">The number of quests in the campaign.</param>
+    /// <param name="ActivityPointType">The activity point type the reward is paid in.</param>
+    /// <param name="Id">The quest id.</param>
+    /// <param name="IsAccepted">Whether the local user has accepted the quest.</param>
+    /// <param name="Type">The quest type code.</param>
+    /// <param name="ImageVersion">The image version of the quest.</param>
+    /// <param name="RewardCurrencyAmount">The amount of activity points the quest rewards.</param>
+    /// <param name="LocalizationCode">The localization code of the quest texts.</param>
+    /// <param name="CompletedSteps">The number of steps completed.</param>
+    /// <param name="TotalSteps">The number of steps the quest has.</param>
+    /// <param name="SortOrder">The sort order of the quest.</param>
+    /// <param name="CatalogPageName">The name of the catalog page linked to the quest.</param>
+    /// <param name="ChainCode">The code of the quest chain.</param>
+    /// <param name="IsEasy">Whether the quest is an easy quest.</param>
+    /// <param name="IsSeasonal">Whether the quest belongs to a seasonal campaign.</param>
+    /// <param name="SeasonalSecondsLeft">The seconds left before the seasonal campaign closes, or <see langword="null"/>.</param>
     public void Deconstruct(
         out string CampaignCode,
         out int CompletedQuestsInCampaign,
@@ -174,6 +235,8 @@ public sealed record QuestData : IParserComposer<QuestData>
         SeasonalSecondsLeft = this.SeasonalSecondsLeft;
     }
 
+    /// <summary>Parses quest data from a packet.</summary>
+    /// <param name="p">The packet reader.</param>
     public static QuestData Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -260,6 +323,9 @@ public sealed record QuestData : IParserComposer<QuestData>
             seasonal_seconds_left);
     }
 
+    /// <summary>Composes the quest data into a packet.</summary>
+    /// <param name="p">The packet writer.</param>
+    /// <exception cref="InvalidDataException">Thrown when <see cref="IsSeasonal"/> does not match whether <see cref="SeasonalSecondsLeft"/> is set.</exception>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 

@@ -4,6 +4,15 @@ namespace Qx.Game.Snapshots;
 
 public sealed partial class GameQueryService
 {
+    /// <summary>Gets the badges the local user owns.</summary>
+    /// <remarks>
+    /// The badges are ordered by code case-insensitively, then by identifier. With
+    /// <paramref name="maxBadges"/> set to 0 only the counts and load state are returned.
+    /// </remarks>
+    /// <param name="maxBadges">The maximum number of badges to return.</param>
+    /// <returns>The <c>badge_inventory</c> query envelope.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxBadges"/> is negative.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the badge application returns an invalid or incomplete snapshot.</exception>
     public QueryEnvelope<BadgeInventorySnapshot> BadgeInventory(int maxBadges = 500)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(maxBadges);
