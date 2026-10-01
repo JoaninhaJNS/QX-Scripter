@@ -266,6 +266,7 @@ public sealed class RuntimeHost : IDisposable, IAsyncDisposable
     void StartMcp()
     {
         bool started = false;
+        bool registered = false;
         Exception? failure = null;
         lock (_gate)
         {
@@ -277,8 +278,10 @@ public sealed class RuntimeHost : IDisposable, IAsyncDisposable
                 {
                     started = Mcp.Start();
                     if (!started)
-                        failure = new InvalidOperationException(
-                            $"MCP port {_options.McpPort} is held by {McpServer.PortHolder(_options.McpPort)}.");
+                    {
+                        registered = Mcp.PortRegistered;
+                        failure = new InvalidOperationException(Mcp.StartFailure);
+                    }
                 }
                 catch (Exception error)
                 {
@@ -294,6 +297,8 @@ public sealed class RuntimeHost : IDisposable, IAsyncDisposable
             return;
         if (failure is null)
             Diag.Info($"MCP server listening on http://127.0.0.1:{Mcp.Port}/mcp", "mcp");
+        else if (registered)
+            Diag.Warn(failure.Message, "mcp");
         else
             Diag.Error(failure.Message, "mcp");
     }
@@ -378,8 +383,9 @@ public sealed class RuntimeHost : IDisposable, IAsyncDisposable
             Messages.LoadVerifiedFallbackCatalog(prepared.Key.Client, catalog, preferred: false);
             lock (_gate)
                 _header_catalog_errors.Remove(identity);
+            string build = prepared.Catalog.ClientBuildIds.Count == 0 ? "unknown" : string.Join(", ", prepared.Catalog.ClientBuildIds);
             Diag.Info(
-                $"Prepared {prepared.Key.Client} catalog for build {prepared.Candidate.Version} with {catalog.HeaderCount} headers from {prepared.Candidate.Source}",
+                $"Prepared {prepared.Key.Client} catalog from {prepared.Candidate.Source} release {prepared.Candidate.Version} (build {build}) with {catalog.HeaderCount} headers",
                 "protocol");
             return true;
         }

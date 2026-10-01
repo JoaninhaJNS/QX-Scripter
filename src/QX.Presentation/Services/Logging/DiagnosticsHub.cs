@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using Qx.Diagnostics;
 using Qx.Interception;
 using Qx.Messages;
@@ -15,13 +17,18 @@ public sealed class DiagnosticsHub : IApplicationLog, IDisposable
     public const int Capacity = 5000;
     public const long RotationBytes = 4 * 1024 * 1024;
 
+    const int BatchChars = 64 * 1024;
+    static readonly TimeSpan FileLockTimeout = TimeSpan.FromSeconds(2);
+
     readonly string _log_file;
+    readonly Mutex? _file_lock;
     readonly BlockingCollection<string> _lines = new(new ConcurrentQueue<string>());
     readonly ConcurrentQueue<Action> _flushes = new();
     readonly ConcurrentQueue<LogEntry> _pending = new();
     readonly ObservableCollection<LogEntry> _entries = [];
     readonly InterceptFailureLog _intercepts = new();
     readonly Thread _writer;
+    FileStream? _file;
     CoalescingSignal? _drain;
     DesktopRuntime? _runtime;
     long _sequence;
@@ -30,6 +37,7 @@ public sealed class DiagnosticsHub : IApplicationLog, IDisposable
     DiagnosticsHub(string log_file)
     {
         _log_file = log_file;
+        _file_lock = CreateFileLock(log_file);
         Entries = new ReadOnlyObservableCollection<LogEntry>(_entries);
         _writer = new Thread(WriteLines) { IsBackground = true, Name = "QX log writer" };
     }
@@ -110,7 +118,8 @@ public sealed class DiagnosticsHub : IApplicationLog, IDisposable
             return;
         Diag.Emitted -= Record;
         _lines.CompleteAdding();
-        _writer.Join(TimeSpan.FromSeconds(1));
+        if (_writer.Join(TimeSpan.FromSeconds(1)))
+            _file_lock?.Dispose();
     }
 
     void Record(DiagLevel level, string message, string? category)
@@ -154,54 +163,111 @@ public sealed class DiagnosticsHub : IApplicationLog, IDisposable
             Trimmed?.Invoke(removed);
     }
 
-    void Rotate()
+    void Rotate() => UnderFileLock(() =>
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_log_file)!);
+        if (File.Exists(_log_file) && new FileInfo(_log_file).Length > RotationBytes && !IsOpenElsewhere(_log_file))
+            File.Move(_log_file, _log_file + ".1", overwrite: true);
+    });
+
+    static bool IsOpenElsewhere(string path)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_log_file)!);
-            if (File.Exists(_log_file) && new FileInfo(_log_file).Length > RotationBytes)
-                File.Move(_log_file, _log_file + ".1", overwrite: true);
+            new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None).Dispose();
+            return false;
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        catch (IOException)
         {
+            return true;
         }
     }
 
     void WriteLines()
     {
-        StreamWriter? writer = null;
+        var batch = new StringBuilder();
         try
         {
             foreach (string line in _lines.GetConsumingEnumerable())
             {
-                writer ??= Open();
-                if (line.Length > 0)
-                    writer?.Write(line);
+                batch.Append(line);
+                if (_lines.Count > 0 && batch.Length < BatchChars)
+                    continue;
+                Append(batch);
                 if (_lines.Count == 0)
-                {
-                    writer?.Flush();
                     CompleteFlushes();
-                }
             }
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ObjectDisposedException)
-        {
         }
         finally
         {
-            writer?.Dispose();
+            _file?.Dispose();
+            _file = null;
             CompleteFlushes();
         }
     }
 
-    StreamWriter? Open()
+    void Append(StringBuilder batch)
     {
+        if (batch.Length == 0)
+            return;
+        byte[] bytes = Encoding.UTF8.GetBytes(batch.ToString());
+        batch.Clear();
+        bool written = UnderFileLock(() =>
+        {
+            _file ??= new FileStream(_log_file, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete, 0);
+            _file.Seek(0, SeekOrigin.End);
+            _file.Write(bytes);
+        });
+        if (written)
+            return;
+        _file?.Dispose();
+        _file = null;
+    }
+
+    bool UnderFileLock(Action write)
+    {
+        bool owned = AcquireFileLock();
         try
         {
-            var stream = new FileStream(_log_file, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
-            return new StreamWriter(stream);
+            write();
+            return true;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+        finally
+        {
+            if (owned)
+                _file_lock!.ReleaseMutex();
+        }
+    }
+
+    bool AcquireFileLock()
+    {
+        if (_file_lock is null)
+            return false;
+        try
+        {
+            return _file_lock.WaitOne(FileLockTimeout);
+        }
+        catch (AbandonedMutexException)
+        {
+            return true;
+        }
+    }
+
+    static Mutex? CreateFileLock(string log_file)
+    {
+        byte[] path = Encoding.UTF8.GetBytes(Path.GetFullPath(log_file).ToUpperInvariant());
+        try
+        {
+            return new Mutex(
+                false,
+                "qx-log-" + Convert.ToHexString(SHA256.HashData(path), 0, 16),
+                new NamedWaitHandleOptions { CurrentSessionOnly = false });
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or WaitHandleCannotBeOpenedException)
         {
             return null;
         }

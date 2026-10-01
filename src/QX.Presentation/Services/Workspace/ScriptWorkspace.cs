@@ -120,9 +120,7 @@ public sealed class ScriptWorkspace : IScriptWorkspace, IDisposable
         }
         if (_opening.TryGetValue(full, out Task<OpenResult>? running))
             return AwaitSharedAsync(running, cancellation_token);
-        var shared = new TaskCompletionSource<OpenResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _opening[full] = shared.Task;
-        return ReadAndAddAsync(full, shared, cancellation_token);
+        return ReadAndAddAsync(full, cancellation_token);
     }
 
     public ScriptDocument? FindByPath(string path) =>
@@ -421,23 +419,27 @@ public sealed class ScriptWorkspace : IScriptWorkspace, IDisposable
         return result.Document is null ? result : new OpenResult(OpenOutcome.AlreadyOpen, result.Document);
     }
 
-    async Task<OpenResult> ReadAndAddAsync(string full, TaskCompletionSource<OpenResult> shared, CancellationToken cancellation_token)
+    async Task<OpenResult> ReadAndAddAsync(string full, CancellationToken cancellation_token)
     {
+        var shared = new TaskCompletionSource<OpenResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _opening[full] = shared.Task;
         try
         {
-            OpenResult result = await ReadAsync(full, cancellation_token);
-            shared.TrySetResult(result);
-            return result;
+            shared.TrySetResult(await ReadAsync(full, cancellation_token));
+        }
+        catch (OperationCanceledException error)
+        {
+            shared.TrySetCanceled(error.CancellationToken);
         }
         catch (Exception error)
         {
             shared.TrySetException(error);
-            throw;
         }
         finally
         {
             _opening.Remove(full);
         }
+        return await shared.Task;
     }
 
     async Task<OpenResult> ReadAsync(string full, CancellationToken cancellation_token)

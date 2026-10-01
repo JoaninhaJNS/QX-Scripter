@@ -8,6 +8,15 @@ work in the editor.
 The server listens on `http://127.0.0.1:9390/mcp` with the Streamable HTTP transport. Copy the
 connection URL from the settings of the desktop app; it contains the access token.
 
+## Several instances
+
+One port serves one QX window. A second window, for example for a second account, runs without MCP
+and logs that the port is taken. To give it its own server, start it with the environment variable
+`QX_MCP_PORT` set to a free port such as `9391`.
+
+On Windows the server uses http.sys, so tools like `netstat` report every MCP port as held by System
+(pid 4) instead of the QX process.
+
 ## Permissions
 
 The server is configured in `mcp.json` in the QX Scripter configuration folder, next to the

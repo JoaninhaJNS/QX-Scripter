@@ -25,7 +25,7 @@ public sealed partial class App : Application
         composition.AttachUi(this);
         DataTemplates.Add(composition.Views);
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.MainWindow = composition.CreateShell(desktop);
+            composition.CreateShell(desktop);
         base.OnFrameworkInitializationCompleted();
     }
 }

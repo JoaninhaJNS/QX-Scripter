@@ -14,6 +14,7 @@ public sealed class McpServer
     private const int MaxRunTimeoutMs = 600000;
     private const int AbandonGraceMs = 2000;
     private const int MaxOffset = 1000000;
+    private const int ErrorAlreadyExists = 183;
 
     private static readonly HashSet<string> SupportedProtocolVersions =
         [.. McpProtocol.Supported];
@@ -180,6 +181,16 @@ public sealed class McpServer
             .ToArray();
     }
 
+    /// <summary>
+    /// Gets whether the last <see cref="Start"/> failed because the endpoint is already registered with
+    /// http.sys, usually by another QX window. http.sys lists every HttpListener port as held by System
+    /// (pid 4), so the owning process cannot be named.
+    /// </summary>
+    public bool PortRegistered { get; private set; }
+
+    /// <summary>Gets why the last <see cref="Start"/> failed, or <see langword="null"/> when it succeeded.</summary>
+    public string? StartFailure { get; private set; }
+
     public bool Start()
     {
         // Fixed port so the MCP client config URL (http://127.0.0.1:9390/mcp) is stable.
@@ -194,11 +205,17 @@ public sealed class McpServer
             Port = _basePort;
             _cts = new CancellationTokenSource();
             _ = AcceptLoop(_cts.Token);
+            PortRegistered = false;
+            StartFailure = null;
             return true;
         }
-        catch (HttpListenerException)
+        catch (HttpListenerException error)
         {
             listener.Close();
+            PortRegistered = error.ErrorCode == ErrorAlreadyExists;
+            StartFailure = PortRegistered
+                ? $"MCP port {_basePort} is already registered, usually by another QX window; this window runs without MCP."
+                : $"MCP port {_basePort} is held by {PortHolder(_basePort)}.";
             return false;
         }
     }

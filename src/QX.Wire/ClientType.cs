@@ -7,9 +7,7 @@ public enum ClientType
     /// <summary>No client.</summary>
     None = 0,
     /// <summary>The Flash client.</summary>
-    Flash = 2,
-    /// <summary>Every supported client, which is only <see cref="Flash"/>.</summary>
-    All = Flash
+    Flash = 2
 }
 
 /// <summary>Provides checks for <see cref="ClientType"/> values.</summary>

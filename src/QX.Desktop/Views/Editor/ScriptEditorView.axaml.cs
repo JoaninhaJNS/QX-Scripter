@@ -94,6 +94,8 @@ public sealed partial class ScriptEditorView : UserControl
                 Directory.CreateDirectory(hosts.WorkingDirectory);
                 Code.TextArea.SelectionCornerRadius = 2;
                 _ = await Code.InitializeAsync(host, ThemeColors(), hosts.WorkingDirectory, document.Text, SourceCodeKind.Script);
+                if (Code.CompletionProvider is { } completions)
+                    Code.CompletionProvider = new GuardedCompletionProvider(completions, Code);
                 Adopt(Code);
                 return;
             }

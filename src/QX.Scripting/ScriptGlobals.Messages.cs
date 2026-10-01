@@ -16,7 +16,9 @@ public partial class ScriptGlobals
     /// The message names to watch, in either direction. Unknown names never match.
     /// </param>
     /// <returns>A copy of the first matching packet; the caller should dispose it.</returns>
-    /// <exception cref="ArgumentException">Thrown when no name was given.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when no name was given, or a name is empty or carries an <c>in:</c>, <c>out:</c> or <c>flash:</c> prefix.
+    /// </exception>
     /// <exception cref="OperationCanceledException">Thrown when the timeout elapsed or the script was stopped.</exception>
     public IPacket Receive(params string[] names) => Receive(10000, false, names);
 
@@ -31,7 +33,9 @@ public partial class ScriptGlobals
     /// </param>
     /// <param name="names">The message names to watch, in either direction.</param>
     /// <returns>A copy of the matching packet; the caller should dispose it.</returns>
-    /// <exception cref="ArgumentException">Thrown when no name was given.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when no name was given, or a name is empty or carries an <c>in:</c>, <c>out:</c> or <c>flash:</c> prefix.
+    /// </exception>
     /// <exception cref="OperationCanceledException">Thrown when the timeout elapsed or the script was stopped.</exception>
     /// <remarks>
     /// This blocks the calling thread while it waits; prefer
@@ -50,7 +54,9 @@ public partial class ScriptGlobals
     /// </param>
     /// <param name="names">The message names to watch, in either direction.</param>
     /// <returns>A copy of the matching packet; the caller should dispose it.</returns>
-    /// <exception cref="ArgumentException">Thrown when no name was given.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when no name was given, or a name is empty or carries an <c>in:</c>, <c>out:</c> or <c>flash:</c> prefix.
+    /// </exception>
     /// <exception cref="OperationCanceledException">Thrown when the timeout elapsed or the script was stopped.</exception>
     public Task<IPacket> ReceiveAnyAsync(int timeoutMs, bool block, params string[] names) =>
         CaptureAny(names, timeoutMs, block);
@@ -65,7 +71,9 @@ public partial class ScriptGlobals
     /// </param>
     /// <param name="names">The message names to watch, in either direction.</param>
     /// <returns><see langword="true"/> when a packet was captured, <see langword="false"/> on timeout.</returns>
-    /// <exception cref="ArgumentException">Thrown when no name was given.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when no name was given, or a name is empty or carries an <c>in:</c>, <c>out:</c> or <c>flash:</c> prefix.
+    /// </exception>
     /// <exception cref="OperationCanceledException">Thrown when the script was stopped while waiting.</exception>
     public bool TryReceive(out IPacket? packet, params string[] names) =>
         TryReceive(10000, false, out packet, names);
@@ -85,7 +93,9 @@ public partial class ScriptGlobals
     /// </param>
     /// <param name="names">The message names to watch, in either direction.</param>
     /// <returns><see langword="true"/> when a packet was captured, <see langword="false"/> on timeout.</returns>
-    /// <exception cref="ArgumentException">Thrown when no name was given.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when no name was given, or a name is empty or carries an <c>in:</c>, <c>out:</c> or <c>flash:</c> prefix.
+    /// </exception>
     /// <exception cref="OperationCanceledException">
     /// Thrown when the script was stopped while waiting; only the timeout is swallowed.
     /// </exception>
@@ -123,19 +133,16 @@ public partial class ScriptGlobals
             }
         }
 
-        var subscriptions = new List<IDisposable>(names.Length * 2);
-        foreach (string name in names)
-        {
-            subscriptions.Add(InterceptIncoming(name, ClientType.None, Handler));
-            subscriptions.Add(InterceptOutgoing(name, ClientType.None, Handler));
-        }
-
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(Ct);
-        timeout.CancelAfter(timeoutMs);
-        await using CancellationTokenRegistration registration = timeout.Token.Register(() => completion.TrySetCanceled());
-
+        Identifier[] identifiers = [.. names.Select(ReceiveIdentifier)];
+        var subscriptions = new List<IDisposable>(identifiers.Length);
         try
         {
+            foreach (Identifier identifier in identifiers)
+                subscriptions.Add(Ext.Intercept(identifier, Handler));
+
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+            timeout.CancelAfter(timeoutMs);
+            await using CancellationTokenRegistration registration = timeout.Token.Register(() => completion.TrySetCanceled());
             return await completion.Task;
         }
         finally
@@ -143,5 +150,18 @@ public partial class ScriptGlobals
             foreach (IDisposable subscription in subscriptions)
                 subscription.Dispose();
         }
+    }
+
+    private static Identifier ReceiveIdentifier(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Message names cannot be empty.", nameof(name));
+        if (name.Contains(':'))
+        {
+            throw new ArgumentException(
+                $"'{name}' carries a prefix; pass the message name only, for example '{name[(name.LastIndexOf(':') + 1)..]}'.",
+                nameof(name));
+        }
+        return new Identifier(ClientType.None, Direction.Both, name);
     }
 }

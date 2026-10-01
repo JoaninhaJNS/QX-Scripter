@@ -101,7 +101,7 @@ public sealed class DesktopComposition : IDisposable
         theme.Apply(SettingsCodec.EffectiveTheme(_services.GetRequiredService<ISettingsStore>().Current));
     }
 
-    public MainWindow CreateShell(IClassicDesktopStyleApplicationLifetime? lifetime)
+    public void CreateShell(IClassicDesktopStyleApplicationLifetime? lifetime)
     {
         var window = new MainWindow();
         _services.GetRequiredService<TopLevelAccessor>().Attach(window);
@@ -132,18 +132,18 @@ public sealed class DesktopComposition : IDisposable
         _router = new KeyRouter(registry, _services.GetRequiredService<IKeyScopeState>(), _services.GetRequiredService<GestureFormatter>());
         _router.Attach(window);
         window.Use(shell, Views, _services.GetRequiredService<BitmapCache>(), host, _services.GetRequiredService<ShellCloseCoordinator>(), _services.GetRequiredService<IPageProvider>());
+        _shell = window;
         if (_launch.HostedByGEarth)
         {
             host.PrepareForHost(_services.GetRequiredService<ISettingsStore>().Current.Window);
+            _services.GetRequiredService<IUiDispatcher>().Post(StartShell);
+            return;
         }
-        else
-        {
-            PixelPlacement? placement = _services.GetRequiredService<WindowPlacementController>().Restore(window);
-            host.Remember(placement?.Maximized == true);
-        }
+        PixelPlacement? placement = _services.GetRequiredService<WindowPlacementController>().Restore(window);
+        host.Remember(placement?.Maximized == true);
         window.Opened += OnOpened;
-        _shell = window;
-        return window;
+        if (lifetime is not null)
+            lifetime.MainWindow = window;
     }
 
     public void Dispose()
@@ -213,11 +213,12 @@ public sealed class DesktopComposition : IDisposable
     {
         if (sender is MainWindow window)
             window.Opened -= OnOpened;
-        ShellWindow host = _services.GetRequiredService<ShellWindow>();
-        if (_launch.HostedByGEarth)
-            host.HideForHost();
-        else
-            host.RestoreState();
+        _services.GetRequiredService<ShellWindow>().RestoreState();
+        StartShell();
+    }
+
+    void StartShell()
+    {
         _services.GetRequiredService<HostedLifecyclePolicy>().MarkShellReady();
         _services.GetRequiredService<ShellStartup>().RunAsync(_services.GetRequiredService<AppLifetime>().Token).Observe("app");
     }

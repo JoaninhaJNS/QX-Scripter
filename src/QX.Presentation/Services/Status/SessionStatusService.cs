@@ -22,6 +22,7 @@ public sealed class SessionStatusService : ISessionStatusService, IAlwaysOn, IDi
     readonly IGameGateway _gateway;
     readonly IScriptRunRegistry _runs;
     readonly IUiDispatcher _dispatcher;
+    readonly AppLifetime _lifetime;
     readonly ThrottledSignal _refresh;
     readonly CoalescingSignal _profile_changed;
     readonly SerialOperation _profile_reads = new();
@@ -36,12 +37,13 @@ public sealed class SessionStatusService : ISessionStatusService, IAlwaysOn, IDi
     int _mcp_port;
     string _mcp_failure = "";
 
-    public SessionStatusService(DesktopRuntime runtime, IGameGateway gateway, IScriptRunRegistry runs, IUiDispatcher dispatcher, TimeProvider time)
+    public SessionStatusService(DesktopRuntime runtime, IGameGateway gateway, IScriptRunRegistry runs, IUiDispatcher dispatcher, TimeProvider time, AppLifetime lifetime)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
         _runs = runs ?? throw new ArgumentNullException(nameof(runs));
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+        _lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
         ArgumentNullException.ThrowIfNull(time);
         _refresh = new ThrottledSignal(dispatcher, time, RefreshInterval, Apply);
         _profile_changed = new CoalescingSignal(dispatcher, QueueProfileRead);
@@ -165,9 +167,11 @@ public sealed class SessionStatusService : ISessionStatusService, IAlwaysOn, IDi
     {
         if (_stopped)
             return;
-        OperationLease lease = await _profile_reads.StartAsync(CancellationToken.None);
+        OperationLease lease = await _profile_reads.StartAsync(_lifetime.Token);
         try
         {
+            if (lease.Token.IsCancellationRequested)
+                return;
             string? name = null;
             try
             {

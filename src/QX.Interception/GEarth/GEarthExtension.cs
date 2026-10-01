@@ -107,6 +107,7 @@ public class GEarthExtension : IInterceptor, IDisposable
     /// <param name="identifier">The message to intercept.</param>
     /// <param name="callback">The callback that receives each matching packet.</param>
     /// <returns>A handle that removes the callback when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="identifier"/> has no message name or no direction.</exception>
     public IDisposable Intercept(Identifier identifier, Action<Intercept> callback) => _dispatcher.Add(identifier, callback, Messages);
     /// <summary>Registers a callback for packets of a semantic message.</summary>
     /// <remarks>The key is resolved again whenever the session catalog changes.</remarks>

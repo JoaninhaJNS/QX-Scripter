@@ -114,6 +114,7 @@ public sealed class ShellCloseCoordinator
                 ? _workspace.ClearDraftsAsync(CancellationToken.None)
                 : _workspace.SaveDraftsAsync(include_modified_files: true, CancellationToken.None));
             Step("seal drafts", _workspace.SealDrafts);
+            Step("stop mcp", _runtime.Mcp.Stop);
             Step("release panic key", _panic.Dispose);
             Step("cancel lifetime", _lifetime.Cancel);
             await StepAsync("stop runs", () => BoundedAsync(_runs.WhenAllStoppedAsync(CancellationToken.None), RunStopBudget));

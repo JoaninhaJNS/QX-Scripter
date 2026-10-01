@@ -269,7 +269,7 @@ public sealed partial class SettingsViewModel : PageViewModel
             if (is_panic)
             {
                 keys = panic.IsRegistered ? GestureText.Parts(panic.Gesture) : [];
-                note = panic.IsRegistered ? null : "not available on this system";
+                note = panic.IsRegistered ? null : panic.Unavailable ?? "not available on this system";
             }
             else
             {

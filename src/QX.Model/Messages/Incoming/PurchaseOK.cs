@@ -7,6 +7,8 @@ public sealed record PurchaseOffer : IParserComposer<PurchaseOffer>
 {
     private string _localization_id = "";
     private IReadOnlyList<CatalogProduct> _products = Array.AsReadOnly(Array.Empty<CatalogProduct>());
+    private IReadOnlyList<Id>? _room_items;
+    private IReadOnlyList<Id>? _wall_items;
 
     /// <summary>Initializes a new instance of the <see cref="PurchaseOffer"/> class.</summary>
     /// <param name="OfferId">The ID of the catalog offer.</param>
@@ -19,6 +21,8 @@ public sealed record PurchaseOffer : IParserComposer<PurchaseOffer>
     /// <param name="Products">The products the offer contains.</param>
     /// <param name="ClubLevel">The club level required to buy the offer.</param>
     /// <param name="BundlePurchaseAllowed">Whether several of the offer can be bought at once.</param>
+    /// <param name="RoomItems">The IDs of the floor items the hotel created for the purchase, or <see langword="null"/> when the message carries no purchase results.</param>
+    /// <param name="WallItems">The IDs of the wall items the hotel created for the purchase, or <see langword="null"/> when the message carries no purchase results.</param>
     public PurchaseOffer(
         int OfferId,
         string LocalizationId,
@@ -29,7 +33,9 @@ public sealed record PurchaseOffer : IParserComposer<PurchaseOffer>
         bool Giftable,
         IReadOnlyList<CatalogProduct> Products,
         int ClubLevel,
-        bool BundlePurchaseAllowed)
+        bool BundlePurchaseAllowed,
+        IReadOnlyList<Id>? RoomItems = null,
+        IReadOnlyList<Id>? WallItems = null)
     {
         this.OfferId = OfferId;
         this.LocalizationId = LocalizationId;
@@ -41,6 +47,8 @@ public sealed record PurchaseOffer : IParserComposer<PurchaseOffer>
         this.Products = Products;
         this.ClubLevel = ClubLevel;
         this.BundlePurchaseAllowed = BundlePurchaseAllowed;
+        this.RoomItems = RoomItems;
+        this.WallItems = WallItems;
     }
 
     /// <summary>Gets the ID of the catalog offer.</summary>
@@ -83,6 +91,26 @@ public sealed record PurchaseOffer : IParserComposer<PurchaseOffer>
 
     /// <summary>Gets whether several of the offer can be bought at once.</summary>
     public bool BundlePurchaseAllowed { get; init; }
+
+    /// <summary>
+    /// Gets the IDs of the floor items the hotel created for the purchase, at most 65535, or
+    /// <see langword="null"/> when the message carries no purchase results.
+    /// </summary>
+    public IReadOnlyList<Id>? RoomItems
+    {
+        get => _room_items;
+        init => _room_items = CatalogPurchaseWire.FreezeItemIds(value, nameof(RoomItems));
+    }
+
+    /// <summary>
+    /// Gets the IDs of the wall items the hotel created for the purchase, at most 65535, or
+    /// <see langword="null"/> when the message carries no purchase results.
+    /// </summary>
+    public IReadOnlyList<Id>? WallItems
+    {
+        get => _wall_items;
+        init => _wall_items = CatalogPurchaseWire.FreezeItemIds(value, nameof(WallItems));
+    }
 
     /// <summary>Parses the offer from a packet.</summary>
     /// <param name="p">The packet reader.</param>
@@ -134,12 +162,55 @@ public sealed record PurchaseOffer : IParserComposer<PurchaseOffer>
         ClubLevel = this.ClubLevel;
         BundlePurchaseAllowed = this.BundlePurchaseAllowed;
     }
+
+    /// <summary>Deconstructs the offer into its values, including the purchase results.</summary>
+    /// <param name="OfferId">The ID of the catalog offer.</param>
+    /// <param name="LocalizationId">The localization key of the offer's name.</param>
+    /// <param name="IsRent">Whether the offer is a rental.</param>
+    /// <param name="PriceInCredits">The price in credits.</param>
+    /// <param name="PriceInActivityPoints">The price in activity points.</param>
+    /// <param name="ActivityPointType">The activity point type the activity point price is paid in.</param>
+    /// <param name="Giftable">Whether the offer can be bought as a gift.</param>
+    /// <param name="Products">The products the offer contains.</param>
+    /// <param name="ClubLevel">The club level required to buy the offer.</param>
+    /// <param name="BundlePurchaseAllowed">Whether several of the offer can be bought at once.</param>
+    /// <param name="RoomItems">The IDs of the floor items the hotel created for the purchase.</param>
+    /// <param name="WallItems">The IDs of the wall items the hotel created for the purchase.</param>
+    public void Deconstruct(
+        out int OfferId,
+        out string LocalizationId,
+        out bool IsRent,
+        out int PriceInCredits,
+        out int PriceInActivityPoints,
+        out int ActivityPointType,
+        out bool Giftable,
+        out IReadOnlyList<CatalogProduct> Products,
+        out int ClubLevel,
+        out bool BundlePurchaseAllowed,
+        out IReadOnlyList<Id>? RoomItems,
+        out IReadOnlyList<Id>? WallItems)
+    {
+        Deconstruct(
+            out OfferId,
+            out LocalizationId,
+            out IsRent,
+            out PriceInCredits,
+            out PriceInActivityPoints,
+            out ActivityPointType,
+            out Giftable,
+            out Products,
+            out ClubLevel,
+            out BundlePurchaseAllowed);
+        RoomItems = this.RoomItems;
+        WallItems = this.WallItems;
+    }
 }
 
 /// <summary>Represents the <c>PurchaseOk</c> message, received when the server accepts a catalog purchase.</summary>
 /// <remarks>
-/// Some Flash builds append three integers after the offer. The parser accepts and discards them, and
-/// composing leaves them out.
+/// The hotel appends purchase results to the offer: the IDs of the floor items and of the wall items it created
+/// for the purchase, a gift box included. The Flash client does not read them, and when a hotel leaves them out,
+/// <see cref="PurchaseOffer.RoomItems"/> and <see cref="PurchaseOffer.WallItems"/> are <see langword="null"/>.
 /// </remarks>
 public sealed record PurchaseOK : IParserComposer<PurchaseOK>
 {
@@ -165,7 +236,7 @@ public sealed record PurchaseOK : IParserComposer<PurchaseOK>
         FlashWire.Parse(in p, ParseFlash);
 
     private static PurchaseOK ParseFlash(in PacketReader p) =>
-        new(CatalogPurchaseWire.ParseFlashAcceptedOffer(in p));
+        new(CatalogPurchaseWire.ParseOffer(in p));
 
     /// <summary>Composes the message into a packet.</summary>
     /// <param name="p">The packet writer.</param>
@@ -186,27 +257,19 @@ public sealed record PurchaseOK : IParserComposer<PurchaseOK>
 internal static class CatalogPurchaseWire
 {
     internal const int MaximumProducts = ushort.MaxValue;
+    internal const int MaximumItemIds = ushort.MaxValue;
     private const int MaximumStrings = MaximumProducts * 2 + 1;
     private const int MaximumStringBytes = 16 * 1024 * 1024;
     private const int MinimumProductBytes = CatalogWire.StringMinimumBytes * 2;
-    private const int FlashAcceptedExtensionBytes = sizeof(int) * 3;
     private const int FlashOfferTailBytes = sizeof(int) + sizeof(byte);
+    private const int FlashIdBytes = sizeof(int);
 
-    public static PurchaseOffer ParseOffer(in PacketReader p) =>
-        ParseOffer(in p, true);
+    public static IReadOnlyList<Id>? FreezeItemIds(IReadOnlyList<Id>? values, string name) =>
+        values is null
+            ? null
+            : CatalogWire.FreezeValues(values, MaximumItemIds, name);
 
-    public static PurchaseOffer ParseFlashAcceptedOffer(in PacketReader p)
-    {
-        PurchaseOffer offer = ParseOffer(in p, false);
-        if (p.Available is not (0 or FlashAcceptedExtensionBytes))
-        {
-            throw new InvalidDataException(
-                $"PurchaseOK contains {p.Available} unexpected bytes.");
-        }
-        return offer;
-    }
-
-    private static PurchaseOffer ParseOffer(in PacketReader p, bool require_empty)
+    public static PurchaseOffer ParseOffer(in PacketReader p)
     {
         var strings = NewStringBudget();
         int offer_id = p.ReadInt();
@@ -248,8 +311,15 @@ internal static class CatalogPurchaseWire
         int club_level = p.ReadInt();
         bool bundle_purchase_allowed = p.ReadBool();
 
-        if (require_empty)
-            CatalogWire.RequireEmpty(in p, nameof(PurchaseOffer));
+        Id[]? room_items = null;
+        Id[]? wall_items = null;
+        if (p.Available > 0)
+        {
+            room_items = ReadItemIds(in p, count_width, nameof(PurchaseOffer.RoomItems));
+            wall_items = ReadItemIds(in p, 0, nameof(PurchaseOffer.WallItems));
+        }
+
+        CatalogWire.RequireEmpty(in p, nameof(PurchaseOffer));
         return new PurchaseOffer(
             offer_id,
             localization_id,
@@ -260,7 +330,9 @@ internal static class CatalogPurchaseWire
             giftable,
             products,
             club_level,
-            bundle_purchase_allowed);
+            bundle_purchase_allowed,
+            room_items,
+            wall_items);
     }
 
     public static void ComposeOffer(PurchaseOffer value, in PacketWriter p)
@@ -280,6 +352,11 @@ internal static class CatalogPurchaseWire
         }
         p.WriteInt(value.ClubLevel);
         p.WriteBool(value.BundlePurchaseAllowed);
+        if (prepared.RoomItems is not null)
+        {
+            p.WriteIdArray(prepared.RoomItems);
+            p.WriteIdArray(prepared.WallItems!);
+        }
     }
 
     private static CatalogProduct ParseProduct(
@@ -368,8 +445,39 @@ internal static class CatalogPurchaseWire
             PrepareFlashProduct(products[index], ref strings, in p);
         }
 
-        return new PreparedPurchaseOffer(products);
+        if (value.RoomItems is null && value.WallItems is null)
+            return new PreparedPurchaseOffer(products, null, null);
+        if (value.RoomItems is null || value.WallItems is null)
+            throw new InvalidDataException("Purchase results require the room items and the wall items together.");
+        Id[] room_items = SnapshotItemIds(value.RoomItems, nameof(PurchaseOffer.RoomItems));
+        Id[] wall_items = SnapshotItemIds(value.WallItems, nameof(PurchaseOffer.WallItems));
+        return new PreparedPurchaseOffer(products, room_items, wall_items);
     }
+
+    private static Id[] ReadItemIds(in PacketReader p, int trailing_bytes, string name)
+    {
+        int count = CatalogWire.ReadCount(
+            in p,
+            FlashIdBytes,
+            trailing_bytes,
+            MaximumItemIds,
+            name);
+        var values = new Id[count];
+        for (int index = 0; index < values.Length; index++)
+            values[index] = p.ReadId();
+        return values;
+    }
+
+    private static Id[] SnapshotItemIds(IReadOnlyList<Id> values, string name)
+    {
+        Id[] snapshot = CatalogWire.SnapshotValues(values, MaximumItemIds, name);
+        foreach (Id value in snapshot)
+            RequireFlashId(value);
+        return snapshot;
+    }
+
+    private static void RequireFlashId(Id value) =>
+        _ = checked((int)(long)value);
 
     private static void PrepareFlashProduct(
         CatalogProduct value,
@@ -444,5 +552,7 @@ internal static class CatalogPurchaseWire
         new(MaximumStrings, MaximumStringBytes);
 
     private sealed record PreparedPurchaseOffer(
-        CatalogProduct[] Products);
+        CatalogProduct[] Products,
+        Id[]? RoomItems,
+        Id[]? WallItems);
 }

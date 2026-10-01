@@ -25,7 +25,7 @@ public sealed class TradeItem : IParserComposer<TradeItem>
     public int CreationMonth { get; set; }
     /// <summary>Gets or sets the year the item was created.</summary>
     public int CreationYear { get; set; }
-    /// <summary>Gets or sets the extra value of a floor item, or -1 for a wall item.</summary>
+    /// <summary>Gets or sets the extra value of a floor item, which the client also uses as its song identifier, or -1 for a wall item.</summary>
     public long Extra { get; set; } = -1;
 
     /// <summary>Gets whether the item is a floor item.</summary>
@@ -39,10 +39,7 @@ public sealed class TradeItem : IParserComposer<TradeItem>
     /// <summary>Reads a trade item from a packet.</summary>
     /// <param name="p">The packet to read from.</param>
     /// <exception cref="UnsupportedClientException">Thrown when the packet is not from the Flash client.</exception>
-    /// <exception cref="InvalidDataException">
-    /// Thrown when the item type is unknown, <see cref="Id"/> is not positive or a floor item's extra
-    /// value is negative.
-    /// </exception>
+    /// <exception cref="InvalidDataException">Thrown when the item type is unknown or <see cref="Id"/> is not positive.</exception>
     public static TradeItem Parse(in PacketReader p) =>
         FlashWire.Parse(in p, ParseFlash);
 
@@ -77,7 +74,6 @@ public sealed class TradeItem : IParserComposer<TradeItem>
             Extra = extra
         };
         TradeWire.RequirePositiveId(value.Id, nameof(Id));
-        TradeWire.RequireFloorExtra(value.Type, value.Extra);
         return value;
     }
 
@@ -114,7 +110,6 @@ public sealed class TradeItem : IParserComposer<TradeItem>
         _ = TradeWire.FlashId(ItemId, nameof(ItemId));
         TradeWire.RequirePositiveFlashId(Id, nameof(Id));
         TradeWire.ValidateItemData(Data, in p);
-        TradeWire.RequireFloorExtra(Type, Extra);
         if (Type is ItemType.Floor)
             _ = checked((int)Extra);
         else if (Extra != -1)
@@ -165,12 +160,6 @@ internal static class TradeWire
     {
         if (type is not (ItemType.Floor or ItemType.Wall))
             throw new InvalidDataException($"Unsupported trade item type {type}.");
-    }
-
-    public static void RequireFloorExtra(ItemType type, long extra)
-    {
-        if (type is ItemType.Floor && extra < 0)
-            throw new InvalidDataException("Floor trade-item metadata cannot be negative.");
     }
 
     public static void RequirePositiveId(Id value, string name)

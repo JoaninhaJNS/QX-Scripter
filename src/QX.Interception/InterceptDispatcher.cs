@@ -83,9 +83,14 @@ public sealed class InterceptDispatcher
     /// <param name="callback">The callback that receives each matching packet.</param>
     /// <param name="manager">The message manager that resolves identifiers, which replaces the one used for every identifier registration.</param>
     /// <returns>A handle that removes the callback when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="identifier"/> has no message name or no direction.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="callback"/> or <paramref name="manager"/> is <see langword="null"/>.</exception>
     public IDisposable Add(Identifier identifier, Action<Intercept> callback, IMessageManager manager)
     {
+        if (string.IsNullOrWhiteSpace(identifier.Name))
+            throw new ArgumentException("An intercept requires a message name.", nameof(identifier));
+        if (identifier.Direction is not (Direction.In or Direction.Out or Direction.Both))
+            throw new ArgumentException("An intercept requires the in, out or both direction.", nameof(identifier));
         ArgumentNullException.ThrowIfNull(callback);
         ArgumentNullException.ThrowIfNull(manager);
         var registration = new Registration { Identifier = identifier, Callback = callback };
@@ -132,7 +137,7 @@ public sealed class InterceptDispatcher
     /// <param name="messages_available">
     /// Whether a message catalog is currently loaded for the active client. When false and nothing
     /// resolves, unresolved registrations are expected and are reported at debug level; otherwise each
-    /// unresolved registration is a real defect and is reported once as a warning.
+    /// unresolved identifier or key is a real defect and is reported as a warning once until the next rebind.
     /// </param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="manager"/> is <see langword="null"/>.</exception>
     public void Rebind(IMessageManager manager, bool messages_available = true)
@@ -144,6 +149,8 @@ public sealed class InterceptDispatcher
             _semantic_resolver = manager as ISemanticMessageResolver;
             _messages_available = messages_available;
             _bindings = null;
+            _reported.Clear();
+            _reported_keys.Clear();
         }
     }
 
@@ -218,9 +225,7 @@ public sealed class InterceptDispatcher
             }
             else if (registration.Identifier is { } identifier)
             {
-                if (_manager is not null &&
-                    _manager.TryGetHeaders(identifier, out IReadOnlyList<Header> resolved) &&
-                    resolved.Count > 0)
+                if (TryResolve(identifier, out IReadOnlyList<Header> resolved))
                 {
                     headers = resolved;
                     resolved_messages++;
@@ -285,6 +290,20 @@ public sealed class InterceptDispatcher
         };
     }
 
+    private bool TryResolve(Identifier identifier, out IReadOnlyList<Header> headers)
+    {
+        headers = [];
+        if (_manager is null)
+            return false;
+        if (identifier.Direction is not Direction.Both)
+            return _manager.TryGetHeaders(identifier, out headers) && headers.Count > 0;
+
+        _manager.TryGetHeaders(identifier with { Direction = Direction.In }, out IReadOnlyList<Header> incoming);
+        _manager.TryGetHeaders(identifier with { Direction = Direction.Out }, out IReadOnlyList<Header> outgoing);
+        headers = [.. incoming, .. outgoing];
+        return headers.Count > 0;
+    }
+
     private void ReportUnresolved(
         List<Identifier>? unresolved,
         List<MessageKey>? unresolved_keys,
@@ -292,34 +311,26 @@ public sealed class InterceptDispatcher
     {
         int unresolved_count = (unresolved?.Count ?? 0) + (unresolved_keys?.Count ?? 0);
         if (unresolved_count == 0)
-        {
-            _reported.Clear();
-            _reported_keys.Clear();
             return;
-        }
 
         if (!_messages_available && resolved_messages == 0)
         {
-            _reported.Clear();
-            _reported_keys.Clear();
             Diag.Debug(
                 $"No message catalog is bound; {unresolved_count} message registration(s) are unbound.",
                 Category);
             return;
         }
 
-        _reported.IntersectWith(unresolved ?? []);
         foreach (Identifier identifier in unresolved ?? [])
         {
             if (!_reported.Add(identifier))
                 continue;
             Diag.Warn(
-                $"Unresolved intercept identifier '{identifier.ToString(true)}'; " +
+                $"Unresolved intercept identifier '{identifier.ToString(identifier.Direction is not Direction.Both)}'; " +
                 "no header matched it, so its callbacks will never run.",
                 Category);
         }
 
-        _reported_keys.IntersectWith(unresolved_keys ?? []);
         foreach (MessageKey key in unresolved_keys ?? [])
         {
             if (!_reported_keys.Add(key))

@@ -15,7 +15,7 @@ public sealed class ShellWindow : IShellWindow, IDisposable
     IClassicDesktopStyleApplicationLifetime? _lifetime;
     PixelPlacement _normal;
     WindowState _remembered = WindowState.Normal;
-    bool _seeded_state;
+    bool _opened;
     bool _hidden_for_host;
     bool _was_visible;
 
@@ -60,6 +60,7 @@ public sealed class ShellWindow : IShellWindow, IDisposable
         _lifetime = lifetime;
         _normal = new PixelPlacement(window.Position.X, window.Position.Y, window.Width, window.Height, false);
         _was_visible = window.IsVisible;
+        window.Opened += OnOpened;
         window.Activated += OnActivated;
         window.PositionChanged += OnPositionChanged;
         window.Resized += OnResized;
@@ -73,6 +74,7 @@ public sealed class ShellWindow : IShellWindow, IDisposable
     {
         if (_window is not { } window)
             return;
+        window.Opened -= OnOpened;
         window.Activated -= OnActivated;
         window.PositionChanged -= OnPositionChanged;
         window.Resized -= OnResized;
@@ -99,16 +101,15 @@ public sealed class ShellWindow : IShellWindow, IDisposable
         if (_window is not { } window)
             return;
         Remember(stored?.Maximized == true);
-        if (WindowPlacementMath.Restore(stored, WindowPlacementController.ScreensOf(window)) is { } placement)
-            WindowPlacementController.Apply(window, placement with { Maximized = false });
-        window.ShowActivated = false;
-        window.ShowInTaskbar = false;
+        if (WindowPlacementMath.Restore(stored, WindowPlacementController.ScreensOf(window)) is not { } placement)
+            return;
+        _normal = placement with { Maximized = false };
+        WindowPlacementController.Apply(window, _normal);
     }
 
     public void Remember(bool maximized)
     {
         _remembered = maximized ? WindowState.Maximized : WindowState.Normal;
-        _seeded_state = true;
     }
 
     public void RestoreState()
@@ -121,9 +122,7 @@ public sealed class ShellWindow : IShellWindow, IDisposable
     {
         if (_window is not { } window)
             return;
-        if (_seeded_state)
-            _seeded_state = false;
-        else if (window.WindowState != WindowState.Minimized)
+        if (window.WindowState != WindowState.Minimized)
             _remembered = window.WindowState;
         _hidden_for_host = true;
         window.ShowInTaskbar = false;
@@ -149,11 +148,13 @@ public sealed class ShellWindow : IShellWindow, IDisposable
 
     public WindowPlacement? CapturePlacement()
     {
-        if (_window is not { } window)
+        if (_window is not { } window || !_opened)
             return null;
         bool maximized = window.WindowState == WindowState.Maximized || (_hidden_for_host && _remembered == WindowState.Maximized);
         return WindowPlacementMath.Capture(_normal, maximized, WindowPlacementController.ScreensOf(window));
     }
+
+    void OnOpened(object? sender, EventArgs e) => _opened = true;
 
     void OnActivated(object? sender, EventArgs e) => Activated?.Invoke();
 

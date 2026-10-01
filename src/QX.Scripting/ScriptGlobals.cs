@@ -1010,11 +1010,13 @@ public partial class ScriptGlobals : IDisposable
     /// The handler to call with each matching intercept. It can block or rewrite the packet.
     /// </param>
     /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="identifier"/> has no message name or no direction.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public IDisposable OnIntercept(Identifier identifier, Action<Intercept> handler)
-        => Track(identifier.Direction is Direction.In
-            ? InterceptIncomingEvent(identifier.Name, identifier.Client, handler)
-            : InterceptOutgoingEvent(identifier.Name, identifier.Client, handler));
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return Track(Ext.Intercept(identifier, Guarded(handler)));
+    }
 
     /// <summary>
     /// Registers a handler that runs for every incoming packet of the named message.
@@ -1028,6 +1030,7 @@ public partial class ScriptGlobals : IDisposable
     /// The handler to call with each matching intercept. It can block or rewrite the packet.
     /// </param>
     /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public IDisposable OnIn(string name, Action<Intercept> handler) =>
     Track(InterceptIncomingEvent(name, ClientType.None, handler));
@@ -1044,6 +1047,7 @@ public partial class ScriptGlobals : IDisposable
     /// The handler to call with each matching intercept. It can block or rewrite the packet.
     /// </param>
     /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public IDisposable OnFlashIn(string name, Action<Intercept> handler) =>
     Track(InterceptIncomingEvent(name, ClientType.Flash, handler));
@@ -1060,6 +1064,7 @@ public partial class ScriptGlobals : IDisposable
     /// The handler to call with each matching intercept. It can block or rewrite the packet.
     /// </param>
     /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public IDisposable OnOut(string name, Action<Intercept> handler) =>
     Track(InterceptOutgoingEvent(name, ClientType.None, handler));
@@ -1076,6 +1081,7 @@ public partial class ScriptGlobals : IDisposable
     /// The handler to call with each matching intercept. It can block or rewrite the packet.
     /// </param>
     /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public IDisposable OnFlashOut(string name, Action<Intercept> handler) =>
     Track(InterceptOutgoingEvent(name, ClientType.Flash, handler));
@@ -1096,6 +1102,7 @@ public partial class ScriptGlobals : IDisposable
     /// <param name="name">The incoming message name.</param>
     /// <param name="handler">The handler to call with each parsed message.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     public IDisposable OnIn<T>(string name, Action<T> handler) where T : IParserComposer<T> =>
         Track(InterceptIncomingEvent(
             name,
@@ -1114,6 +1121,7 @@ public partial class ScriptGlobals : IDisposable
     /// <param name="name">The incoming message name.</param>
     /// <param name="handler">The handler to call with each parsed message and its intercept.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public IDisposable OnIn<T>(string name, Action<T, Intercept> handler) where T : IParserComposer<T>
     {
@@ -1144,6 +1152,7 @@ public partial class ScriptGlobals : IDisposable
     /// <param name="name">The outgoing message name.</param>
     /// <param name="handler">The handler to call with each parsed message.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     public IDisposable OnOut<T>(string name, Action<T> handler) where T : IParserComposer<T> =>
         Track(InterceptOutgoingEvent(
             name,
@@ -1163,6 +1172,7 @@ public partial class ScriptGlobals : IDisposable
     /// <param name="name">The outgoing message name.</param>
     /// <param name="handler">The handler to call with each parsed message and its intercept.</param>
     /// <returns>A handle that removes the handler when disposed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handler"/> is <see langword="null"/>.</exception>
     public IDisposable OnOut<T>(string name, Action<T, Intercept> handler) where T : IParserComposer<T>
     {
@@ -1184,6 +1194,9 @@ public partial class ScriptGlobals : IDisposable
     /// <param name="name">The message name, resolved against both directions.</param>
     /// <param name="timeoutMs">The timeout in milliseconds.</param>
     /// <returns>The parsed message.</returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="name"/> is empty or carries an <c>in:</c>, <c>out:</c> or <c>flash:</c> prefix.
+    /// </exception>
     /// <exception cref="OperationCanceledException">
     /// Thrown when the timeout elapsed, or the script was stopped, before a matching packet arrived.
     /// </exception>
@@ -1257,36 +1270,14 @@ public partial class ScriptGlobals : IDisposable
     /// <returns>
     /// A copy of the packet, positioned at the start. The caller owns it and should dispose it.
     /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="name"/> is empty or carries an <c>in:</c>, <c>out:</c> or <c>flash:</c> prefix.
+    /// </exception>
     /// <exception cref="OperationCanceledException">
     /// Thrown when the timeout elapsed, or the script was stopped, before a matching packet arrived.
     /// </exception>
-    public async Task<IPacket> ReceiveAsync(string name, int timeoutMs = 10000)
-    {
-        var completion = new TaskCompletionSource<IPacket>(TaskCreationOptions.RunContinuationsAsynchronously);
-        void Handler(Intercept intercept)
-        {
-            IPacket copy = intercept.Packet.Copy();
-            if (!completion.TrySetResult(copy))
-                copy.Dispose();
-        }
-
-        IDisposable incoming = InterceptIncoming(name, ClientType.None, Handler);
-        IDisposable outgoing = InterceptOutgoing(name, ClientType.None, Handler);
-
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(Ct);
-        timeout.CancelAfter(timeoutMs);
-        await using CancellationTokenRegistration registration = timeout.Token.Register(() => completion.TrySetCanceled());
-
-        try
-        {
-            return await completion.Task;
-        }
-        finally
-        {
-            incoming.Dispose();
-            outgoing.Dispose();
-        }
-    }
+    public Task<IPacket> ReceiveAsync(string name, int timeoutMs = 10000) =>
+        CaptureAny([name], timeoutMs, false);
 
     // High-level actions (field orders verified against the decompiled Flash composers).
 
@@ -1753,21 +1744,12 @@ public partial class ScriptGlobals : IDisposable
         return message;
     }
 
-    private IDisposable InterceptIncoming(string name, ClientType requested, Action<Intercept> handler)
-    {
-        var identifier = new Identifier(requested, Direction.In, name);
-        return Ext.Intercept(identifier, handler);
-    }
-
     private IDisposable InterceptIncomingEvent(string name, ClientType requested, Action<Intercept> handler)
     {
         ArgumentNullException.ThrowIfNull(handler);
         var identifier = new Identifier(requested, Direction.In, name);
         return Ext.Intercept(identifier, Guarded(handler));
     }
-
-    private IDisposable InterceptOutgoing(string name, ClientType requested, Action<Intercept> handler)
-        => Ext.Intercept(new Identifier(requested, Direction.Out, name), handler);
 
     private IDisposable InterceptOutgoingEvent(string name, ClientType requested, Action<Intercept> handler)
     {

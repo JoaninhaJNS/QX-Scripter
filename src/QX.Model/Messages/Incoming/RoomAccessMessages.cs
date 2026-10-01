@@ -85,6 +85,12 @@ public sealed record FlatAccessDenied(Id RoomId, string? UserName) : IParserComp
     /// <summary>Gets whether the refusal is for the user, which is the case when <see cref="UserName"/> is <see langword="null"/> or empty.</summary>
     public bool IsSelf => string.IsNullOrEmpty(UserName);
 
+    /// <summary>
+    /// Gets the optional trailing byte the hotel appends after the user name, which the Flash client does not read,
+    /// or <see langword="null"/> when the packet ends after the user name.
+    /// </summary>
+    public byte? FlashTrailingValue { get; init; }
+
     /// <summary>Parses the message from a packet.</summary>
     /// <param name="p">The packet reader.</param>
     public static FlatAccessDenied Parse(in PacketReader p) =>
@@ -93,19 +99,32 @@ public sealed record FlatAccessDenied(Id RoomId, string? UserName) : IParserComp
     private static FlatAccessDenied ParseFlash(in PacketReader p)
     {
         Id room_id = p.ReadId();
-        return new FlatAccessDenied(room_id, p.Available > 0 ? p.ReadString() : null);
+        string? user_name = p.Available > 0 ? p.ReadString() : null;
+        return new FlatAccessDenied(room_id, user_name)
+        {
+            FlashTrailingValue = p.Available switch
+            {
+                0 => null,
+                1 => p.ReadByte(),
+                _ => throw new InvalidDataException("Flash flat access denied requires either no trailing data or one trailing byte after the user name.")
+            }
+        };
     }
 
     /// <summary>Composes the message into a packet.</summary>
     /// <param name="p">The packet writer.</param>
+    /// <remarks><see cref="FlashTrailingValue"/> is only written when <see cref="UserName"/> is not <see langword="null"/>.</remarks>
     public void Compose(in PacketWriter p) =>
         FlashWire.Compose(this, in p, ComposeFlash);
 
     private static void ComposeFlash(FlatAccessDenied value, in PacketWriter p)
     {
         p.WriteId(value.RoomId);
-        if (value.UserName is not null)
-            p.WriteString(value.UserName);
+        if (value.UserName is null)
+            return;
+        p.WriteString(value.UserName);
+        if (value.FlashTrailingValue is byte trailing_value)
+            p.WriteByte(trailing_value);
     }
 }
 

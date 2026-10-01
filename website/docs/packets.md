@@ -61,4 +61,7 @@ IPacket update = await ReceiveAsync("UserUpdate", timeoutMs: 5000);
 UserUpdate parsed = await ReceiveAsync<UserUpdate>("UserUpdate");
 ```
 
+`ReceiveAsync` and `Receive` watch both directions, so pass the message name only. A name with an
+`in:` or `out:` prefix throws an `ArgumentException`.
+
 The returned packet is a copy that belongs to the script.
